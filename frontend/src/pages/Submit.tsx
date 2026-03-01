@@ -5,7 +5,11 @@ import { PlaceSearch } from '../components/PlaceSearch'
 import { TagPicker } from '../components/TagPicker'
 import './Submit.css'
 
-export function Submit() {
+interface Props {
+  path?: string
+}
+
+export function Submit(_props: Props) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')

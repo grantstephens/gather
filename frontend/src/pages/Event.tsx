@@ -5,7 +5,8 @@ import { pb, Event as EventType, getImageUrl } from '../lib/pocketbase'
 import './Event.css'
 
 interface Props {
-  id: string
+  path?: string
+  id?: string
 }
 
 export function Event({ id }: Props) {
@@ -16,9 +17,10 @@ export function Event({ id }: Props) {
   const mapInstance = useRef<L.Map | null>(null)
 
   useEffect(() => {
+    if (!id) return
     async function load() {
       try {
-        const result = await pb.collection('events').getOne<EventType>(id, {
+        const result = await pb.collection('events').getOne<EventType>(id!, {
           expand: 'place,tags,author',
         })
         setEvent(result)

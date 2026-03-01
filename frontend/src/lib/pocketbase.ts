@@ -67,5 +67,5 @@ export interface Settings {
 // Helper to get image URL
 export function getImageUrl(record: Event, thumb?: string): string | undefined {
   if (!record.image) return undefined
-  return pb.files.getURL(record, record.image, { thumb })
+  return pb.files.getUrl(record, record.image, { thumb })
 }

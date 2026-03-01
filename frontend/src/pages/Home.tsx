@@ -3,7 +3,11 @@ import { pb, Event, Tag } from '../lib/pocketbase'
 import { EventCard } from '../components/EventCard'
 import './Home.css'
 
-export function Home() {
+interface Props {
+  path?: string
+}
+
+export function Home(_props: Props) {
   const [events, setEvents] = useState<Event[]>([])
   const [tags, setTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(true)
