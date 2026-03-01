@@ -90,3 +90,7 @@ help:
 	@echo "Admin dashboard: http://127.0.0.1:8090/_/"
 	@echo "  Email:    admin@example.com"
 	@echo "  Password: adminpassword123"
+	@echo ""
+	@echo "Frontend login: http://127.0.0.1:8090/login"
+	@echo "  Email:    user@example.com"
+	@echo "  Password: userpassword123"

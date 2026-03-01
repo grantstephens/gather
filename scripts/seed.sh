@@ -14,6 +14,13 @@ for i in {1..10}; do
     sleep 1
 done
 
+# Create test user
+echo "Creating test user..."
+curl -s -X POST "$BASE_URL/api/collections/users/records" \
+    -H "Content-Type: application/json" \
+    -d '{"email":"user@example.com","password":"userpassword123","passwordConfirm":"userpassword123"}' > /dev/null
+echo "  User: user@example.com / userpassword123"
+
 # Create tags
 echo "Creating tags..."
 curl -s -X POST "$BASE_URL/api/collections/tags/records" \
@@ -110,4 +117,8 @@ curl -s -X POST "$BASE_URL/api/collections/events/records" \
 echo "  Created: Neighborhood Cleanup"
 
 echo ""
-echo "Seed complete! Created 5 tags, 3 places, and 6 events."
+echo "Seed complete! Created 1 user, 5 tags, 3 places, and 6 events."
+echo ""
+echo "Login at /login with:"
+echo "  Email:    user@example.com"
+echo "  Password: userpassword123"
