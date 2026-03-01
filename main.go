@@ -7,6 +7,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 
+	"gather/internal/activitypub"
 	"gather/internal/ical"
 	"gather/internal/rss"
 	_ "gather/migrations"
@@ -16,6 +17,11 @@ func main() {
 	app := pocketbase.New()
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		// Initialize AP keypair on first run
+		if err := activitypub.EnsureKeypair(se.App); err != nil {
+			log.Println("Warning: failed to ensure AP keypair:", err)
+		}
+
 		// Serve embedded frontend
 		frontend, err := frontendFS()
 		if err != nil {
@@ -92,6 +98,21 @@ func main() {
 			re.Response.Header().Set("Content-Type", "text/calendar")
 			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
 			return re.Blob(200, "text/calendar", data)
+		})
+
+		// ActivityPub actor
+		se.Router.GET("/ap/actor", func(re *core.RequestEvent) error {
+			actor, err := activitypub.GetActor(se.App, baseURL)
+			if err != nil {
+				return re.InternalServerError("Failed to get actor", err)
+			}
+			data, err := actor.ToJSON()
+			if err != nil {
+				return re.InternalServerError("Failed to serialize actor", err)
+			}
+			re.Response.Header().Set("Content-Type", "application/activity+json")
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600")
+			return re.Blob(200, "application/activity+json", data)
 		})
 
 		// Serve static files, fallback to index.html for SPA routing
