@@ -1,5 +1,6 @@
 import Router from 'preact-router'
 import { Home } from './pages/Home'
+import { Event } from './pages/Event'
 import './style.css'
 
 export function App() {
@@ -11,6 +12,7 @@ export function App() {
       <main>
         <Router>
           <Home path="/" />
+          <Event path="/event/:id" />
         </Router>
       </main>
     </div>
