@@ -1,0 +1,51 @@
+.place-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.place-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.place-header h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.place-address {
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
+
+.place-city {
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+}
+
+.place-count {
+  color: #6b7280;
+}
+
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.no-events {
+  color: #6b7280;
+  text-align: center;
+  padding: 3rem;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+}
+
+.error {
+  color: #dc2626;
+}
