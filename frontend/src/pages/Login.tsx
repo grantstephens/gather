@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useState, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import { pb } from '../lib/pocketbase'
 import './Login.css'
@@ -9,6 +9,13 @@ interface Props {
 
 export function Login(_props: Props) {
   const [isRegister, setIsRegister] = useState(false)
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (pb.authStore.isValid) {
+      route('/')
+    }
+  }, [])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
@@ -62,6 +69,7 @@ export function Login(_props: Props) {
             type="password"
             value={password}
             onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
+            minLength={8}
             required
           />
         </div>
@@ -74,6 +82,7 @@ export function Login(_props: Props) {
               type="password"
               value={passwordConfirm}
               onInput={(e) => setPasswordConfirm((e.target as HTMLInputElement).value)}
+              minLength={8}
               required
             />
           </div>
