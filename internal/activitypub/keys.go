@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 )
 
 func GenerateKeyPair() (privateKey string, publicKey string, err error) {
@@ -34,7 +35,7 @@ func GenerateKeyPair() (privateKey string, publicKey string, err error) {
 func ParsePrivateKey(pemData string) (*rsa.PrivateKey, error) {
 	block, _ := pem.Decode([]byte(pemData))
 	if block == nil {
-		return nil, nil
+		return nil, errors.New("failed to decode PEM block")
 	}
 	return x509.ParsePKCS1PrivateKey(block.Bytes)
 }

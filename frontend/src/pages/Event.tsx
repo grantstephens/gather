@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
 import { format } from 'date-fns'
 import L from 'leaflet'
+import DOMPurify from 'dompurify'
 import { pb, Event as EventType, getImageUrl } from '../lib/pocketbase'
 import './Event.css'
 
@@ -106,7 +107,7 @@ export function Event({ id }: Props) {
         {event.description && (
           <section class="event-description">
             <h2>About</h2>
-            <div dangerouslySetInnerHTML={{ __html: event.description }} />
+            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(event.description) }} />
           </section>
         )}
 
