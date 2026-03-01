@@ -93,38 +93,91 @@ else
     NEXT_MONTH=$(date -v+30d +%Y-%m-%d)
 fi
 
-# Create events
+# Download placeholder images
+echo "Downloading event images..."
+IMG_DIR=$(mktemp -d)
+curl -sL "https://picsum.photos/seed/openmic/800/600" -o "$IMG_DIR/openmic.jpg"
+curl -sL "https://picsum.photos/seed/drawing/800/600" -o "$IMG_DIR/drawing.jpg"
+curl -sL "https://picsum.photos/seed/potluck/800/600" -o "$IMG_DIR/potluck.jpg"
+curl -sL "https://picsum.photos/seed/jazz/800/600" -o "$IMG_DIR/jazz.jpg"
+curl -sL "https://picsum.photos/seed/pottery/800/600" -o "$IMG_DIR/pottery.jpg"
+curl -sL "https://picsum.photos/seed/cleanup/800/600" -o "$IMG_DIR/cleanup.jpg"
+
+# Create events with images (using multipart form data)
 echo "Creating events..."
 
 curl -s -X POST "$BASE_URL/api/collections/events/records" \
-    -H "Content-Type: application/json" \
-    -d "{\"title\":\"Open Mic Night\",\"description\":\"<p>Join us for an evening of local talent! Singers, poets, comedians all welcome. Sign up at the door.</p><p>Free entry, donations appreciated.</p>\",\"start_datetime\":\"${TOMORROW}T19:00:00Z\",\"end_datetime\":\"${TOMORROW}T22:00:00Z\",\"place\":\"$PLACE1\",\"tags\":[\"$MUSIC_TAG\",\"$COMMUNITY_TAG\"],\"status\":\"published\"}" > /dev/null
+    -F "title=Open Mic Night" \
+    -F "description=<p>Join us for an evening of local talent! Singers, poets, comedians all welcome. Sign up at the door.</p><p>Free entry, donations appreciated.</p>" \
+    -F "start_datetime=${TOMORROW}T19:00:00Z" \
+    -F "end_datetime=${TOMORROW}T22:00:00Z" \
+    -F "place=$PLACE1" \
+    -F "tags=$MUSIC_TAG" \
+    -F "tags=$COMMUNITY_TAG" \
+    -F "status=published" \
+    -F "image=@$IMG_DIR/openmic.jpg" > /dev/null
 echo "  Created: Open Mic Night"
 
 curl -s -X POST "$BASE_URL/api/collections/events/records" \
-    -H "Content-Type: application/json" \
-    -d "{\"title\":\"Figure Drawing Workshop\",\"description\":\"<p>Weekly figure drawing session with live models. All skill levels welcome.</p><p>Bring your own materials or use ours for a small fee.</p>\",\"start_datetime\":\"${NEXT_WEEK}T14:00:00Z\",\"end_datetime\":\"${NEXT_WEEK}T17:00:00Z\",\"place\":\"$PLACE2\",\"tags\":[\"$ART_TAG\",\"$WORKSHOP_TAG\"],\"status\":\"published\"}" > /dev/null
+    -F "title=Figure Drawing Workshop" \
+    -F "description=<p>Weekly figure drawing session with live models. All skill levels welcome.</p><p>Bring your own materials or use ours for a small fee.</p>" \
+    -F "start_datetime=${NEXT_WEEK}T14:00:00Z" \
+    -F "end_datetime=${NEXT_WEEK}T17:00:00Z" \
+    -F "place=$PLACE2" \
+    -F "tags=$ART_TAG" \
+    -F "tags=$WORKSHOP_TAG" \
+    -F "status=published" \
+    -F "image=@$IMG_DIR/drawing.jpg" > /dev/null
 echo "  Created: Figure Drawing Workshop"
 
 curl -s -X POST "$BASE_URL/api/collections/events/records" \
-    -H "Content-Type: application/json" \
-    -d "{\"title\":\"Community Potluck\",\"description\":\"<p>Monthly community potluck in the park! Bring a dish to share and meet your neighbors.</p><p>Tables and chairs provided. Bring your own plates and utensils.</p>\",\"start_datetime\":\"${NEXT_WEEK}T12:00:00Z\",\"end_datetime\":\"${NEXT_WEEK}T15:00:00Z\",\"place\":\"$PLACE3\",\"tags\":[\"$COMMUNITY_TAG\",\"$FOOD_TAG\"],\"status\":\"published\"}" > /dev/null
+    -F "title=Community Potluck" \
+    -F "description=<p>Monthly community potluck in the park! Bring a dish to share and meet your neighbors.</p><p>Tables and chairs provided. Bring your own plates and utensils.</p>" \
+    -F "start_datetime=${NEXT_WEEK}T12:00:00Z" \
+    -F "end_datetime=${NEXT_WEEK}T15:00:00Z" \
+    -F "place=$PLACE3" \
+    -F "tags=$COMMUNITY_TAG" \
+    -F "tags=$FOOD_TAG" \
+    -F "status=published" \
+    -F "image=@$IMG_DIR/potluck.jpg" > /dev/null
 echo "  Created: Community Potluck"
 
 curl -s -X POST "$BASE_URL/api/collections/events/records" \
-    -H "Content-Type: application/json" \
-    -d "{\"title\":\"Jazz in the Park\",\"description\":\"<p>Free jazz concert featuring local musicians. Bring a blanket and enjoy the music!</p><p>Food trucks will be on site.</p>\",\"start_datetime\":\"${IN_TWO_WEEKS}T18:00:00Z\",\"end_datetime\":\"${IN_TWO_WEEKS}T21:00:00Z\",\"place\":\"$PLACE3\",\"tags\":[\"$MUSIC_TAG\"],\"status\":\"published\"}" > /dev/null
+    -F "title=Jazz in the Park" \
+    -F "description=<p>Free jazz concert featuring local musicians. Bring a blanket and enjoy the music!</p><p>Food trucks will be on site.</p>" \
+    -F "start_datetime=${IN_TWO_WEEKS}T18:00:00Z" \
+    -F "end_datetime=${IN_TWO_WEEKS}T21:00:00Z" \
+    -F "place=$PLACE3" \
+    -F "tags=$MUSIC_TAG" \
+    -F "status=published" \
+    -F "image=@$IMG_DIR/jazz.jpg" > /dev/null
 echo "  Created: Jazz in the Park"
 
 curl -s -X POST "$BASE_URL/api/collections/events/records" \
-    -H "Content-Type: application/json" \
-    -d "{\"title\":\"Pottery for Beginners\",\"description\":\"<p>Learn the basics of wheel throwing in this hands-on workshop.</p><p>All materials provided. Wear clothes you don't mind getting dirty!</p>\",\"start_datetime\":\"${NEXT_MONTH}T10:00:00Z\",\"end_datetime\":\"${NEXT_MONTH}T13:00:00Z\",\"place\":\"$PLACE2\",\"tags\":[\"$ART_TAG\",\"$WORKSHOP_TAG\"],\"status\":\"published\"}" > /dev/null
+    -F "title=Pottery for Beginners" \
+    -F "description=<p>Learn the basics of wheel throwing in this hands-on workshop.</p><p>All materials provided. Wear clothes you don't mind getting dirty!</p>" \
+    -F "start_datetime=${NEXT_MONTH}T10:00:00Z" \
+    -F "end_datetime=${NEXT_MONTH}T13:00:00Z" \
+    -F "place=$PLACE2" \
+    -F "tags=$ART_TAG" \
+    -F "tags=$WORKSHOP_TAG" \
+    -F "status=published" \
+    -F "image=@$IMG_DIR/pottery.jpg" > /dev/null
 echo "  Created: Pottery for Beginners"
 
 curl -s -X POST "$BASE_URL/api/collections/events/records" \
-    -H "Content-Type: application/json" \
-    -d "{\"title\":\"Neighborhood Cleanup\",\"description\":\"<p>Help keep our neighborhood beautiful! We'll provide gloves, bags, and refreshments.</p><p>Meet at the Community Center entrance.</p>\",\"start_datetime\":\"${IN_TWO_WEEKS}T09:00:00Z\",\"end_datetime\":\"${IN_TWO_WEEKS}T12:00:00Z\",\"place\":\"$PLACE1\",\"tags\":[\"$COMMUNITY_TAG\"],\"status\":\"published\"}" > /dev/null
+    -F "title=Neighborhood Cleanup" \
+    -F "description=<p>Help keep our neighborhood beautiful! We'll provide gloves, bags, and refreshments.</p><p>Meet at the Community Center entrance.</p>" \
+    -F "start_datetime=${IN_TWO_WEEKS}T09:00:00Z" \
+    -F "end_datetime=${IN_TWO_WEEKS}T12:00:00Z" \
+    -F "place=$PLACE1" \
+    -F "tags=$COMMUNITY_TAG" \
+    -F "status=published" \
+    -F "image=@$IMG_DIR/cleanup.jpg" > /dev/null
 echo "  Created: Neighborhood Cleanup"
+
+# Cleanup temp images
+rm -rf "$IMG_DIR"
 
 echo ""
 echo "Seed complete! Created 3 users, 5 tags, 3 places, and 6 events."
