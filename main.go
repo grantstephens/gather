@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"gather/internal/activitypub"
+	"gather/internal/hooks"
 	"gather/internal/ical"
 	"gather/internal/rss"
 	_ "gather/migrations"
@@ -129,6 +130,20 @@ func main() {
 			re.Response.Header().Set("Cache-Control", "public, max-age=3600")
 			return re.Blob(200, "application/jrd+json", data)
 		})
+
+		// ActivityPub outbox
+		se.Router.GET("/ap/outbox", func(re *core.RequestEvent) error {
+			data, err := activitypub.GetOutbox(se.App, baseURL)
+			if err != nil {
+				return re.InternalServerError("Failed to get outbox", err)
+			}
+			re.Response.Header().Set("Content-Type", "application/activity+json")
+			re.Response.Header().Set("Cache-Control", "public, max-age=300")
+			return re.Blob(200, "application/activity+json", data)
+		})
+
+		// Register event hooks for ActivityPub delivery
+		hooks.RegisterEventHooks(se.App, baseURL)
 
 		// Serve static files, fallback to index.html for SPA routing
 		se.Router.GET("/{path...}", func(re *core.RequestEvent) error {
