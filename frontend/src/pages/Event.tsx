@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
 import { format } from 'date-fns'
+import { route } from 'preact-router'
 import L from 'leaflet'
 import DOMPurify from 'dompurify'
-import { pb, Event as EventType, getImageUrl } from '../lib/pocketbase'
+import { pb, Event as EventType, getImageUrl, canModerate } from '../lib/pocketbase'
 import './Event.css'
 
 interface Props {
@@ -14,8 +15,35 @@ export function Event({ id }: Props) {
   const [event, setEvent] = useState<EventType | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
+  const isModerator = canModerate()
+
+  const handleDelete = async () => {
+    if (!event || !confirm('Are you sure you want to delete this event?')) return
+    setActionLoading(true)
+    try {
+      await pb.collection('events').delete(event.id)
+      route('/')
+    } catch (err) {
+      alert('Failed to delete event')
+      setActionLoading(false)
+    }
+  }
+
+  const handleStatusChange = async (newStatus: 'published' | 'cancelled' | 'pending') => {
+    if (!event) return
+    setActionLoading(true)
+    try {
+      const updated = await pb.collection('events').update<EventType>(event.id, { status: newStatus })
+      setEvent({ ...event, status: updated.status })
+    } catch (err) {
+      alert('Failed to update event status')
+    } finally {
+      setActionLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!id) return
@@ -72,6 +100,11 @@ export function Event({ id }: Props) {
       )}
       <div class="event-content">
         <header class="event-header">
+          {event.status !== 'published' && (
+            <span class={`status-badge status-${event.status}`}>
+              {event.status}
+            </span>
+          )}
           <time class="event-datetime">
             {format(startDate, 'EEEE, MMMM d, yyyy · h:mm a')}
             {endDate && ` - ${format(endDate, 'h:mm a')}`}
@@ -112,9 +145,51 @@ export function Event({ id }: Props) {
         )}
 
         <footer class="event-actions">
-          <a href={`/event/${event.id}.ics`} class="btn">
+          <a href={`/ics/event/${event.id}`} class="btn">
             Download .ics
           </a>
+
+          {isModerator && (
+            <div class="admin-actions">
+              <a href={`/edit/${event.id}`} class="btn btn-secondary">
+                Edit
+              </a>
+              {event.status === 'pending' && (
+                <button
+                  class="btn btn-success"
+                  onClick={() => handleStatusChange('published')}
+                  disabled={actionLoading}
+                >
+                  Approve
+                </button>
+              )}
+              {event.status === 'published' && (
+                <button
+                  class="btn btn-warning"
+                  onClick={() => handleStatusChange('cancelled')}
+                  disabled={actionLoading}
+                >
+                  Cancel Event
+                </button>
+              )}
+              {event.status === 'cancelled' && (
+                <button
+                  class="btn btn-success"
+                  onClick={() => handleStatusChange('published')}
+                  disabled={actionLoading}
+                >
+                  Republish
+                </button>
+              )}
+              <button
+                class="btn btn-danger"
+                onClick={handleDelete}
+                disabled={actionLoading}
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </footer>
       </div>
     </article>

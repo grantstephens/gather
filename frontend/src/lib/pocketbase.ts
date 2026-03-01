@@ -69,3 +69,22 @@ export function getImageUrl(record: Event, thumb?: string): string | undefined {
   if (!record.image) return undefined
   return pb.files.getUrl(record, record.image, { thumb })
 }
+
+// Auth helpers
+export function getCurrentUser(): User | null {
+  return pb.authStore.model as User | null
+}
+
+export function isAdmin(): boolean {
+  const user = getCurrentUser()
+  return user?.role === 'admin'
+}
+
+export function isEditor(): boolean {
+  const user = getCurrentUser()
+  return user?.role === 'editor' || user?.role === 'admin'
+}
+
+export function canModerate(): boolean {
+  return isEditor()
+}
