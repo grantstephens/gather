@@ -22,8 +22,12 @@ export function Place({ id }: Props) {
         const placeRecord = await pb.collection('places').getOne<PlaceType>(id!)
         setPlace(placeRecord)
 
+        const now = new Date().toISOString()
         const eventRecords = await pb.collection('events').getList<Event>(1, 50, {
-          filter: `status="published" && place="${id}"`,
+          filter: pb.filter('status = "published" && place = {:placeId} && start_datetime >= {:now}', {
+            placeId: id,
+            now,
+          }),
           sort: 'start_datetime',
           expand: 'place,tags',
         })

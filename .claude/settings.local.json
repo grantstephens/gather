@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(superpowers:brainstorming)",
+      "WebFetch(domain:gancio.org)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(go mod init:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go build:*)",
+      "Bash(timeout 3 go run:*)",
+      "Bash(git -C /home/grant/Sync/Code/Web/community-calendar status)",
+      "Bash(git -C /home/grant/Sync/Code/Web/community-calendar add go.mod go.sum main.go)",
+      "Bash(git -C /home/grant/Sync/Code/Web/community-calendar commit -m \"$\\(cat <<''EOF''\nfeat: initialize PocketBase Go project\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C /home/grant/Sync/Code/Web/community-calendar log -1 --oneline)",
+      "Bash(go run:*)",
+      "Bash(sqlite3:*)",
+      "Bash(git -C /home/grant/Sync/Code/Web/community-calendar diff)",
+      "Bash(git -C /home/grant/Sync/Code/Web/community-calendar log --oneline -5)",
+      "Bash(git -C /home/grant/Sync/Code/Web/community-calendar add migrations/ main.go)",
+      "Bash(git -C /home/grant/Sync/Code/Web/community-calendar commit -m \"$\\(cat <<''EOF''\nfeat: add PocketBase collection migrations\n\nAdd database schema migrations for the core Gather data model:\n- tags: event categorization with unique names and optional colors\n- places: physical locations with OSM integration support\n- events: main events collection with relations to tags/places, \n  image uploads, status workflow, and recurrence support\n- settings: instance configuration \\(name, moderation, custom CSS\\)\n- ap_followers: ActivityPub follower tracking\n- ap_delivery_queue: ActivityPub outbound delivery queue\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npm install)",
+      "Bash(npm run build:*)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}

@@ -20,12 +20,16 @@ export function Tag({ name }: Props) {
     async function load() {
       try {
         const tagRecord = await pb.collection('tags').getFirstListItem<TagType>(
-          `name="${name}"`
+          pb.filter('name = {:name}', { name })
         )
         setTag(tagRecord)
 
+        const now = new Date().toISOString()
         const eventRecords = await pb.collection('events').getList<Event>(1, 50, {
-          filter: `status="published" && tags.id ?= "${tagRecord.id}"`,
+          filter: pb.filter('status = "published" && tags.id ?= {:tagId} && start_datetime >= {:now}', {
+            tagId: tagRecord.id,
+            now,
+          }),
           sort: 'start_datetime',
           expand: 'place,tags',
         })
