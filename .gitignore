@@ -1,0 +1,19 @@
+# Dependencies
+frontend/node_modules/
+
+# Build output
+frontend/dist/
+
+# PocketBase data
+pb_data/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Binary
+gather
