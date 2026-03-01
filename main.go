@@ -4,6 +4,8 @@ import (
 	"log"
 
 	"github.com/pocketbase/pocketbase"
+
+	_ "gather/migrations"
 )
 
 func main() {
