@@ -1,0 +1,72 @@
+.tag-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tag-picker-loading {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.tag-picker-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag-picker-empty {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border);
+  background: white;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+}
+
+.tag-pill:hover {
+  border-color: var(--color-primary);
+}
+
+.tag-pill.selected {
+  background: var(--tag-color, var(--color-primary));
+  border-color: var(--tag-color, var(--color-primary));
+  color: white;
+}
+
+.tag-check {
+  font-size: 0.75rem;
+  margin-left: 0.125rem;
+}
+
+.tag-picker-new {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tag-picker-new input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.tag-picker-new input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
