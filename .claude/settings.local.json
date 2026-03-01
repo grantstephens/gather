@@ -31,7 +31,8 @@
       "Bash(make:*)",
       "Bash(./gather:*)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''''Total tags: {d[\"\"totalItems\"\"]}''''\\)\" curl -s \"http://127.0.0.1:8090/api/collections/places/records\")",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(pgrep:*)"
     ]
   }
 }

@@ -19,8 +19,10 @@ func init() {
 		tags.Indexes = []string{
 			"CREATE UNIQUE INDEX idx_tags_name ON tags (name)",
 		}
-		tags.ListRule = nil // public
-		tags.ViewRule = nil
+		// Empty string = public access, nil = admin only
+		publicRule := ""
+		tags.ListRule = &publicRule
+		tags.ViewRule = &publicRule
 		if err := app.Save(tags); err != nil {
 			return err
 		}
@@ -59,8 +61,8 @@ func init() {
 		places.Fields.Add(&core.JSONField{
 			Name: "osm_data",
 		})
-		places.ListRule = nil
-		places.ViewRule = nil
+		places.ListRule = &publicRule
+		places.ViewRule = &publicRule
 		if err := app.Save(places); err != nil {
 			return err
 		}
