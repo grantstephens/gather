@@ -115,6 +115,21 @@ func main() {
 			return re.Blob(200, "application/activity+json", data)
 		})
 
+		// Webfinger
+		se.Router.GET("/.well-known/webfinger", func(re *core.RequestEvent) error {
+			resource := re.Request.URL.Query().Get("resource")
+			if resource == "" {
+				return re.BadRequestError("Missing resource parameter", nil)
+			}
+			data, err := activitypub.HandleWebfinger(resource, baseURL)
+			if err != nil {
+				return re.NotFoundError("Resource not found", err)
+			}
+			re.Response.Header().Set("Content-Type", "application/jrd+json")
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600")
+			return re.Blob(200, "application/jrd+json", data)
+		})
+
 		// Serve static files, fallback to index.html for SPA routing
 		se.Router.GET("/{path...}", func(re *core.RequestEvent) error {
 			path := re.Request.PathValue("path")
