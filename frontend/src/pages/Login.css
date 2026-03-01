@@ -1,0 +1,21 @@
+.login-page {
+  max-width: 400px;
+  margin: 2rem auto;
+}
+
+.login-page h1 {
+  margin-bottom: 2rem;
+}
+
+.toggle-mode {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.toggle-mode .link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font: inherit;
+}
