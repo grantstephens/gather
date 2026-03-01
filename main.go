@@ -142,6 +142,14 @@ func main() {
 			return re.Blob(200, "application/activity+json", data)
 		})
 
+		// ActivityPub inbox
+		se.Router.POST("/ap/inbox", func(re *core.RequestEvent) error {
+			if err := activitypub.HandleInbox(se.App, baseURL, re.Request.Body); err != nil {
+				return re.InternalServerError("Failed to process activity", err)
+			}
+			return re.NoContent(202)
+		})
+
 		// Register event hooks for ActivityPub delivery
 		hooks.RegisterEventHooks(se.App, baseURL)
 
