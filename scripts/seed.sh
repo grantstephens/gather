@@ -14,12 +14,22 @@ for i in {1..10}; do
     sleep 1
 done
 
-# Create test user
-echo "Creating test user..."
+# Create test users
+echo "Creating users..."
 curl -s -X POST "$BASE_URL/api/collections/users/records" \
     -H "Content-Type: application/json" \
-    -d '{"email":"user@example.com","password":"userpassword123","passwordConfirm":"userpassword123"}' > /dev/null
-echo "  User: user@example.com / userpassword123"
+    -d '{"email":"editor@example.com","password":"editorpassword123","passwordConfirm":"editorpassword123","role":"editor","display_name":"Editor"}' > /dev/null
+echo "  Editor: editor@example.com / editorpassword123"
+
+curl -s -X POST "$BASE_URL/api/collections/users/records" \
+    -H "Content-Type: application/json" \
+    -d '{"email":"admin@example.com","password":"adminpassword123","passwordConfirm":"adminpassword123","role":"admin","display_name":"Admin"}' > /dev/null
+echo "  Admin:  admin@example.com / adminpassword123"
+
+curl -s -X POST "$BASE_URL/api/collections/users/records" \
+    -H "Content-Type: application/json" \
+    -d '{"email":"user@example.com","password":"userpassword123","passwordConfirm":"userpassword123","role":"user","display_name":"Test User"}' > /dev/null
+echo "  User:  user@example.com / userpassword123"
 
 # Create tags
 echo "Creating tags..."
@@ -117,8 +127,9 @@ curl -s -X POST "$BASE_URL/api/collections/events/records" \
 echo "  Created: Neighborhood Cleanup"
 
 echo ""
-echo "Seed complete! Created 1 user, 5 tags, 3 places, and 6 events."
+echo "Seed complete! Created 3 users, 5 tags, 3 places, and 6 events."
 echo ""
-echo "Login at /login with:"
-echo "  Email:    user@example.com"
-echo "  Password: userpassword123"
+echo "Frontend login (/login):"
+echo "  admin@example.com  / adminpassword123  (admin)"
+echo "  editor@example.com / editorpassword123 (editor)"
+echo "  user@example.com   / userpassword123   (user)"

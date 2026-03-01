@@ -92,5 +92,6 @@ help:
 	@echo "  Password: adminpassword123"
 	@echo ""
 	@echo "Frontend login: http://127.0.0.1:8090/login"
-	@echo "  Email:    user@example.com"
-	@echo "  Password: userpassword123"
+	@echo "  admin@example.com  / adminpassword123  (admin)"
+	@echo "  editor@example.com / editorpassword123 (editor)"
+	@echo "  user@example.com   / userpassword123   (user)"
