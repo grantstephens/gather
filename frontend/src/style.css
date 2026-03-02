@@ -5,6 +5,13 @@
   --color-border: #e5e7eb;
 }
 
+[data-theme="dark"] {
+  --color-primary: #3b82f6;
+  --color-text: #f3f4f6;
+  --color-bg: #111827;
+  --color-border: #374151;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
