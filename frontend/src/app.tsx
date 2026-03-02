@@ -9,10 +9,17 @@ import { Login } from './pages/Login'
 import { Admin } from './pages/Admin'
 import { Edit } from './pages/Edit'
 import { pb, User } from './lib/pocketbase'
+import { getTheme, toggleTheme } from './lib/theme'
 import './style.css'
 
 export function App() {
   const [user, setUser] = useState<User | null>(pb.authStore.model as User | null)
+  const [theme, setThemeState] = useState(getTheme())
+
+  const handleToggleTheme = () => {
+    const newTheme = toggleTheme()
+    setThemeState(newTheme)
+  }
 
   useEffect(() => {
     return pb.authStore.onChange(() => {
@@ -57,6 +64,11 @@ export function App() {
           <Edit path="/edit/:id" />
         </Router>
       </main>
+      <footer class="app-footer">
+        <button onClick={handleToggleTheme} class="theme-toggle">
+          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+        </button>
+      </footer>
     </div>
   )
 }
