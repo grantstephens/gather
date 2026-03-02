@@ -49,3 +49,32 @@
 .error {
   color: #dc2626;
 }
+
+/* Dark mode overrides */
+[data-theme="dark"] .place-header {
+  border-bottom-color: var(--color-border);
+}
+
+[data-theme="dark"] .place-address {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .place-city {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .place-count {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .no-events {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .loading {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .error {
+  color: #f87171;
+}

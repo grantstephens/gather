@@ -53,3 +53,24 @@
 .error {
   color: #dc2626;
 }
+
+/* Dark mode overrides */
+[data-theme="dark"] .tag-header {
+  border-bottom-color: var(--color-border);
+}
+
+[data-theme="dark"] .tag-count {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .no-events {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .loading {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .error {
+  color: #f87171;
+}

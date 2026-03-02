@@ -70,3 +70,18 @@
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
 }
+
+/* Dark mode overrides */
+[data-theme="dark"] .tag-picker-loading,
+[data-theme="dark"] .tag-picker-empty {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .tag-pill {
+  background: var(--color-bg);
+}
+
+[data-theme="dark"] .tag-picker-new input {
+  background: var(--color-bg);
+  color: var(--color-text);
+}

@@ -20,16 +20,16 @@
   margin-bottom: 2rem;
 }
 
+.event-header h1 {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+}
+
 .event-datetime {
   display: block;
   font-size: 1rem;
   color: var(--color-primary);
   font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-
-.event-header h1 {
-  font-size: 2rem;
   margin-bottom: 1rem;
 }
 
@@ -37,6 +37,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-bottom: 0;
 }
 
 .event-tags .tag {
@@ -155,4 +156,29 @@
 
 .btn-danger:hover {
   background: #dc2626;
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] .event-location h2,
+[data-theme="dark"] .event-description h2 {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .place-address {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .status-pending {
+  background: #78350f;
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .status-cancelled {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .status-draft {
+  background: #374151;
+  color: #d1d5db;
 }

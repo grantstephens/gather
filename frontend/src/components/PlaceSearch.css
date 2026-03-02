@@ -194,3 +194,53 @@
 .btn-secondary:hover {
   background: #d1d5db;
 }
+
+/* Dark mode overrides */
+[data-theme="dark"] .place-loading {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .place-results {
+  background: var(--color-bg);
+}
+
+[data-theme="dark"] .place-results li button:hover {
+  background: #374151;
+}
+
+[data-theme="dark"] .place-results .result-address {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .place-no-results {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .place-selected {
+  background: #1f2937;
+}
+
+[data-theme="dark"] .place-info .place-address {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .place-clear {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .manual-place-form {
+  background: #1f2937;
+}
+
+[data-theme="dark"] .manual-place-form input {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: #4b5563;
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background: #6b7280;
+}

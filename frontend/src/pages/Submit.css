@@ -50,6 +50,7 @@
 
 .form-group input[type="text"],
 .form-group input[type="email"],
+.form-group input[type="password"],
 .form-group input[type="date"],
 .form-group input[type="time"],
 .form-group textarea {
@@ -173,4 +174,35 @@
 .btn-large:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] .submit-notice {
+  background: #78350f;
+  border-color: #b45309;
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .submit-error {
+  background: #7f1d1d;
+  border-color: #b91c1c;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .form-hint {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .image-upload-hint {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .form-group input[type="text"],
+[data-theme="dark"] .form-group input[type="email"],
+[data-theme="dark"] .form-group input[type="password"],
+[data-theme="dark"] .form-group input[type="date"],
+[data-theme="dark"] .form-group input[type="time"],
+[data-theme="dark"] .form-group textarea {
+  background: var(--color-bg);
+  color: var(--color-text);
 }

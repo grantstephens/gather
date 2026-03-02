@@ -21,3 +21,10 @@
   text-align: center;
 }
 
+/* Dark mode overrides */
+[data-theme="dark"] .login-page .error-message {
+  background: #7f1d1d;
+  border-color: #b91c1c;
+  color: #fca5a5;
+}
+

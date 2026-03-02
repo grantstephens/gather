@@ -1,0 +1,115 @@
+.markdown-editor {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.markdown-toolbar {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: #f9fafb;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.toolbar-btn {
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.toolbar-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.toolbar-btn.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.markdown-textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 0.75rem;
+  border: none;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+  outline: none;
+}
+
+.markdown-textarea:focus {
+  outline: none;
+}
+
+.markdown-preview {
+  min-height: 150px;
+  padding: 0.75rem;
+  background: white;
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-preview h1:first-child,
+.markdown-preview h2:first-child,
+.markdown-preview h3:first-child,
+.markdown-preview h4:first-child {
+  margin-top: 0;
+}
+
+.markdown-preview p {
+  margin-bottom: 0.75rem;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.markdown-preview a {
+  color: var(--color-primary);
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] .markdown-toolbar {
+  background: #1f2937;
+}
+
+[data-theme="dark"] .toolbar-btn {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .toolbar-btn:hover {
+  background: #4b5563;
+  border-color: #6b7280;
+}
+
+[data-theme="dark"] .markdown-textarea {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .markdown-preview {
+  background: var(--color-bg);
+}
