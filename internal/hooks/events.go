@@ -7,6 +7,12 @@ import (
 )
 
 func RegisterEventHooks(app core.App, baseURL string) {
+	app.OnRecordAfterCreateSuccess("events").BindFunc(func(e *core.RecordEvent) error {
+		// Send moderator alert for pending events
+		sendModeratorAlert(app, *e.Record, baseURL)
+		return e.Next()
+	})
+
 	app.OnRecordAfterUpdateSuccess("events").BindFunc(func(e *core.RecordEvent) error {
 		oldStatus := e.Record.Original().GetString("status")
 		newStatus := e.Record.GetString("status")
