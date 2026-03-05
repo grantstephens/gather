@@ -82,6 +82,86 @@ func getLocationString(app core.App, event core.Record) string {
 	return place.GetString("name")
 }
 
+// getSubmitterEmail returns the email address to notify for an event
+func getSubmitterEmail(app core.App, event core.Record) string {
+	// Check for anonymous submission
+	authorEmail := event.GetString("author_email")
+	if authorEmail != "" {
+		return authorEmail
+	}
+
+	// Check for registered user
+	authorID := event.GetString("author")
+	if authorID == "" {
+		return ""
+	}
+
+	author, err := app.FindRecordById("users", authorID)
+	if err != nil {
+		log.Printf("[WARN] Failed to find author %s for event %s: %v", authorID, event.Id, err)
+		return ""
+	}
+
+	return author.GetString("email")
+}
+
+// sendApprovalNotification sends email to submitter when event is approved
+func sendApprovalNotification(app core.App, event core.Record, baseURL string) {
+	email := getSubmitterEmail(app, event)
+	if email == "" {
+		log.Printf("[WARN] No email found for event %s approval notification", event.Id)
+		return
+	}
+
+	title := event.GetString("title")
+	startTime := formatEventTime(event.GetString("start_datetime"))
+	eventLink := fmt.Sprintf("%s/event/%s", baseURL, event.Id)
+
+	subject := fmt.Sprintf("Your Event Has Been Published: %s", title)
+
+	htmlBody := fmt.Sprintf(`<p>Good news! Your event has been approved and is now live.</p>
+
+<p><strong>Event:</strong> %s<br>
+<strong>Start:</strong> %s</p>
+
+<p><a href="%s">View your published event</a></p>
+
+<hr>
+<p><small>This is an automated notification from %s.</small></p>`,
+		html.EscapeString(title),
+		html.EscapeString(startTime),
+		eventLink,
+		appName)
+
+	textBody := fmt.Sprintf(`Good news! Your event has been approved and is now live.
+
+Event: %s
+Start: %s
+
+View your published event:
+%s
+
+---
+This is an automated notification from %s.`,
+		title, startTime, eventLink, appName)
+
+	mailClient := app.NewMailClient()
+	message := &mailer.Message{
+		From: mail.Address{
+			Name:    app.Settings().Meta.SenderName,
+			Address: app.Settings().Meta.SenderAddress,
+		},
+		To:      []mail.Address{{Address: email}},
+		Subject: subject,
+		HTML:    htmlBody,
+		Text:    textBody,
+	}
+
+	if err := mailClient.Send(message); err != nil {
+		log.Printf("[WARN] Failed to send approval notification to %s for event %s: %v", email, event.Id, err)
+	}
+}
+
 // sendModeratorAlert sends email to all moderators when a new event needs review
 func sendModeratorAlert(app core.App, event core.Record, baseURL string) {
 	// Only send for pending events
