@@ -1,4 +1,4 @@
-import PocketBase from 'pocketbase'
+import PocketBase, { type BaseModel } from 'pocketbase'
 
 export const pb = new PocketBase('/')
 
@@ -19,8 +19,7 @@ export interface Event {
   recurrence_rule?: string
   parent_event?: string
   ap_id?: string
-  created: string
-  updated: string
+  edit_token?: string
   expand?: {
     place?: Place
     tags?: Tag[]
@@ -39,12 +38,14 @@ export interface Place {
   city?: string
   country_code?: string
   osm_data?: Record<string, unknown>
+  status: 'pending' | 'approved'
 }
 
 export interface Tag {
   id: string
   name: string
   color?: string
+  status: 'pending' | 'approved'
 }
 
 export interface User {
@@ -54,14 +55,16 @@ export interface User {
   display_name?: string
 }
 
-export interface Settings {
-  id: string
-  instance_name?: string
-  instance_description?: string
-  allow_anonymous?: boolean
-  require_moderation?: boolean
-  custom_css?: string
-  ap_enabled?: boolean
+export interface Settings extends BaseModel {
+  instance_name: string
+  instance_description: string
+  allow_anonymous: boolean
+  require_moderation: boolean
+  custom_css: string
+  ap_enabled: boolean
+  ap_private_key: string
+  ap_public_key: string
+  logo?: string
 }
 
 // Helper to get image URL
