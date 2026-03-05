@@ -17,6 +17,16 @@ func RegisterEventHooks(app core.App, baseURL string) {
 		oldStatus := e.Record.Original().GetString("status")
 		newStatus := e.Record.GetString("status")
 
+		// Send approval notification
+		if oldStatus == "pending" && newStatus == "published" {
+			sendApprovalNotification(app, *e.Record, baseURL)
+		}
+
+		// Send rejection notification
+		if oldStatus == "pending" && newStatus == "cancelled" {
+			sendRejectionNotification(app, *e.Record, baseURL)
+		}
+
 		if oldStatus != "published" && newStatus == "published" {
 			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Create")
 			go activitypub.QueueDeliveryToFollowers(app, activity)
