@@ -8,13 +8,14 @@ import { Place } from './pages/Place'
 import { Login } from './pages/Login'
 import { Admin } from './pages/Admin'
 import { Edit } from './pages/Edit'
-import { pb, User } from './lib/pocketbase'
+import { pb, User, Settings } from './lib/pocketbase'
 import { getTheme, toggleTheme } from './lib/theme'
 import './style.css'
 
 export function App() {
   const [user, setUser] = useState<User | null>(pb.authStore.model as User | null)
   const [theme, setThemeState] = useState(getTheme())
+  const [settings, setSettings] = useState<Settings | null>(null)
 
   const handleToggleTheme = () => {
     const newTheme = toggleTheme()
@@ -27,6 +28,19 @@ export function App() {
     })
   }, [])
 
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const record = await pb.collection('settings').getFirstListItem<Settings>('')
+        setSettings(record)
+      } catch (err) {
+        // Use defaults if settings don't exist
+        setSettings(null)
+      }
+    }
+    loadSettings()
+  }, [])
+
   const handleLogout = () => {
     pb.authStore.clear()
   }
@@ -36,8 +50,17 @@ export function App() {
   return (
     <div class="app">
       <header>
-        <a href="/" class="logo">Gather</a>
         <nav>
+          <div class="nav-left">
+            {settings?.logo && (
+              <img
+                src={pb.files.getUrl(settings, settings.logo, { thumb: '100x100' })}
+                alt="Logo"
+                class="header-logo"
+              />
+            )}
+            <a href="/" class="logo">{settings?.instance_name || 'Gather'}</a>
+          </div>
           <a href="/submit">Submit Event</a>
           {isModeratorOrAdmin && (
             <a href="/admin">Admin</a>
