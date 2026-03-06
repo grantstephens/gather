@@ -11,11 +11,13 @@ import { Edit } from './pages/Edit'
 import { pb, User, Settings } from './lib/pocketbase'
 import { getTheme, toggleTheme } from './lib/theme'
 import './style.css'
+import './components/Navigation.css'
 
 export function App() {
   const [user, setUser] = useState<User | null>(pb.authStore.model as User | null)
   const [theme, setThemeState] = useState(getTheme())
   const [settings, setSettings] = useState<Settings | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleToggleTheme = () => {
     const newTheme = toggleTheme()
@@ -43,6 +45,10 @@ export function App() {
 
   const handleLogout = () => {
     pb.authStore.clear()
+  }
+
+  const handleNavClick = () => {
+    setMobileMenuOpen(false)
   }
 
   const isModeratorOrAdmin = user?.role === 'admin' || user?.role === 'editor'
