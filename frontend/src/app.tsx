@@ -43,6 +43,32 @@ export function App() {
     loadSettings()
   }, [])
 
+  // Close mobile menu on escape key or click outside
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false)
+      }
+    }
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('nav')) {
+        setMobileMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    document.addEventListener('click', handleClickOutside)
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [mobileMenuOpen])
+
   const handleLogout = () => {
     pb.authStore.clear()
   }
