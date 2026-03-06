@@ -35,18 +35,7 @@ header {
   border-bottom: 1px solid var(--color-border);
   padding-bottom: 1rem;
   margin-bottom: 2rem;
-}
-
-header nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.nav-left {
-  display: flex;
-  align-items: center;
+  position: relative;
 }
 
 .header-logo {
