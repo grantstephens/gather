@@ -17,3 +17,6 @@ pb_data/
 
 # Binary
 gather
+
+# Worktrees
+.worktrees/
