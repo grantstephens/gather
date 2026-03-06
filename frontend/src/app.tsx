@@ -65,20 +65,36 @@ export function App() {
                 class="header-logo"
               />
             )}
-            <a href="/" class="logo">{settings?.instance_name || 'Gather'}</a>
+            <a href="/" class="logo" onClick={handleNavClick}>
+              {settings?.instance_name || 'Gather'}
+            </a>
           </div>
-          <a href="/submit">Submit Event</a>
-          {isModeratorOrAdmin && (
-            <a href="/admin">Admin</a>
-          )}
-          {user ? (
-            <>
-              <span class="user-email">{user.email}</span>
-              <button onClick={handleLogout} class="link">Logout</button>
-            </>
-          ) : (
-            <a href="/login">Login</a>
-          )}
+
+          <button
+            class="hamburger-button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            ☰
+          </button>
+
+          <div class={`nav-items ${mobileMenuOpen ? 'open' : ''}`}>
+            <a href="/submit" onClick={handleNavClick}>Submit Event</a>
+            {isModeratorOrAdmin && (
+              <a href="/admin" onClick={handleNavClick}>Admin</a>
+            )}
+            {user ? (
+              <>
+                <span class="user-email">{user.email}</span>
+                <button onClick={() => { handleLogout(); handleNavClick(); }} class="link">
+                  Logout
+                </button>
+              </>
+            ) : (
+              <a href="/login" onClick={handleNavClick}>Login</a>
+            )}
+          </div>
         </nav>
       </header>
       <main>
