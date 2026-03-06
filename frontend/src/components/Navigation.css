@@ -1,0 +1,85 @@
+/* Desktop Navigation - Default */
+header nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+}
+
+.nav-items {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Hamburger button - hidden on desktop */
+.hamburger-button {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+/* Mobile Navigation */
+@media (max-width: 768px) {
+  .hamburger-button {
+    display: block;
+  }
+
+  .nav-items {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    gap: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease-in-out;
+    z-index: 100;
+  }
+
+  .nav-items.open {
+    max-height: 400px;
+  }
+
+  .nav-items a,
+  .nav-items button,
+  .nav-items .user-email {
+    padding: 1rem;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+  }
+
+  .nav-items a:last-child,
+  .nav-items button:last-child {
+    border-bottom: none;
+  }
+
+  header {
+    position: relative;
+  }
+
+  .nav-items .user-email {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Dark mode */
+[data-theme="dark"] .hamburger-button {
+  color: var(--color-text);
+}
