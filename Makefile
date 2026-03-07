@@ -1,7 +1,39 @@
-.PHONY: dev build build-frontend build-backend serve clean seed setup-admin help watch run reset
+.PHONY: dev dev-backend dev-frontend build build-frontend build-backend serve clean seed setup-admin help watch run reset stop test-unit test-api test-e2e test-e2e-ui test-watch test-coverage test
 
-# Default target: build everything, setup admin, seed data, start server
-dev: build setup-admin seed serve
+# Development: run Vite + backend with hot reload proxy
+dev: build-backend setup-admin
+	@echo "Starting development servers..."
+	@echo "Backend: http://127.0.0.1:8090 (proxies frontend to Vite)"
+	@echo "Vite:    http://localhost:5173 (direct)"
+	@echo "Press Ctrl+C to stop"
+	@echo ""
+	@bash -c '\
+		cleanup() { \
+			echo ""; \
+			echo "Shutting down..."; \
+			kill $$VITE_PID $$BACKEND_PID 2>/dev/null; \
+			wait; \
+			echo "Stopped."; \
+		}; \
+		trap cleanup EXIT; \
+		cd frontend && npm run dev & VITE_PID=$$!; \
+		sleep 2; \
+		DEV=1 ./gather serve & BACKEND_PID=$$!; \
+		sleep 2; \
+		$(MAKE) -s seed; \
+		wait \
+	'
+
+# Run just the backend in dev mode (assumes Vite is running separately)
+dev-backend:
+	@DEV=1 ./gather serve
+
+# Run just the frontend (Vite dev server)
+dev-frontend:
+	@cd frontend && npm run dev
+
+# Production: build everything, setup admin, seed data, start server
+prod: build setup-admin seed serve
 
 # Build everything
 build: build-frontend build-backend
@@ -27,16 +59,13 @@ setup-admin:
 	@echo "Setting up admin user..."
 	@./gather superuser upsert admin@example.com adminpassword123 2>/dev/null || true
 
-# Seed dummy data (requires server to be running or starts it temporarily)
+# Seed dummy data (requires server to be running)
 seed:
-	@echo "Seeding dummy data..."
 	@if curl -s "http://127.0.0.1:8090/api/health" > /dev/null 2>&1; then \
-		./scripts/seed.sh; \
+		echo "Seeding dummy data..."; \
+		PB_ADMIN_EMAIL=admin@example.com PB_ADMIN_PASSWORD=adminpassword123 python3 ./scripts/seed.py; \
 	else \
-		./gather serve & PID=$$!; \
-		sleep 2; \
-		./scripts/seed.sh; \
-		kill $$PID 2>/dev/null; \
+		echo "Server not running, skipping seed"; \
 	fi
 
 # Watch frontend for changes (development)
@@ -60,6 +89,45 @@ reset: clean
 	@rm -rf pb_data
 	@echo "Reset complete. Run 'make dev' to start fresh."
 
+# Stop any running dev servers
+stop:
+	@echo "Stopping dev servers..."
+	@-pkill -f "gather serve" 2>/dev/null
+	@-pkill -f "npm run dev" 2>/dev/null
+	@-pkill -f "node.*vite" 2>/dev/null
+	@-fuser -k 8090/tcp 5173/tcp 5174/tcp 5175/tcp 2>/dev/null
+	@echo "Stopped."
+
+# Testing
+test-unit:
+	@echo "Running Go unit tests..."
+	@go test ./internal/seo/... -v
+
+test-api:
+	@echo "Running API integration tests..."
+	@go test ./internal/api/... -v
+
+test-e2e:
+	@echo "Running E2E tests (headless)..."
+	@cd tests/e2e && npm test
+
+test-e2e-ui:
+	@echo "Running E2E tests (UI mode)..."
+	@cd tests/e2e && npm run test:ui
+
+test-watch:
+	@echo "Running E2E tests in watch mode..."
+	@cd tests/e2e && npm test -- --ui
+
+test-coverage:
+	@echo "Running tests with coverage..."
+	@go test -coverprofile=coverage.out ./...
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report: coverage.html"
+
+test: test-unit test-api test-e2e
+	@echo "All tests passed!"
+
 # Help
 help:
 	@echo "Gather - Community Calendar"
@@ -67,8 +135,10 @@ help:
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Development:"
-	@echo "  dev            Build, setup admin, seed data, and start server (default)"
-	@echo "  watch          Run Vite dev server for frontend hot-reload"
+	@echo "  dev            Run with hot reload (Vite + backend proxy)"
+	@echo "  dev-backend    Run backend only in dev mode (proxy to Vite)"
+	@echo "  dev-frontend   Run Vite dev server only"
+	@echo "  prod           Build, seed, and start production server"
 	@echo "  run            Start server (assumes already built)"
 	@echo ""
 	@echo "Building:"
@@ -81,6 +151,7 @@ help:
 	@echo "  seed           Add dummy data (tags, places, events)"
 	@echo ""
 	@echo "Cleanup:"
+	@echo "  stop           Kill any running dev servers"
 	@echo "  clean          Remove build artifacts"
 	@echo "  reset          Clean everything including database"
 	@echo ""
