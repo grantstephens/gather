@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend build build-frontend build-backend serve clean seed setup-admin help watch run reset stop test-unit test-api test-e2e test-e2e-ui test-watch test-coverage test
+.PHONY: dev dev-backend dev-frontend build build-frontend build-backend serve clean seed seed-test-users setup-admin help watch run reset stop test-unit test-api test-e2e test-e2e-ui test-watch test-coverage test
 
 # Development: run Vite + backend with hot reload proxy
 dev: build-backend setup-admin
@@ -21,6 +21,7 @@ dev: build-backend setup-admin
 		DEV=1 ./gather serve & BACKEND_PID=$$!; \
 		sleep 2; \
 		$(MAKE) -s seed; \
+		$(MAKE) -s seed-test-users; \
 		wait \
 	'
 
@@ -67,6 +68,11 @@ seed:
 	else \
 		echo "Server not running, skipping seed"; \
 	fi
+
+# Seed test users for E2E testing
+seed-test-users: setup-admin
+	@echo "Seeding test users..."
+	@./scripts/seed-test-users.sh
 
 # Watch frontend for changes (development)
 watch:
