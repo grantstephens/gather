@@ -35,6 +35,11 @@ export async function createTestPlace(
     },
   });
 
+  if (!response.ok()) {
+    const text = await response.text();
+    throw new Error(`Failed to create test place: ${response.status()} ${text}`);
+  }
+
   const data = await response.json();
   await apiContext.dispose();
 
@@ -65,6 +70,11 @@ export async function createTestTag(
       status: 'approved',
     },
   });
+
+  if (!response.ok()) {
+    const text = await response.text();
+    throw new Error(`Failed to create test tag: ${response.status()} ${text}`);
+  }
 
   const data = await response.json();
   await apiContext.dispose();
@@ -98,6 +108,11 @@ export async function createTestUser(
       display_name: `Test ${role}`,
     },
   });
+
+  if (!response.ok()) {
+    const text = await response.text();
+    throw new Error(`Failed to create test user: ${response.status()} ${text}`);
+  }
 
   const data = await response.json();
   await apiContext.dispose();
