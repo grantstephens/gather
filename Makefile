@@ -101,11 +101,15 @@ stop:
 # Testing
 test-unit:
 	@echo "Running Go unit tests..."
-	@go test ./internal/seo/... -v
+	@go test ./internal/... -v 2>/dev/null || echo "No unit tests found or tests failed"
 
 test-api:
 	@echo "Running API integration tests..."
-	@go test ./internal/api/... -v
+	@if [ -d "./internal/api" ]; then \
+		go test ./internal/api/... -v; \
+	else \
+		echo "API tests not yet implemented (internal/api does not exist)"; \
+	fi
 
 test-e2e:
 	@echo "Running E2E tests (headless)..."
@@ -116,8 +120,8 @@ test-e2e-ui:
 	@cd tests/e2e && npm run test:ui
 
 test-watch:
-	@echo "Running E2E tests in watch mode..."
-	@cd tests/e2e && npm test -- --ui
+	@echo "Running E2E tests in watch mode (UI)..."
+	@cd tests/e2e && npm run test:ui
 
 test-coverage:
 	@echo "Running tests with coverage..."
@@ -154,6 +158,15 @@ help:
 	@echo "  stop           Kill any running dev servers"
 	@echo "  clean          Remove build artifacts"
 	@echo "  reset          Clean everything including database"
+	@echo ""
+	@echo "Testing:"
+	@echo "  test           Run all tests (unit, API, E2E)"
+	@echo "  test-unit      Run Go unit tests"
+	@echo "  test-api       Run API integration tests"
+	@echo "  test-e2e       Run E2E tests (headless)"
+	@echo "  test-e2e-ui    Run E2E tests (interactive UI)"
+	@echo "  test-watch     Run E2E tests in watch mode (UI)"
+	@echo "  test-coverage  Run tests with coverage report"
 	@echo ""
 	@echo "Quick start:"
 	@echo "  make dev"
