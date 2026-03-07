@@ -11,6 +11,7 @@ import (
 	"gather/internal/hooks"
 	"gather/internal/ical"
 	"gather/internal/rss"
+	"gather/internal/seo"
 	_ "gather/migrations"
 )
 
@@ -152,6 +153,40 @@ func main() {
 
 		// Register event hooks for ActivityPub delivery
 		hooks.RegisterEventHooks(se.App, baseURL)
+
+		// Schema.org Event metadata for bots
+		se.Router.GET("/event/{id}", func(re *core.RequestEvent) error {
+			userAgent := re.Request.Header.Get("User-Agent")
+
+			// Non-bots get the SPA
+			if !seo.IsBot(userAgent) {
+				return re.FileFS(frontend, "index.html")
+			}
+
+			id := re.Request.PathValue("id")
+
+			// Fetch event - only published events
+			event, err := se.App.FindRecordById("events", id)
+			if err != nil {
+				return re.FileFS(frontend, "index.html") // Let SPA handle 404
+			}
+
+			// Only serve metadata for published events
+			if event.GetString("status") != "published" {
+				return re.FileFS(frontend, "index.html")
+			}
+
+			// Generate HTML with metadata
+			html, err := seo.GenerateEventHTML(se.App, event, baseURL)
+			if err != nil {
+				log.Println("Failed to generate SEO HTML:", err)
+				return re.FileFS(frontend, "index.html") // Fallback to SPA
+			}
+
+			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300")
+			return re.Blob(200, "text/html", html)
+		})
 
 		// Serve static files, fallback to index.html for SPA routing
 		se.Router.GET("/{path...}", func(re *core.RequestEvent) error {
