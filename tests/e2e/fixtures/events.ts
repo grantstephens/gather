@@ -2,10 +2,11 @@ export interface TestEventData {
   title: string;
   description: string;
   start_datetime: string;
-  end_datetime: string;
+  end_datetime?: string;
   status: 'draft' | 'pending' | 'published';
   place?: string;
   tags?: string[];
+  recurrence_rule?: string;
 }
 
 export function createTestEvent(overrides: Partial<TestEventData> = {}): TestEventData {
@@ -26,7 +27,7 @@ export function createTestEvent(overrides: Partial<TestEventData> = {}): TestEve
   };
 }
 
-export const SAMPLE_EVENTS = {
+export const SAMPLE_EVENTS: Record<string, Partial<TestEventData>> = {
   basic: {
     title: '[TEST] Basic Event',
     description: 'A simple test event',
@@ -40,4 +41,4 @@ export const SAMPLE_EVENTS = {
     description: 'Recurring weekly event',
     recurrence_rule: 'FREQ=WEEKLY;COUNT=4',
   }
-} as const;
+};

@@ -3,19 +3,19 @@ export const TEST_USERS = {
     email: 'test-admin@test.local',
     password: 'testpass123',
     role: 'admin',
-    displayName: 'Test Admin'
+    display_name: 'Test Admin'
   },
   editor: {
     email: 'test-editor@test.local',
     password: 'testpass123',
     role: 'editor',
-    displayName: 'Test Editor'
+    display_name: 'Test Editor'
   },
   user: {
     email: 'test-user@test.local',
     password: 'testpass123',
     role: 'user',
-    displayName: 'Test User'
+    display_name: 'Test User'
   }
 } as const;
 
