@@ -11,12 +11,18 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 )
 
-// NewTestApp creates a test PocketBase app instance
+// NewTestApp creates a test PocketBase app instance with migrations
 func NewTestApp(t *testing.T) *tests.TestApp {
 	app, err := tests.NewTestApp()
 	if err != nil {
 		t.Fatalf("Failed to create test app: %v", err)
 	}
+
+	// Run migrations to set up collections
+	if err := app.RunAllMigrations(); err != nil {
+		t.Fatalf("Failed to run migrations: %v", err)
+	}
+
 	return app
 }
 
