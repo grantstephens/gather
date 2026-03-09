@@ -71,5 +71,5 @@ export async function isLoggedIn(page: Page): Promise<boolean> {
     return data ? JSON.parse(data) : null;
   });
 
-  return authData !== null && authData.token;
+  return authData !== null && !!authData.token;
 }

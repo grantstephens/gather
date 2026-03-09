@@ -117,7 +117,7 @@ test-api:
 		echo "API tests not yet implemented (internal/api does not exist)"; \
 	fi
 
-test-e2e:
+test-e2e: build-backend
 	@echo "Running E2E tests (headless)..."
 	@cd tests/e2e && npm test
 

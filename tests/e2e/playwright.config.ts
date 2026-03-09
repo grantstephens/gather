@@ -6,6 +6,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
+  globalSetup: './global-setup.ts',
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
     ['list']
@@ -22,7 +23,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'cd ../.. && DEV=1 ./gather serve',
+    command: 'cd ../.. && ./gather serve',
     url: 'http://127.0.0.1:8090/api/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
