@@ -121,10 +121,11 @@ func init() {
 		events.Fields.Add(&core.TextField{
 			Name: "edit_token",
 		})
-		// API rules
-		publishedRule := "status = 'published'"
-		events.ListRule = &publishedRule
-		viewRule := "status = 'published'"
+		// API rules (basic rules first, update/delete rules added after author field)
+		// Published events visible to all, admins/editors can see all events
+		listRule := "status = 'published' || @request.auth.role = 'admin' || @request.auth.role = 'editor'"
+		events.ListRule = &listRule
+		viewRule := "status = 'published' || @request.auth.role = 'admin' || @request.auth.role = 'editor'"
 		events.ViewRule = &viewRule
 		createRule := ""
 		events.CreateRule = &createRule
@@ -147,6 +148,11 @@ func init() {
 			CollectionId: events.Id,
 			MaxSelect:    1,
 		})
+		// Now add update/delete rules (after author field exists)
+		updateRule := "@request.auth.role = 'admin' || @request.auth.role = 'editor' || (@request.auth.id = author && status != 'published')"
+		events.UpdateRule = &updateRule
+		deleteRule := "@request.auth.role = 'admin' || @request.auth.role = 'editor'"
+		events.DeleteRule = &deleteRule
 		if err := app.Save(events); err != nil {
 			return err
 		}

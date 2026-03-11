@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { route } from 'preact-router'
 import L from 'leaflet'
 import DOMPurify from 'dompurify'
+import { marked } from 'marked'
 import { pb, Event as EventType, getImageUrl, canModerate } from '../lib/pocketbase'
 import './Event.css'
 
@@ -105,11 +106,11 @@ export function Event({ id }: Props) {
               {event.status}
             </span>
           )}
+          <h1>{event.title}</h1>
           <time class="event-datetime">
             {format(startDate, 'EEEE, MMMM d, yyyy · h:mm a')}
             {endDate && ` - ${format(endDate, 'h:mm a')}`}
           </time>
-          <h1>{event.title}</h1>
           {event.expand?.tags && event.expand.tags.length > 0 && (
             <div class="event-tags">
               {event.expand.tags.map(tag => (
@@ -140,7 +141,7 @@ export function Event({ id }: Props) {
         {event.description && (
           <section class="event-description">
             <h2>About</h2>
-            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(event.description) }} />
+            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(event.description) as string) }} />
           </section>
         )}
 
