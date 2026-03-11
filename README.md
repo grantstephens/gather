@@ -55,6 +55,36 @@ make reset         # Clean everything including database
 make prod          # Build, setup admin, seed, and start server
 ```
 
+### Docker
+
+#### Using Published Images (GHCR)
+
+```bash
+# Pull and run the latest image
+docker run -d \
+  --name gather \
+  -p 8090:8090 \
+  -v gather-data:/app/pb_data \
+  ghcr.io/[owner]/gather:latest
+
+# Or use a specific version (short SHA)
+docker run -d \
+  --name gather \
+  -p 8090:8090 \
+  -v gather-data:/app/pb_data \
+  ghcr.io/[owner]/gather:sha-abc1234
+```
+
+#### Building Locally
+
+```bash
+make docker-build  # Build Docker image
+make docker-run    # Run container with persistent volume
+make docker-stop   # Stop and remove container
+```
+
+**Note:** Replace `[owner]` with your GitHub username or organization name.
+
 ## Testing
 
 ### Running Tests

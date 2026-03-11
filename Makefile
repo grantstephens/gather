@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend build build-frontend build-backend serve clean seed seed-test-users setup-admin help watch run reset stop test-unit test-api test-e2e test-e2e-ui test-watch test-coverage test
+.PHONY: dev dev-backend dev-frontend build build-frontend build-backend serve clean seed seed-test-users setup-admin help watch run reset stop test-unit test-api test-e2e test-e2e-ui test-watch test-coverage test docker-build docker-run docker-stop
 
 # Development: run Vite + backend with hot reload proxy
 dev: build-backend setup-admin
@@ -138,6 +138,24 @@ test-coverage:
 test: test-unit test-api test-e2e
 	@echo "All tests passed!"
 
+# Docker
+docker-build:
+	@echo "Building Docker image..."
+	@docker build -t gather:latest .
+
+docker-run:
+	@echo "Running Docker container..."
+	@docker run -d \
+		--name gather \
+		-p 8090:8090 \
+		-v gather-data:/app/pb_data \
+		gather:latest
+
+docker-stop:
+	@echo "Stopping and removing Docker container..."
+	@docker stop gather 2>/dev/null || true
+	@docker rm gather 2>/dev/null || true
+
 # Help
 help:
 	@echo "Gather - Community Calendar"
@@ -173,6 +191,11 @@ help:
 	@echo "  test-e2e-ui    Run E2E tests (interactive UI)"
 	@echo "  test-watch     Run E2E tests in watch mode (UI)"
 	@echo "  test-coverage  Run tests with coverage report"
+	@echo ""
+	@echo "Docker:"
+	@echo "  docker-build   Build Docker image"
+	@echo "  docker-run     Run Docker container (detached)"
+	@echo "  docker-stop    Stop and remove Docker container"
 	@echo ""
 	@echo "Quick start:"
 	@echo "  make dev"

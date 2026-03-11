@@ -1,0 +1,35 @@
+# Build artifacts
+gather
+frontend/dist
+frontend/node_modules
+
+# Database
+pb_data
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+CLAUDE.md
+docs
+
+# Tests
+tests
+
+# Scripts
+scripts
+
+# Development files
+.env
+.env.local
+*.log
+
+# IDE
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
