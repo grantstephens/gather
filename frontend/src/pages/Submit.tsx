@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import { pb, Place, Tag } from '../lib/pocketbase'
 import { PlaceSearch } from '../components/PlaceSearch'
 import { TagPicker } from '../components/TagPicker'
+import { MarkdownEditor } from '../components/MarkdownEditor'
 import './Submit.css'
 
 interface Props {
@@ -130,13 +131,11 @@ export function Submit(_props: Props) {
         </div>
 
         <div class="form-group">
-          <label for="description">Description</label>
-          <textarea
-            id="description"
+          <label>Description</label>
+          <MarkdownEditor
             value={description}
-            onInput={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
+            onChange={setDescription}
             placeholder="Tell people more about your event..."
-            rows={5}
           />
         </div>
 
@@ -213,7 +212,7 @@ export function Submit(_props: Props) {
               />
               <label for="image" class="image-upload-label">
                 <span>Choose an image</span>
-                <span class="image-upload-hint">PNG, JPG up to 10MB</span>
+                <span class="image-upload-hint">Images auto-converted to WebP (max 5MB, no animated GIFs)</span>
               </label>
             </div>
           )}

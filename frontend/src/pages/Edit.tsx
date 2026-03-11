@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import { pb, Place, Tag, Event as EventType, canModerate, getImageUrl } from '../lib/pocketbase'
 import { PlaceSearch } from '../components/PlaceSearch'
 import { TagPicker } from '../components/TagPicker'
+import { MarkdownEditor } from '../components/MarkdownEditor'
 import './Submit.css'
 
 interface Props {
@@ -112,32 +113,33 @@ export function Edit({ id }: Props) {
     setSubmitting(true)
 
     try {
-      const formData = new FormData()
-      formData.append('title', title.trim())
-      formData.append('description', description.trim())
-      formData.append('start_datetime', new Date(`${startDate}T${startTime}`).toISOString())
-
-      if (endDate && endTime) {
-        formData.append('end_datetime', new Date(`${endDate}T${endTime}`).toISOString())
-      } else {
-        formData.append('end_datetime', '')
-      }
-
-      if (place) {
-        formData.append('place', place.id)
-      } else {
-        formData.append('place', '')
-      }
-
-      tags.forEach((t) => formData.append('tags', t.id))
-
+      // Use FormData only if we have a new image to upload
       if (image) {
+        const formData = new FormData()
+        formData.append('title', title.trim())
+        formData.append('description', description.trim())
+        formData.append('start_datetime', new Date(`${startDate}T${startTime}`).toISOString())
+        formData.append('end_datetime', endDate && endTime ? new Date(`${endDate}T${endTime}`).toISOString() : '')
+        formData.append('place', place?.id || '')
+        tags.forEach((t) => formData.append('tags', t.id))
         formData.append('image', image)
-      } else if (removeExistingImage) {
-        formData.append('image', '')
+        await pb.collection('events').update(eventData.id, formData)
+      } else {
+        // Use JSON for updates without new images (more reliable)
+        const updateData: Record<string, unknown> = {
+          title: title.trim(),
+          description: description.trim(),
+          start_datetime: new Date(`${startDate}T${startTime}`).toISOString(),
+          end_datetime: endDate && endTime ? new Date(`${endDate}T${endTime}`).toISOString() : '',
+          place: place?.id || '',
+          tags: tags.map(t => t.id),
+        }
+        // Clear image if user removed it
+        if (removeExistingImage) {
+          updateData.image = null
+        }
+        await pb.collection('events').update(eventData.id, updateData)
       }
-
-      await pb.collection('events').update(eventData.id, formData)
       route(`/event/${eventData.id}`)
     } catch (err) {
       console.error('Failed to update event:', err)
@@ -175,13 +177,11 @@ export function Edit({ id }: Props) {
         </div>
 
         <div class="form-group">
-          <label for="description">Description</label>
-          <textarea
-            id="description"
+          <label>Description</label>
+          <MarkdownEditor
             value={description}
-            onInput={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
+            onChange={setDescription}
             placeholder="Tell people more about your event..."
-            rows={5}
           />
         </div>
 
@@ -265,7 +265,7 @@ export function Edit({ id }: Props) {
               />
               <label for="image" class="image-upload-label">
                 <span>Choose an image</span>
-                <span class="image-upload-hint">PNG, JPG up to 10MB</span>
+                <span class="image-upload-hint">Images auto-converted to WebP (max 5MB, no animated GIFs)</span>
               </label>
             </div>
           )}

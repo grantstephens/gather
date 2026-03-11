@@ -61,9 +61,9 @@ export function SettingsForm() {
     const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
 
-    const validTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp']
+    const validTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp', 'image/gif']
     if (!validTypes.includes(file.type)) {
-      setError('Logo must be PNG, JPG, SVG, or WebP')
+      setError('Logo must be an image (PNG, JPG, SVG, WebP, GIF). Raster images auto-convert to WebP.')
       return
     }
 
@@ -192,7 +192,7 @@ export function SettingsForm() {
             <input
               type="file"
               id="logo"
-              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              accept="image/*"
               onChange={handleLogoChange}
               disabled={saving}
             />

@@ -2,6 +2,9 @@ package main
 
 import (
 	"log"
+	"net/http/httputil"
+	"net/url"
+	"os"
 	"strings"
 
 	"github.com/pocketbase/pocketbase"
@@ -151,8 +154,40 @@ func main() {
 			return re.NoContent(202)
 		})
 
-		// Register event hooks for ActivityPub delivery
+		// Favicon route - serves logo from settings
+		se.Router.GET("/favicon.ico", func(re *core.RequestEvent) error {
+			settings, err := se.App.FindFirstRecordByFilter("settings", "")
+			if err != nil {
+				// No settings record, return 404
+				return re.NotFoundError("No favicon configured", nil)
+			}
+
+			logo := settings.GetString("logo")
+			if logo == "" {
+				// No logo configured, return 404
+				return re.NotFoundError("No favicon configured", nil)
+			}
+
+			// Construct PocketBase file URL
+			fileURL := baseURL + "/api/files/" + settings.Collection().Name + "/" + settings.Id + "/" + logo
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300")
+			return re.Redirect(302, fileURL)
+		})
+
+		// Register hooks
+		hooks.RegisterUserHooks(se.App)
 		hooks.RegisterEventHooks(se.App, baseURL)
+		hooks.RegisterModerationHooks(se.App)
+		hooks.RegisterImageConversionHooks(se.App)
+
+		// Dev mode: proxy to Vite dev server
+		devMode := os.Getenv("DEV") != ""
+		var viteProxy *httputil.ReverseProxy
+		if devMode {
+			viteURL, _ := url.Parse("http://localhost:5173")
+			viteProxy = httputil.NewSingleHostReverseProxy(viteURL)
+			log.Println("Dev mode: proxying frontend to http://localhost:5173")
+		}
 
 		// Schema.org Event metadata for bots
 		se.Router.GET("/event/{id}", func(re *core.RequestEvent) error {
@@ -195,6 +230,12 @@ func main() {
 			// Skip API and admin routes
 			if strings.HasPrefix(path, "api/") || strings.HasPrefix(path, "_/") {
 				return re.Next()
+			}
+
+			// Dev mode: proxy to Vite
+			if devMode && viteProxy != nil {
+				viteProxy.ServeHTTP(re.Response, re.Request)
+				return nil
 			}
 
 			// Try to serve the file
