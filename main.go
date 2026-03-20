@@ -105,6 +105,23 @@ func main() {
 			return re.Blob(200, "text/calendar", data)
 		})
 
+		// Sitemap
+		se.Router.GET("/sitemap.xml", func(re *core.RequestEvent) error {
+			data, err := seo.GenerateSitemap(se.App, baseURL)
+			if err != nil {
+				return re.InternalServerError("Failed to generate sitemap", err)
+			}
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600")
+			return re.Blob(200, "application/xml", data)
+		})
+
+		// Robots.txt
+		se.Router.GET("/robots.txt", func(re *core.RequestEvent) error {
+			content := seo.BuildRobotsTxt(baseURL)
+			re.Response.Header().Set("Cache-Control", "public, max-age=86400")
+			return re.String(200, content)
+		})
+
 		// ActivityPub actor
 		se.Router.GET("/ap/actor", func(re *core.RequestEvent) error {
 			actor, err := activitypub.GetActor(se.App, baseURL)
