@@ -50,9 +50,20 @@ export function Event({ id }: Props) {
     if (!id) return
     async function load() {
       try {
-        const result = await pb.collection('events').getOne<EventType>(id!, {
-          expand: 'place,tags,author',
-        })
+        let result: EventType
+        try {
+          result = await pb.collection('events').getOne<EventType>(id!, {
+            expand: 'place,tags,author',
+          })
+        } catch {
+          // Fall back to slug lookup
+          const records = await pb.collection('events').getList<EventType>(1, 1, {
+            filter: `slug = "${id}"`,
+            expand: 'place,tags,author',
+          })
+          if (records.items.length === 0) throw new Error('Event not found')
+          result = records.items[0]
+        }
         setEvent(result)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Event not found')

@@ -67,7 +67,7 @@ func GenerateEventJSONLD(app core.App, event *core.Record, baseURL string) ([]by
 		StartDate:           formatDateTime(event.GetDateTime("start_datetime")),
 		EventStatus:         mapEventStatus(event.GetString("status")),
 		EventAttendanceMode: determineAttendanceMode(event),
-		URL:                 fmt.Sprintf("%s/event/%s", baseURL, event.Id),
+		URL:                 eventPageURL(baseURL, event),
 	}
 
 	// Add end date if it exists, otherwise default to start + 2 hours

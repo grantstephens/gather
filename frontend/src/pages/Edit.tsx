@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
-import { pb, Place, Tag, Event as EventType, canModerate, getImageUrl } from '../lib/pocketbase'
+import { pb, Place, Tag, Event as EventType, canModerate, getImageUrl, eventPath } from '../lib/pocketbase'
 import { PlaceSearch } from '../components/PlaceSearch'
 import { TagPicker } from '../components/TagPicker'
 import { MarkdownEditor } from '../components/MarkdownEditor'
@@ -140,7 +140,7 @@ export function Edit({ id }: Props) {
         }
         await pb.collection('events').update(eventData.id, updateData)
       }
-      route(`/event/${eventData.id}`)
+      route(eventPath(eventData))
     } catch (err) {
       console.error('Failed to update event:', err)
       setError(err instanceof Error ? err.message : 'Failed to update event')
@@ -275,7 +275,7 @@ export function Edit({ id }: Props) {
           <button type="submit" class="btn btn-primary btn-large" disabled={submitting}>
             {submitting ? 'Saving...' : 'Save Changes'}
           </button>
-          <a href={`/event/${eventData.id}`} class="btn btn-secondary btn-large">
+          <a href={eventPath(eventData)} class="btn btn-secondary btn-large">
             Cancel
           </a>
         </div>

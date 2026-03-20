@@ -5,6 +5,7 @@ export const pb = new PocketBase('/')
 // Types for our collections
 export interface Event {
   id: string
+  slug?: string
   title: string
   description: string
   start_datetime: string
@@ -25,6 +26,11 @@ export interface Event {
     tags?: Tag[]
     author?: User
   }
+}
+
+// Returns the URL path for an event, preferring slug over ID
+export function eventPath(event: Pick<Event, 'id' | 'slug'>): string {
+  return `/event/${event.slug || event.id}`
 }
 
 export interface Place {

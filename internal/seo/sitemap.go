@@ -34,8 +34,12 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 		if lastMod == "" {
 			lastMod = time.Now().Format("2006-01-02")
 		}
+		urlPath := event.GetString("slug")
+		if urlPath == "" {
+			urlPath = event.Id
+		}
 		entries = append(entries, SitemapEntry{
-			URL:     fmt.Sprintf("%s/event/%s", baseURL, event.Id),
+			URL:     fmt.Sprintf("%s/event/%s", baseURL, urlPath),
 			LastMod: lastMod,
 		})
 	}

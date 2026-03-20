@@ -19,7 +19,7 @@ func GenerateMetaTags(app core.App, event *core.Record, baseURL string) string {
 
 	title := event.GetString("title")
 	description := truncateText(stripMarkdown(event.GetString("description")), 200)
-	eventURL := fmt.Sprintf("%s/event/%s", baseURL, event.Id)
+	eventURL := eventPageURL(baseURL, event)
 	imageURL := ""
 	if image := event.GetString("image"); image != "" {
 		imageURL = fmt.Sprintf("%s/api/files/events/%s/%s", baseURL, event.Id, image)
@@ -57,6 +57,14 @@ func buildMetaTags(title, description, eventURL, imageURL, instanceName string) 
 	}
 
 	return tags.String()
+}
+
+// eventPageURL returns the canonical URL for an event, using slug if available.
+func eventPageURL(baseURL string, event *core.Record) string {
+	if s := event.GetString("slug"); s != "" {
+		return fmt.Sprintf("%s/event/%s", baseURL, s)
+	}
+	return fmt.Sprintf("%s/event/%s", baseURL, event.Id)
 }
 
 // htmlEscape escapes HTML special characters to prevent XSS

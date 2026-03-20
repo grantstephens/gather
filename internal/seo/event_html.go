@@ -23,7 +23,7 @@ func GenerateEventHTML(app core.App, event *core.Record, baseURL string) ([]byte
 	}
 
 	metaTags := GenerateMetaTags(app, event, baseURL)
-	eventURL := fmt.Sprintf("%s/event/%s", baseURL, event.Id)
+	eventURL := eventPageURL(baseURL, event)
 	description := truncateText(stripMarkdown(event.GetString("description")), 300)
 
 	return []byte(buildEventHTML(

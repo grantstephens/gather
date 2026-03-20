@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { route } from 'preact-router'
-import { pb, Event, Place, Tag, canModerate } from '../lib/pocketbase'
+import { pb, Event, Place, Tag, canModerate, eventPath } from '../lib/pocketbase'
 import { EventCard } from '../components/EventCard'
 import { SettingsForm } from '../components/SettingsForm'
 import './Admin.css'
@@ -236,7 +236,7 @@ export function Admin(_props: Props) {
                   <button class="btn btn-success" onClick={() => handleApproveEvent(event.id)}>
                     Approve
                   </button>
-                  <a href={`/event/${event.id}`} class="btn btn-secondary">
+                  <a href={eventPath(event)} class="btn btn-secondary">
                     View
                   </a>
                   <button class="btn btn-danger" onClick={() => handleRejectEvent(event.id)}>
@@ -316,7 +316,7 @@ export function Admin(_props: Props) {
                 </div>
                 <EventCard event={event} />
                 <div class="admin-event-actions">
-                  <a href={`/event/${event.id}`} class="btn btn-secondary">
+                  <a href={eventPath(event)} class="btn btn-secondary">
                     View
                   </a>
                   <a href={`/edit/${event.id}`} class="btn btn-secondary">

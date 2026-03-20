@@ -1,5 +1,5 @@
 import { format } from 'date-fns'
-import { Event, getImageUrl } from '../lib/pocketbase'
+import { Event, eventPath, getImageUrl } from '../lib/pocketbase'
 import './EventCard.css'
 
 interface Props {
@@ -11,7 +11,7 @@ export function EventCard({ event }: Props) {
   const imageUrl = getImageUrl(event, '400x300')
 
   return (
-    <a href={`/event/${event.id}`} class="event-card">
+    <a href={eventPath(event)} class="event-card">
       {imageUrl && (
         <div class="event-card-image">
           <img src={imageUrl} alt="" />

@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks'
 import { route } from 'preact-router'
-import { pb, Place, Tag } from '../lib/pocketbase'
+import { pb, Place, Tag, eventPath, Event as EventType } from '../lib/pocketbase'
 import { PlaceSearch } from '../components/PlaceSearch'
 import { TagPicker } from '../components/TagPicker'
 import { MarkdownEditor } from '../components/MarkdownEditor'
@@ -95,7 +95,7 @@ export function Submit(_props: Props) {
       }
 
       const created = await pb.collection('events').create(formData)
-      route(`/event/${created.id}`)
+      route(eventPath(created as unknown as EventType))
     } catch (err) {
       console.error('Failed to create event:', err)
       setError(err instanceof Error ? err.message : 'Failed to create event')

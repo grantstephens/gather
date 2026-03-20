@@ -199,6 +199,7 @@ func main() {
 		hooks.RegisterEventHooks(se.App, baseURL)
 		hooks.RegisterModerationHooks(se.App)
 		hooks.RegisterImageConversionHooks(se.App)
+		hooks.RegisterSlugHooks(se.App)
 
 		// Dev mode: proxy to Vite dev server
 		devMode := os.Getenv("DEV") != ""
@@ -220,8 +221,11 @@ func main() {
 
 			id := re.Request.PathValue("id")
 
-			// Fetch event - only published events
-			event, err := se.App.FindRecordById("events", id)
+			// Try slug lookup first, then fall back to ID (backward compat)
+			event, err := se.App.FindFirstRecordByFilter("events", "slug = {:slug}", map[string]any{"slug": id})
+			if err != nil {
+				event, err = se.App.FindRecordById("events", id)
+			}
 			if err != nil {
 				return re.FileFS(frontend, "index.html") // Let SPA handle 404
 			}
