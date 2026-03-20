@@ -1,6 +1,7 @@
 package seo
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -80,6 +81,14 @@ func buildHomeHTML(instanceName, description, logoURL, baseURL string, events []
 		b.WriteString(fmt.Sprintf(`  <meta name="twitter:image" content="%s">`, htmlEscape(logoURL)) + "\n")
 	}
 	b.WriteString(fmt.Sprintf(`  <link rel="alternate" type="application/rss+xml" title="%s" href="%s/feed.rss">`, htmlEscape(instanceName), baseURL) + "\n")
+	if websiteLD, err := json.Marshal(map[string]string{
+		"@context": "https://schema.org",
+		"@type":    "WebSite",
+		"name":     instanceName,
+		"url":      baseURL + "/",
+	}); err == nil {
+		b.WriteString("  <script type=\"application/ld+json\">\n  " + string(websiteLD) + "\n  </script>\n")
+	}
 	b.WriteString("</head>\n<body>\n")
 	b.WriteString(fmt.Sprintf("  <h1>%s</h1>\n", htmlEscape(instanceName)))
 	if description != "" {

@@ -32,7 +32,7 @@ func GenerateMetaTags(app core.App, event *core.Record, baseURL string) string {
 func buildMetaTags(title, description, eventURL, imageURL, instanceName string) string {
 	var tags strings.Builder
 
-	tags.WriteString(fmt.Sprintf(`<meta property="og:type" content="website">%s`, "\n"))
+	tags.WriteString(fmt.Sprintf(`<meta property="og:type" content="article">%s`, "\n"))
 	tags.WriteString(fmt.Sprintf(`<meta property="og:site_name" content="%s">%s`, htmlEscape(instanceName), "\n"))
 	tags.WriteString(fmt.Sprintf(`<meta property="og:title" content="%s">%s`, htmlEscape(title), "\n"))
 	if description != "" {

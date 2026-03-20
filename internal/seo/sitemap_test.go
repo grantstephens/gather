@@ -7,12 +7,12 @@ import (
 
 func TestBuildSitemapXML(t *testing.T) {
 	baseURL := "https://example.com"
-	eventURLs := []string{
-		"https://example.com/event/abc123",
-		"https://example.com/event/def456",
+	entries := []SitemapEntry{
+		{URL: "https://example.com/event/abc123", LastMod: "2026-03-01"},
+		{URL: "https://example.com/event/def456", LastMod: "2026-03-10"},
 	}
 
-	xml := buildSitemapXML(baseURL, eventURLs)
+	xml := buildSitemapXML(baseURL, entries)
 
 	if !strings.Contains(xml, `<?xml version="1.0" encoding="UTF-8"?>`) {
 		t.Error("sitemap should start with XML declaration")

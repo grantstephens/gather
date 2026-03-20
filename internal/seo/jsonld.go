@@ -155,19 +155,22 @@ func determineAttendanceMode(event *core.Record) string {
 	return "https://schema.org/OfflineEventAttendanceMode"
 }
 
-// stripMarkdown removes markdown formatting from text (basic implementation)
+// stripMarkdown removes markdown and HTML formatting from text
 func stripMarkdown(text string) string {
+	// Remove HTML tags
+	text = regexp.MustCompile(`<[^>]+>`).ReplaceAllString(text, " ")
 	// Remove markdown links [text](url)
 	text = regexp.MustCompile(`\[([^\]]+)\]\([^\)]+\)`).ReplaceAllString(text, "$1")
 	// Remove bold/italic **text** or *text*
 	text = regexp.MustCompile(`\*\*([^\*]+)\*\*`).ReplaceAllString(text, "$1")
 	text = regexp.MustCompile(`\*([^\*]+)\*`).ReplaceAllString(text, "$1")
 	// Remove headings
-	text = regexp.MustCompile(`^#+\s+`).ReplaceAllString(text, "")
+	text = regexp.MustCompile(`(?m)^#+\s+`).ReplaceAllString(text, "")
 	// Remove list markers
-	text = regexp.MustCompile(`^[\*\-\+]\s+`).ReplaceAllString(text, "")
-	text = regexp.MustCompile(`^\d+\.\s+`).ReplaceAllString(text, "")
-	// Collapse multiple newlines
+	text = regexp.MustCompile(`(?m)^[\*\-\+]\s+`).ReplaceAllString(text, "")
+	text = regexp.MustCompile(`(?m)^\d+\.\s+`).ReplaceAllString(text, "")
+	// Collapse multiple spaces/newlines
+	text = regexp.MustCompile(`[ \t]+`).ReplaceAllString(text, " ")
 	text = regexp.MustCompile(`\n\n+`).ReplaceAllString(text, "\n")
 	// Trim whitespace
 	return strings.TrimSpace(text)
