@@ -244,7 +244,8 @@ func main() {
 		})
 
 		// Home page: SSR for bots, SPA/Vite for humans
-		se.Router.GET("/", func(re *core.RequestEvent) error {
+		// Use /{$} to match only exact root — GET / conflicts with GET /{path...} in Go 1.22+
+		se.Router.GET("/{$}", func(re *core.RequestEvent) error {
 			userAgent := re.Request.Header.Get("User-Agent")
 			if !seo.IsBot(userAgent) {
 				if devMode && viteProxy != nil {
