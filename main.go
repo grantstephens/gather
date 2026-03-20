@@ -240,6 +240,28 @@ func main() {
 			return re.Blob(200, "text/html", html)
 		})
 
+		// Home page: SSR for bots, SPA/Vite for humans
+		se.Router.GET("/", func(re *core.RequestEvent) error {
+			userAgent := re.Request.Header.Get("User-Agent")
+			if !seo.IsBot(userAgent) {
+				if devMode && viteProxy != nil {
+					viteProxy.ServeHTTP(re.Response, re.Request)
+					return nil
+				}
+				return re.FileFS(frontend, "index.html")
+			}
+
+			html, err := seo.GenerateHomeHTML(se.App, baseURL)
+			if err != nil {
+				log.Println("Failed to generate home SEO HTML:", err)
+				return re.FileFS(frontend, "index.html")
+			}
+
+			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
+			return re.Blob(200, "text/html", html)
+		})
+
 		// Serve static files, fallback to index.html for SPA routing
 		se.Router.GET("/{path...}", func(re *core.RequestEvent) error {
 			path := re.Request.PathValue("path")
