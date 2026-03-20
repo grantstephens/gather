@@ -42,10 +42,12 @@ func buildMetaTags(title, description, eventURL, imageURL, instanceName string) 
 
 	if imageURL != "" {
 		tags.WriteString(fmt.Sprintf(`<meta property="og:image" content="%s">%s`, htmlEscape(imageURL), "\n"))
+		tags.WriteString(fmt.Sprintf(`<meta property="og:image:alt" content="%s">%s`, htmlEscape(title), "\n"))
 		tags.WriteString(fmt.Sprintf(`<meta property="og:image:width" content="800">%s`, "\n"))
 		tags.WriteString(fmt.Sprintf(`<meta property="og:image:height" content="600">%s`, "\n"))
 		tags.WriteString(fmt.Sprintf(`<meta name="twitter:card" content="summary_large_image">%s`, "\n"))
 		tags.WriteString(fmt.Sprintf(`<meta name="twitter:image" content="%s">%s`, htmlEscape(imageURL), "\n"))
+		tags.WriteString(fmt.Sprintf(`<meta name="twitter:image:alt" content="%s">%s`, htmlEscape(title), "\n"))
 	} else {
 		tags.WriteString(fmt.Sprintf(`<meta name="twitter:card" content="summary">%s`, "\n"))
 	}

@@ -70,9 +70,11 @@ func GenerateEventJSONLD(app core.App, event *core.Record, baseURL string) ([]by
 		URL:                 fmt.Sprintf("%s/event/%s", baseURL, event.Id),
 	}
 
-	// Add end date if it exists
+	// Add end date if it exists, otherwise default to start + 2 hours
 	if endDateTime := event.GetDateTime("end_datetime"); !endDateTime.IsZero() {
 		jsonLD.EndDate = formatDateTime(endDateTime)
+	} else if startDateTime := event.GetDateTime("start_datetime"); !startDateTime.IsZero() {
+		jsonLD.EndDate = startDateTime.Time().Add(2 * time.Hour).Format(time.RFC3339)
 	}
 
 	// Add location if place exists
