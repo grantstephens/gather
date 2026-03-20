@@ -33,7 +33,10 @@ func main() {
 			return err
 		}
 
-		baseURL := se.App.Settings().Meta.AppURL
+		baseURL := os.Getenv("BASE_URL")
+		if baseURL == "" {
+			baseURL = se.App.Settings().Meta.AppURL
+		}
 		if baseURL == "" {
 			baseURL = "http://127.0.0.1:8090"
 		}
