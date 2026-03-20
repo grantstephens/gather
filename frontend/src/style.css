@@ -77,14 +77,18 @@ header .link {
 }
 
 .app-footer {
+  position: sticky;
+  bottom: 0;
   margin-top: 3rem;
-  padding-top: 1rem;
+  padding: 0.75rem 1rem;
   border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
+  z-index: 10;
 }
 
 .fediverse-link {
