@@ -23,12 +23,20 @@ body {
   color: var(--color-text);
   background: var(--color-bg);
   line-height: 1.5;
+  min-height: 100vh;
 }
 
 .app {
   max-width: 1200px;
   margin: 0 auto;
   padding: 1rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
 }
 
 header {
