@@ -9,7 +9,6 @@ import (
 
 // GenerateEventHTML creates a complete HTML page with Schema.org JSON-LD and meta tags for an event
 func GenerateEventHTML(app core.App, event *core.Record, baseURL string) ([]byte, error) {
-	// Get instance name from settings
 	instanceName := "Gather"
 	settings, err := app.FindFirstRecordByFilter("settings", "")
 	if err == nil {
@@ -18,56 +17,47 @@ func GenerateEventHTML(app core.App, event *core.Record, baseURL string) ([]byte
 		}
 	}
 
-	// Generate JSON-LD
 	jsonLD, err := GenerateEventJSONLD(app, event, baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate JSON-LD: %w", err)
 	}
 
-	// Generate meta tags
 	metaTags := GenerateMetaTags(app, event, baseURL)
+	eventURL := fmt.Sprintf("%s/event/%s", baseURL, event.Id)
+	description := truncateText(stripMarkdown(event.GetString("description")), 300)
 
-	// Build HTML
+	return []byte(buildEventHTML(
+		event.GetString("title"),
+		instanceName,
+		description,
+		eventURL,
+		metaTags,
+		string(jsonLD),
+	)), nil
+}
+
+func buildEventHTML(title, instanceName, description, eventURL, metaTags, jsonLD string) string {
 	var html strings.Builder
 	html.WriteString("<!DOCTYPE html>\n")
-	html.WriteString(`<html lang="en">`)
-	html.WriteString("\n<head>\n")
-	html.WriteString(`  <meta charset="UTF-8">`)
-	html.WriteString("\n")
-	html.WriteString(`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`)
-	html.WriteString("\n")
-
-	// Title
-	title := fmt.Sprintf("%s - %s", htmlEscape(event.GetString("title")), htmlEscape(instanceName))
-	html.WriteString(fmt.Sprintf(`  <title>%s</title>`, title))
-	html.WriteString("\n")
-
-	// Meta tags
-	html.WriteString("  ")
-	html.WriteString(strings.ReplaceAll(strings.TrimSpace(metaTags), "\n", "\n  "))
-	html.WriteString("\n")
-
-	// JSON-LD script
-	html.WriteString(`  <script type="application/ld+json">`)
-	html.WriteString("\n")
-	html.WriteString(string(jsonLD))
-	html.WriteString("\n")
-	html.WriteString(`  </script>`)
-	html.WriteString("\n")
-
-	// Client-side redirect (meta refresh)
-	eventURL := fmt.Sprintf("/event/%s", event.Id)
-	html.WriteString(fmt.Sprintf(`  <meta http-equiv="refresh" content="0;url=%s">`, eventURL))
-	html.WriteString("\n")
-
-	html.WriteString("</head>\n")
-	html.WriteString("<body>\n")
-	html.WriteString(`  <p>Redirecting to event page...</p>`)
-	html.WriteString("\n")
-	html.WriteString(fmt.Sprintf(`  <script>window.location.href = "%s";</script>`, eventURL))
-	html.WriteString("\n")
-	html.WriteString("</body>\n")
-	html.WriteString("</html>\n")
-
-	return []byte(html.String()), nil
+	html.WriteString(`<html lang="en">` + "\n<head>\n")
+	html.WriteString(`  <meta charset="UTF-8">` + "\n")
+	html.WriteString(`  <meta name="viewport" content="width=device-width, initial-scale=1.0">` + "\n")
+	html.WriteString(fmt.Sprintf(`  <title>%s - %s</title>`, htmlEscape(title), htmlEscape(instanceName)) + "\n")
+	html.WriteString(fmt.Sprintf(`  <link rel="canonical" href="%s">`, htmlEscape(eventURL)) + "\n")
+	if strings.TrimSpace(metaTags) != "" {
+		html.WriteString("  ")
+		html.WriteString(strings.ReplaceAll(strings.TrimSpace(metaTags), "\n", "\n  "))
+		html.WriteString("\n")
+	}
+	html.WriteString(`  <script type="application/ld+json">` + "\n")
+	html.WriteString(jsonLD + "\n")
+	html.WriteString(`  </script>` + "\n")
+	html.WriteString("</head>\n<body>\n")
+	html.WriteString(fmt.Sprintf(`  <h1>%s</h1>`, htmlEscape(title)) + "\n")
+	if description != "" {
+		html.WriteString(fmt.Sprintf(`  <p>%s</p>`, htmlEscape(description)) + "\n")
+	}
+	html.WriteString(fmt.Sprintf(`  <p><a href="%s">View full event details</a></p>`, htmlEscape(eventURL)) + "\n")
+	html.WriteString("</body>\n</html>\n")
+	return html.String()
 }
