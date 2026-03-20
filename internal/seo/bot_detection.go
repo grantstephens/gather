@@ -12,6 +12,12 @@ var botUserAgents = []string{
 	"WhatsApp",
 	"Discordbot",
 	"bingbot",
+	"Applebot",
+	"DuckDuckBot",
+	"YandexBot",
+	"ia_archiver",
+	"AhrefsBot",
+	"SemrushBot",
 }
 
 // IsBot checks if the User-Agent header belongs to a known bot/crawler

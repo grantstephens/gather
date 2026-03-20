@@ -48,6 +48,36 @@ func TestIsBot(t *testing.T) {
 			userAgent: "",
 			want:      false,
 		},
+		{
+			name:      "Applebot",
+			userAgent: "Applebot/0.1 (+http://www.apple.com/go/applebot)",
+			want:      true,
+		},
+		{
+			name:      "DuckDuckBot",
+			userAgent: "DuckDuckBot/1.0; (+http://duckduckgo.com/duckduckbot.html)",
+			want:      true,
+		},
+		{
+			name:      "YandexBot",
+			userAgent: "Mozilla/5.0 (compatible; YandexBot/3.0; +http://yandex.com/bots)",
+			want:      true,
+		},
+		{
+			name:      "Internet Archive",
+			userAgent: "Mozilla/5.0 (compatible; ia_archiver/1.0)",
+			want:      true,
+		},
+		{
+			name:      "AhrefsBot",
+			userAgent: "Mozilla/5.0 (compatible; AhrefsBot/7.0; +http://ahrefs.com/robot/)",
+			want:      true,
+		},
+		{
+			name:      "SemrushBot",
+			userAgent: "Mozilla/5.0 (compatible; SemrushBot/7; +http://www.semrush.com/bot.html)",
+			want:      true,
+		},
 	}
 
 	for _, tt := range tests {
