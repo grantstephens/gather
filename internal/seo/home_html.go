@@ -19,11 +19,15 @@ type HomeEvent struct {
 func GenerateHomeHTML(app core.App, baseURL string) ([]byte, error) {
 	instanceName := "Gather"
 	description := ""
+	logoURL := ""
 	if settings, err := app.FindFirstRecordByFilter("settings", ""); err == nil {
 		if name := settings.GetString("instance_name"); name != "" {
 			instanceName = name
 		}
 		description = settings.GetString("instance_description")
+		if logo := settings.GetString("logo"); logo != "" {
+			logoURL = baseURL + "/api/files/" + settings.Collection().Name + "/" + settings.Id + "/" + logo
+		}
 	}
 
 	today := time.Now().Format("2006-01-02")
@@ -46,10 +50,10 @@ func GenerateHomeHTML(app core.App, baseURL string) ([]byte, error) {
 		})
 	}
 
-	return []byte(buildHomeHTML(instanceName, description, baseURL, homeEvents)), nil
+	return []byte(buildHomeHTML(instanceName, description, logoURL, baseURL, homeEvents)), nil
 }
 
-func buildHomeHTML(instanceName, description, baseURL string, events []HomeEvent) string {
+func buildHomeHTML(instanceName, description, logoURL, baseURL string, events []HomeEvent) string {
 	var b strings.Builder
 
 	b.WriteString("<!DOCTYPE html>\n")
@@ -69,6 +73,11 @@ func buildHomeHTML(instanceName, description, baseURL string, events []HomeEvent
 	b.WriteString(fmt.Sprintf(`  <meta property="og:url" content="%s/">`, htmlEscape(baseURL)) + "\n")
 	if description != "" {
 		b.WriteString(fmt.Sprintf(`  <meta property="og:description" content="%s">`, htmlEscape(truncateText(description, 200))) + "\n")
+	}
+	if logoURL != "" {
+		b.WriteString(fmt.Sprintf(`  <meta property="og:image" content="%s">`, htmlEscape(logoURL)) + "\n")
+		b.WriteString(fmt.Sprintf(`  <meta name="twitter:card" content="summary">`) + "\n")
+		b.WriteString(fmt.Sprintf(`  <meta name="twitter:image" content="%s">`, htmlEscape(logoURL)) + "\n")
 	}
 	b.WriteString(fmt.Sprintf(`  <link rel="alternate" type="application/rss+xml" title="%s" href="%s/feed.rss">`, htmlEscape(instanceName), baseURL) + "\n")
 	b.WriteString("</head>\n<body>\n")
