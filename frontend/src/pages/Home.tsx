@@ -1,74 +1,95 @@
-import { useEffect, useState, useMemo } from 'preact/hooks'
+import { useEffect, useState, useRef } from 'preact/hooks'
 import { pb, Event, Tag } from '../lib/pocketbase'
 import { EventCard } from '../components/EventCard'
 import { MiniCalendar } from '../components/MiniCalendar'
 import './Home.css'
+
+const PAGE_SIZE = 20
 
 interface Props {
   path?: string
 }
 
 export function Home(_props: Props) {
-  const [allEvents, setAllEvents] = useState<Event[]>([])
+  const [events, setEvents] = useState<Event[]>([])
   const [tags, setTags] = useState<Tag[]>([])
+  const [eventDates, setEventDates] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const pageRef = useRef(1)
+  const loadingMoreRef = useRef(false)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const today = new Date().toISOString().split('T')[0]
 
+  // Fetch just the dates for the calendar (lightweight, all upcoming)
   useEffect(() => {
-    async function load() {
-      try {
-        const [eventsResult, tagsResult] = await Promise.all([
-          pb.collection('events').getList<Event>(1, 100, {
-            filter: `status = 'published' && start_datetime >= '${new Date().toISOString().split('T')[0]}'`,
-            sort: 'start_datetime',
-            expand: 'place,tags',
-          }),
-          pb.collection('tags').getFullList<Tag>(),
-        ])
-        setAllEvents(eventsResult.items)
-        setTags(tagsResult)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load events')
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
+    pb.collection('events').getFullList({
+      filter: `status = 'published' && start_datetime >= '${today}'`,
+      fields: 'start_datetime',
+    }).then((items: any[]) => {
+      const dates = new Set<string>()
+      items.forEach(e => dates.add(e.start_datetime.split(' ')[0]))
+      setEventDates(dates)
+    }).catch(() => {})
   }, [])
 
-  // Extract dates that have events
-  const eventDates = useMemo(() => {
-    const dates = new Set<string>()
-    allEvents.forEach(event => {
-      // PocketBase uses space separator, not 'T'
-      const date = event.start_datetime.split(' ')[0]
-      dates.add(date)
-    })
-    return dates
-  }, [allEvents])
+  useEffect(() => {
+    pb.collection('tags').getFullList<Tag>().then(setTags).catch(() => {})
+  }, [])
 
-  // Filter events by selected date
-  const filteredEvents = useMemo(() => {
-    if (!selectedDate) return allEvents
-    return allEvents.filter(event => event.start_datetime.startsWith(selectedDate))
-  }, [allEvents, selectedDate])
+  const fetchPage = async (page: number, date: string | null): Promise<boolean> => {
+    const dateFilter = date
+      ? `start_datetime >= '${date} 00:00:00' && start_datetime <= '${date} 23:59:59'`
+      : `start_datetime >= '${today}'`
+    const result = await pb.collection('events').getList<Event>(page, PAGE_SIZE, {
+      filter: `status = 'published' && ${dateFilter}`,
+      sort: 'start_datetime',
+      expand: 'place,tags',
+    })
+    setEvents(prev => page === 1 ? result.items : [...prev, ...result.items])
+    return result.page < result.totalPages
+  }
+
+  // Reset and load page 1 whenever date filter changes
+  useEffect(() => {
+    pageRef.current = 1
+    setLoading(true)
+    setError(null)
+    fetchPage(1, selectedDate)
+      .then(more => setHasMore(more))
+      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load events'))
+      .finally(() => setLoading(false))
+  }, [selectedDate])
+
+  // Infinite scroll — only when no date filter active
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel || !hasMore || selectedDate) return
+
+    const observer = new IntersectionObserver(async (entries) => {
+      if (!entries[0].isIntersecting || loadingMoreRef.current) return
+      loadingMoreRef.current = true
+      setLoadingMore(true)
+      const nextPage = pageRef.current + 1
+      try {
+        const more = await fetchPage(nextPage, null)
+        pageRef.current = nextPage
+        setHasMore(more)
+      } finally {
+        loadingMoreRef.current = false
+        setLoadingMore(false)
+      }
+    }, { rootMargin: '300px' })
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [hasMore, selectedDate])
 
   const handleDateSelect = (date: string) => {
-    // Toggle selection - if already selected, clear it
     setSelectedDate(prev => prev === date ? null : date)
-  }
-
-  const clearDateFilter = () => {
-    setSelectedDate(null)
-  }
-
-  if (loading) {
-    return <div class="loading">Loading events...</div>
-  }
-
-  if (error) {
-    return <div class="error">{error}</div>
   }
 
   const formatSelectedDate = (dateStr: string) => {
@@ -76,30 +97,31 @@ export function Home(_props: Props) {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   }
 
+  if (loading) return <div class="loading">Loading events...</div>
+  if (error) return <div class="error">{error}</div>
+
   return (
     <div class="home">
       <div class="home-main">
         <div class="events-header">
-          <h2>
-            {selectedDate ? formatSelectedDate(selectedDate) : 'Upcoming Events'}
-          </h2>
+          <h2>{selectedDate ? formatSelectedDate(selectedDate) : 'Upcoming Events'}</h2>
           {selectedDate && (
-            <button class="clear-filter" onClick={clearDateFilter}>
-              Show all
-            </button>
+            <button class="clear-filter" onClick={() => setSelectedDate(null)}>Show all</button>
           )}
         </div>
-        {filteredEvents.length === 0 ? (
+        {events.length === 0 ? (
           <p class="no-events">
             {selectedDate ? 'No events on this date' : 'No upcoming events'}
           </p>
         ) : (
           <div class="events-grid">
-            {filteredEvents.map(event => (
+            {events.map(event => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
         )}
+        <div ref={sentinelRef} />
+        {loadingMore && <p class="loading-more">Loading more events...</p>}
       </div>
       <aside class="home-sidebar">
         <div class="sidebar-section">
