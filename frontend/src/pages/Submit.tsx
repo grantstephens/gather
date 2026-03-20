@@ -212,7 +212,7 @@ export function Submit(_props: Props) {
               />
               <label for="image" class="image-upload-label">
                 <span>Choose an image</span>
-                <span class="image-upload-hint">Images auto-converted to WebP (max 5MB, no animated GIFs)</span>
+                <span class="image-upload-hint">Images auto-converted to WebP (max 20MB, no animated GIFs)</span>
               </label>
             </div>
           )}

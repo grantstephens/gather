@@ -100,7 +100,7 @@ func init() {
 		events.Fields.Add(&core.FileField{
 			Name:      "image",
 			MaxSelect: 1,
-			MaxSize:   5 * 1024 * 1024,
+			MaxSize:   20 * 1024 * 1024,
 			MimeTypes: []string{"image/jpeg", "image/png", "image/webp", "image/gif"},
 			Thumbs:    []string{"100x100", "400x300", "800x600"},
 		})
