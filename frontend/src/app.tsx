@@ -18,6 +18,18 @@ export function App() {
   const [theme, setThemeState] = useState(getTheme())
   const [settings, setSettings] = useState<Settings | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [fediverseDialogOpen, setFediverseDialogOpen] = useState(false)
+  const [fediverseInstance, setFediverseInstance] = useState('')
+
+  const handleFediverseFollow = (e: Event) => {
+    e.preventDefault()
+    const instance = fediverseInstance.trim().replace(/^https?:\/\//, '')
+    if (!instance) return
+    const actorUrl = `${window.location.origin}/ap/actor`
+    window.open(`https://${instance}/authorize_interaction?uri=${encodeURIComponent(actorUrl)}`, '_blank')
+    setFediverseDialogOpen(false)
+    setFediverseInstance('')
+  }
 
   const handleToggleTheme = () => {
     const newTheme = toggleTheme()
@@ -136,13 +148,29 @@ export function App() {
         </Router>
       </main>
       <footer class="app-footer">
-        <a
-          href={`https://${window.location.host}/ap/actor`}
-          class="fediverse-link"
-          title="Follow this calendar on the Fediverse"
-        >
+        <button onClick={() => setFediverseDialogOpen(true)} class="fediverse-link">
           Follow @events@{window.location.host}
-        </a>
+        </button>
+        {fediverseDialogOpen && (
+          <div class="fediverse-dialog-overlay" onClick={() => setFediverseDialogOpen(false)}>
+            <div class="fediverse-dialog" onClick={(e) => e.stopPropagation()}>
+              <p>Enter your Mastodon/Fediverse instance:</p>
+              <form onSubmit={handleFediverseFollow}>
+                <input
+                  type="text"
+                  placeholder="mastodon.social"
+                  value={fediverseInstance}
+                  onInput={(e) => setFediverseInstance((e.target as HTMLInputElement).value)}
+                  autoFocus
+                />
+                <div class="fediverse-dialog-actions">
+                  <button type="button" onClick={() => setFediverseDialogOpen(false)}>Cancel</button>
+                  <button type="submit">Follow</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
         <button onClick={handleToggleTheme} class="theme-toggle">
           {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
         </button>

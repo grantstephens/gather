@@ -95,6 +95,47 @@ header .link {
   color: var(--color-primary);
 }
 
+.fediverse-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.fediverse-dialog {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  width: min(360px, 90vw);
+}
+
+.fediverse-dialog p {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.fediverse-dialog input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.fediverse-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
 .theme-toggle {
   background: none;
   border: 1px solid var(--color-border);
