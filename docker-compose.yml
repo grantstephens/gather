@@ -1,18 +1,4 @@
 services:
-  caddy:
-    image: caddy:2-alpine
-    container_name: gather_caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - gather
-
   gather:
     # Pull pre-built image from GitHub Container Registry
     image: ghcr.io/${GITHUB_REPO_OWNER:-grantstephens}/gather:latest
@@ -24,9 +10,8 @@ services:
 
     container_name: gather
     restart: unless-stopped
-    # No longer exposed directly; Caddy proxies to it
-    expose:
-      - "8090"
+    ports:
+      - "8090:8090"
     volumes:
       # Persist database and uploaded files
       - gather_data:/app/pb_data
@@ -35,7 +20,7 @@ services:
       - PB_ADMIN_EMAIL=${PB_ADMIN_EMAIL:-admin@example.com}
       - PB_ADMIN_PASSWORD=${PB_ADMIN_PASSWORD:-changeme}
       # Base URL for ActivityPub federation
-      - BASE_URL=${BASE_URL:-https://yourdomain.com}
+      - BASE_URL=${BASE_URL:-http://localhost:8090}
       # Optional: encryption key for sensitive data
       - PB_ENCRYPTION_KEY=${PB_ENCRYPTION_KEY:-}
     healthcheck:
@@ -47,8 +32,4 @@ services:
 
 volumes:
   gather_data:
-    driver: local
-  caddy_data:
-    driver: local
-  caddy_config:
     driver: local

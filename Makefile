@@ -160,7 +160,7 @@ docker-stop:
 docker-up:
 	@echo "Starting with Docker Compose..."
 	@docker-compose up -d
-	@echo "✓ Gather is running at https://$$DOMAIN (set DOMAIN in .env)"
+	@echo "✓ Gather is running at http://localhost:8090"
 	@echo "  View logs: make docker-logs"
 
 docker-down:
@@ -168,11 +168,11 @@ docker-down:
 	@docker-compose down
 
 docker-logs:
-	@docker-compose logs -f
+	@docker-compose logs -f gather
 
 docker-restart:
 	@echo "Restarting Docker Compose..."
-	@docker-compose restart gather caddy
+	@docker-compose restart gather
 
 # Help
 help:
