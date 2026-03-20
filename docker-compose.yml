@@ -1,0 +1,54 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: gather_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - gather
+
+  gather:
+    # Pull pre-built image from GitHub Container Registry
+    image: ghcr.io/${GITHUB_REPO_OWNER:-grantstephens}/gather:latest
+
+    # Or uncomment to build locally instead of pulling from registry:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+
+    container_name: gather
+    restart: unless-stopped
+    # No longer exposed directly; Caddy proxies to it
+    expose:
+      - "8090"
+    volumes:
+      # Persist database and uploaded files
+      - gather_data:/app/pb_data
+    environment:
+      # PocketBase admin credentials (change these!)
+      - PB_ADMIN_EMAIL=${PB_ADMIN_EMAIL:-admin@example.com}
+      - PB_ADMIN_PASSWORD=${PB_ADMIN_PASSWORD:-changeme}
+      # Base URL for ActivityPub federation
+      - BASE_URL=${BASE_URL:-https://yourdomain.com}
+      # Optional: encryption key for sensitive data
+      - PB_ENCRYPTION_KEY=${PB_ENCRYPTION_KEY:-}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8090/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  gather_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local

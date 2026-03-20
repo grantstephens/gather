@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/filesystem"
 
 	"gather/internal/images"
 )
@@ -30,6 +31,11 @@ func RegisterImageConversionHooks(app core.App) {
 
 	app.OnRecordAfterUpdateSuccess("settings").BindFunc(func(e *core.RecordEvent) error {
 		return convertAndReplaceImage(e, "logo", true)
+	})
+
+	// Serve pre-generated WebP thumbnails instead of PocketBase's PNG thumbnails
+	app.OnFileDownloadRequest().BindFunc(func(e *core.FileDownloadRequestEvent) error {
+		return serveWebPThumbnail(e)
 	})
 }
 
@@ -122,6 +128,15 @@ func convertAndReplaceImage(e *core.RecordEvent, fieldName string, allowSVG bool
 		return e.Next()
 	}
 
+	// Pre-generate WebP thumbnails for common sizes
+	thumbSizes := []string{"400x300", "800x600", "100x100"}
+	for _, thumbSize := range thumbSizes {
+		if err := generateAndSaveWebPThumbnail(fs, basePath, newFilename, webpBytes, thumbSize); err != nil {
+			log.Printf("Warning: Failed to generate %s thumbnail for %s: %v", thumbSize, newFilename, err)
+			// Continue on error - don't fail the whole upload
+		}
+	}
+
 	// Update the record with the new filename directly in the database
 	// We can't use e.App.Save() here because we're in an AfterSuccess hook
 	// So we update the database directly
@@ -143,6 +158,64 @@ func convertAndReplaceImage(e *core.RecordEvent, fieldName string, allowSVG bool
 			filename, newFilename, e.Record.Collection().Name, fieldName,
 			(1.0 - float64(len(webpBytes))/float64(len(fileData)))*100)
 	}
+
+	return e.Next()
+}
+
+// generateAndSaveWebPThumbnail generates a WebP thumbnail and saves it to the thumbs directory
+func generateAndSaveWebPThumbnail(fs *filesystem.System, basePath, filename string, imageData []byte, thumbSize string) error {
+	// Generate thumbnail
+	thumbBytes, err := images.GenerateThumbnail(imageData, thumbSize, 85)
+	if err != nil {
+		return err
+	}
+
+	// Build thumbnail path (mimics PocketBase's thumb structure)
+	thumbDir := basePath + "/thumbs_" + filename
+	thumbPath := thumbDir + "/" + thumbSize + "_" + filename
+
+	// Upload thumbnail
+	if err := fs.Upload(thumbBytes, thumbPath); err != nil {
+		return err
+	}
+
+	log.Printf("  ✓ Generated %s WebP thumbnail for %s", thumbSize, filename)
+	return nil
+}
+
+// serveWebPThumbnail intercepts file download requests and serves pre-generated WebP thumbnails
+func serveWebPThumbnail(e *core.FileDownloadRequestEvent) error {
+	// Check if a thumbnail was requested
+	thumbSize := e.Request.URL.Query().Get("thumb")
+	if thumbSize == "" {
+		return e.Next() // No thumbnail requested, serve original
+	}
+
+	// Check if the file is a WebP file
+	if filepath.Ext(e.ServedName) != ".webp" {
+		return e.Next() // Not a WebP file, let PocketBase handle it
+	}
+
+	// Check if we have a pre-generated WebP thumbnail
+	basePath := e.Record.BaseFilesPath()
+	webpThumbPath := basePath + "/thumbs_" + e.ServedName + "/" + thumbSize + "_" + e.ServedName
+
+	// Get filesystem
+	fs, err := e.App.NewFilesystem()
+	if err != nil {
+		return e.Next() // Can't access filesystem, fallback to default
+	}
+	defer fs.Close()
+
+	// Check if the WebP thumbnail exists
+	exists, err := fs.Exists(webpThumbPath)
+	if err != nil || !exists {
+		return e.Next() // WebP thumbnail doesn't exist, let PocketBase generate PNG
+	}
+
+	// Serve the pre-generated WebP thumbnail
+	e.ServedPath = webpThumbPath
+	e.ServedName = thumbSize + "_" + e.ServedName
 
 	return e.Next()
 }

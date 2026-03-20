@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
 import { format } from 'date-fns'
 import { route } from 'preact-router'
-import L from 'leaflet'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { pb, Event as EventType, getImageUrl, canModerate } from '../lib/pocketbase'
+import 'leaflet/dist/leaflet.css'
 import './Event.css'
 
 interface Props {
@@ -18,7 +18,7 @@ export function Event({ id }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstance = useRef<L.Map | null>(null)
+  const mapInstance = useRef<any>(null)
   const isModerator = canModerate()
 
   const handleDelete = async () => {
@@ -67,16 +67,26 @@ export function Event({ id }: Props) {
     if (!event?.expand?.place || !mapRef.current || mapInstance.current) return
 
     const place = event.expand.place
-    const map = L.map(mapRef.current).setView([place.latitude, place.longitude], 15)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map)
-    L.marker([place.latitude, place.longitude]).addTo(map)
-    mapInstance.current = map
+
+    // Dynamically import Leaflet only when needed (CSS imported at module level)
+    import('leaflet').then((L) => {
+      if (!mapRef.current || mapInstance.current) return
+
+      const map = L.default.map(mapRef.current).setView([place.latitude, place.longitude], 15)
+      L.default.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(map)
+      L.default.marker([place.latitude, place.longitude]).addTo(map)
+      mapInstance.current = map
+    }).catch(err => {
+      console.error('Failed to load Leaflet:', err)
+    })
 
     return () => {
-      map.remove()
-      mapInstance.current = null
+      if (mapInstance.current) {
+        mapInstance.current.remove()
+        mapInstance.current = null
+      }
     }
   }, [event])
 

@@ -44,6 +44,17 @@ func RegisterModerationHooks(app core.App) {
 			return e.Next()
 		}
 
+		// Superusers and admin/editor role users can bypass cascade checks
+		if e.HasSuperuserAuth() {
+			return e.Next()
+		}
+		if e.Auth != nil {
+			role := e.Auth.GetString("role")
+			if role == "admin" || role == "editor" {
+				return e.Next()
+			}
+		}
+
 		// Check place status
 		placeId := e.Record.GetString("place")
 		if placeId != "" {

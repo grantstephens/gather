@@ -10,8 +10,10 @@ import (
 	"image/png"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
 
+	"github.com/disintegration/imaging"
 	"github.com/kolesa-team/go-webp/encoder"
 	"github.com/kolesa-team/go-webp/webp"
 	_ "golang.org/x/image/webp" // WebP decoder
@@ -182,4 +184,75 @@ func encodeWebP(img image.Image, hasAlpha bool, quality int) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// GenerateThumbnail generates a WebP thumbnail from image bytes
+// thumbSize examples: "400x300", "800x600", "100x100f" (fit), "0x300" (height only)
+func GenerateThumbnail(imageData []byte, thumbSize string, quality int) ([]byte, error) {
+	// Decode the image
+	img, err := imaging.Decode(bytes.NewReader(imageData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	// Parse thumb size
+	width, height, fit, err := parseThumbSize(thumbSize)
+	if err != nil {
+		return nil, err
+	}
+
+	// Resize image
+	var resized image.Image
+	if fit {
+		// Fit mode: resize to fit within dimensions
+		resized = imaging.Fit(img, width, height, imaging.Lanczos)
+	} else if width == 0 {
+		// Height only: maintain aspect ratio
+		resized = imaging.Resize(img, 0, height, imaging.Lanczos)
+	} else if height == 0 {
+		// Width only: maintain aspect ratio
+		resized = imaging.Resize(img, width, 0, imaging.Lanczos)
+	} else {
+		// Crop mode: fill to exact dimensions from center
+		resized = imaging.Fill(img, width, height, imaging.Center, imaging.Lanczos)
+	}
+
+	// Check for transparency
+	hasAlpha := hasTransparency(resized)
+
+	// Encode to WebP
+	return encodeWebP(resized, hasAlpha, quality)
+}
+
+// parseThumbSize parses thumbnail size string (e.g., "400x300", "100x100f", "0x300")
+func parseThumbSize(thumbSize string) (width, height int, fit bool, err error) {
+	// Check for fit mode (ends with 'f')
+	if strings.HasSuffix(thumbSize, "f") {
+		fit = true
+		thumbSize = strings.TrimSuffix(thumbSize, "f")
+	}
+
+	// Split by 'x'
+	parts := strings.Split(thumbSize, "x")
+	if len(parts) != 2 {
+		return 0, 0, false, fmt.Errorf("invalid thumb size format: %s", thumbSize)
+	}
+
+	// Parse width
+	if parts[0] != "" && parts[0] != "0" {
+		width, err = strconv.Atoi(parts[0])
+		if err != nil {
+			return 0, 0, false, fmt.Errorf("invalid width: %w", err)
+		}
+	}
+
+	// Parse height
+	if parts[1] != "" && parts[1] != "0" {
+		height, err = strconv.Atoi(parts[1])
+		if err != nil {
+			return 0, 0, false, fmt.Errorf("invalid height: %w", err)
+		}
+	}
+
+	return width, height, fit, nil
 }

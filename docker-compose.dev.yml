@@ -1,0 +1,26 @@
+# Development override
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  gather:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Disable cache for development builds
+      cache_from: []
+    ports:
+      - "8090:8090"
+    volumes:
+      # Mount local pb_data for development
+      - ./pb_data:/app/pb_data
+    environment:
+      - DEV=1
+      - PB_ADMIN_EMAIL=admin@example.com
+      - PB_ADMIN_PASSWORD=adminpassword123
+      - BASE_URL=http://localhost:8090
+    # Override healthcheck for faster feedback in dev
+    healthcheck:
+      interval: 10s
+      timeout: 2s
+      retries: 2
+      start_period: 5s

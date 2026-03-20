@@ -136,6 +136,13 @@ export function App() {
         </Router>
       </main>
       <footer class="app-footer">
+        <a
+          href={`https://${window.location.host}/ap/actor`}
+          class="fediverse-link"
+          title="Follow this calendar on the Fediverse"
+        >
+          Follow @events@{window.location.host}
+        </a>
         <button onClick={handleToggleTheme} class="theme-toggle">
           {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
         </button>

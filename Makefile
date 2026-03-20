@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend build build-frontend build-backend serve clean seed seed-test-users setup-admin help watch run reset stop test-unit test-api test-e2e test-e2e-ui test-watch test-coverage test docker-build docker-run docker-stop
+.PHONY: dev dev-backend dev-frontend build build-frontend build-backend serve clean seed seed-test-users setup-admin help watch run reset stop test-unit test-api test-e2e test-e2e-ui test-watch test-coverage test docker-build docker-run docker-stop docker-up docker-down docker-logs docker-restart
 
 # Development: run Vite + backend with hot reload proxy
 dev: build-backend setup-admin
@@ -156,6 +156,24 @@ docker-stop:
 	@docker stop gather 2>/dev/null || true
 	@docker rm gather 2>/dev/null || true
 
+# Docker Compose commands
+docker-up:
+	@echo "Starting with Docker Compose..."
+	@docker-compose up -d
+	@echo "✓ Gather is running at https://$$DOMAIN (set DOMAIN in .env)"
+	@echo "  View logs: make docker-logs"
+
+docker-down:
+	@echo "Stopping Docker Compose..."
+	@docker-compose down
+
+docker-logs:
+	@docker-compose logs -f
+
+docker-restart:
+	@echo "Restarting Docker Compose..."
+	@docker-compose restart gather caddy
+
 # Help
 help:
 	@echo "Gather - Community Calendar"
@@ -196,6 +214,12 @@ help:
 	@echo "  docker-build   Build Docker image"
 	@echo "  docker-run     Run Docker container (detached)"
 	@echo "  docker-stop    Stop and remove Docker container"
+	@echo ""
+	@echo "Docker Compose:"
+	@echo "  docker-up      Start with Docker Compose (recommended)"
+	@echo "  docker-down    Stop Docker Compose"
+	@echo "  docker-logs    View Docker Compose logs"
+	@echo "  docker-restart Restart Docker Compose service"
 	@echo ""
 	@echo "Quick start:"
 	@echo "  make dev"

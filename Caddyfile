@@ -1,0 +1,3 @@
+{$DOMAIN} {
+    reverse_proxy gather:8090
+}

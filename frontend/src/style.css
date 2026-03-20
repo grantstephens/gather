@@ -74,6 +74,25 @@ header .link {
   border-top: 1px solid var(--color-border);
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.fediverse-link {
+  background: none;
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.fediverse-link:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .theme-toggle {
