@@ -2,11 +2,43 @@ package hooks
 
 import (
 	"errors"
+	"fmt"
+	"hash/fnv"
 
 	"github.com/pocketbase/pocketbase/core"
 )
 
+// hashColor returns a deterministic HSL color string derived from the tag name.
+func hashColor(name string) string {
+	h := fnv.New32a()
+	h.Write([]byte(name))
+	hue := h.Sum32() % 360
+	return fmt.Sprintf("hsl(%d, 65%%, 45%%)", hue)
+}
+
 func RegisterModerationHooks(app core.App) {
+	// Backfill colors for any existing tags that have none
+	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+		tags, err := e.App.FindAllRecords("tags")
+		if err == nil {
+			for _, tag := range tags {
+				if tag.GetString("color") == "" {
+					tag.Set("color", hashColor(tag.GetString("name")))
+					_ = e.App.Save(tag)
+				}
+			}
+		}
+		return e.Next()
+	})
+
+	// Auto-assign color to tags on create if not provided
+	app.OnRecordCreateRequest("tags").BindFunc(func(e *core.RecordRequestEvent) error {
+		if e.Record.GetString("color") == "" {
+			e.Record.Set("color", hashColor(e.Record.GetString("name")))
+		}
+		return e.Next()
+	})
+
 	// Auto-set status on places create
 	app.OnRecordCreateRequest("places").BindFunc(func(e *core.RecordRequestEvent) error {
 		if e.HasSuperuserAuth() {
