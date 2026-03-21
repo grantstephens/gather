@@ -1,7 +1,9 @@
 package main
 
 import (
+	"io"
 	"log"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
@@ -203,20 +205,41 @@ func main() {
 		se.Router.GET("/favicon.ico", func(re *core.RequestEvent) error {
 			settings, err := se.App.FindFirstRecordByFilter("settings", "")
 			if err != nil {
-				// No settings record, return 404
 				return re.NotFoundError("No favicon configured", nil)
 			}
 
 			logo := settings.GetString("logo")
 			if logo == "" {
-				// No logo configured, return 404
 				return re.NotFoundError("No favicon configured", nil)
 			}
 
-			// Construct PocketBase file URL
-			fileURL := baseURL + "/api/files/" + settings.Collection().Name + "/" + settings.Id + "/" + logo
+			fs, err := se.App.NewFilesystem()
+			if err != nil {
+				return re.NotFoundError("No favicon configured", nil)
+			}
+			defer fs.Close()
+
+			filePath := settings.BaseFilesPath() + "/" + logo
+			reader, err := fs.GetReader(filePath)
+			if err != nil {
+				return re.NotFoundError("No favicon configured", nil)
+			}
+			defer reader.Close()
+
+			contentType := "image/x-icon"
+			if strings.HasSuffix(logo, ".png") {
+				contentType = "image/png"
+			} else if strings.HasSuffix(logo, ".webp") {
+				contentType = "image/webp"
+			} else if strings.HasSuffix(logo, ".jpg") || strings.HasSuffix(logo, ".jpeg") {
+				contentType = "image/jpeg"
+			}
+
+			re.Response.Header().Set("Content-Type", contentType)
 			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300")
-			return re.Redirect(302, fileURL)
+			re.Response.WriteHeader(http.StatusOK)
+			_, err = io.Copy(re.Response, reader)
+			return err
 		})
 
 		// Register hooks

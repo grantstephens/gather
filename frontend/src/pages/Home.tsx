@@ -26,14 +26,17 @@ export function Home(_props: Props) {
 
   // Fetch just the dates for the calendar (lightweight, all upcoming)
   useEffect(() => {
+    const controller = new AbortController()
     pb.collection('events').getFullList({
       filter: `status = 'published' && start_datetime >= '${today}'`,
       fields: 'start_datetime',
+      signal: controller.signal,
     }).then((items: any[]) => {
       const dates = new Set<string>()
       items.forEach(e => dates.add(e.start_datetime.split(' ')[0]))
       setEventDates(dates)
     }).catch(() => {})
+    return () => controller.abort()
   }, [])
 
   useEffect(() => {
