@@ -30,7 +30,6 @@ export function Home(_props: Props) {
     const controller = new AbortController()
     pb.collection('events').getFullList({
       filter: `status = 'published' && start_datetime >= '${today}'`,
-      fields: 'start_datetime,tags',
       signal: controller.signal,
     }).then((items: any[]) => {
       const dates = new Set<string>()
