@@ -118,7 +118,7 @@ export function Home(_props: Props) {
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [hasMore, selectedDate])
+  }, [hasMore, selectedDate, loading])
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(prev => prev === date ? null : date)
