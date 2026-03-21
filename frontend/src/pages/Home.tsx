@@ -13,6 +13,7 @@ interface Props {
 export function Home(_props: Props) {
   const [events, setEvents] = useState<Event[]>([])
   const [tags, setTags] = useState<Tag[]>([])
+  const [tagCounts, setTagCounts] = useState<Record<string, number>>({})
   const [eventDates, setEventDates] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -24,17 +25,24 @@ export function Home(_props: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const today = new Date().toISOString().split('T')[0]
 
-  // Fetch just the dates for the calendar (lightweight, all upcoming)
+  // Fetch dates for calendar and tag counts from upcoming published events
   useEffect(() => {
     const controller = new AbortController()
     pb.collection('events').getFullList({
       filter: `status = 'published' && start_datetime >= '${today}'`,
-      fields: 'start_datetime',
+      fields: 'start_datetime,tags',
       signal: controller.signal,
     }).then((items: any[]) => {
       const dates = new Set<string>()
-      items.forEach(e => dates.add(e.start_datetime.split(' ')[0]))
+      const counts: Record<string, number> = {}
+      items.forEach(e => {
+        dates.add(e.start_datetime.split(' ')[0])
+        if (Array.isArray(e.tags)) {
+          e.tags.forEach((id: string) => { counts[id] = (counts[id] ?? 0) + 1 })
+        }
+      })
       setEventDates(dates)
+      setTagCounts(counts)
     }).catch(() => {})
     return () => controller.abort()
   }, [])
@@ -137,16 +145,18 @@ export function Home(_props: Props) {
         <div class="sidebar-section">
           <h3>Tags</h3>
           <div class="tag-cloud">
-            {tags.map(tag => (
-              <a
-                key={tag.id}
-                href={`/tag/${tag.name}`}
-                class="tag"
-                style={tag.color ? { backgroundColor: tag.color } : undefined}
-              >
-                {tag.name}
-              </a>
-            ))}
+            {[...tags]
+              .sort((a, b) => (tagCounts[b.id] ?? 0) - (tagCounts[a.id] ?? 0))
+              .map(tag => (
+                <a
+                  key={tag.id}
+                  href={`/tag/${tag.name}`}
+                  class="tag"
+                  style={tag.color ? { backgroundColor: tag.color } : undefined}
+                >
+                  {tag.name}{tagCounts[tag.id] ? ` (${tagCounts[tag.id]})` : ''}
+                </a>
+              ))}
           </div>
         </div>
         <div class="sidebar-section">
