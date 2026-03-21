@@ -67,6 +67,7 @@ export interface Settings extends BaseModel {
   allow_anonymous: boolean
   require_moderation: boolean
   custom_css: string
+  custom_head: string
   ap_enabled: boolean
   ap_private_key: string
   ap_public_key: string

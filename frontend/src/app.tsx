@@ -49,6 +49,27 @@ export function App() {
       try {
         const record = await pb.collection('settings').getFirstListItem<Settings>('')
         setSettings(record)
+
+        if (record.custom_css) {
+          const style = document.createElement('style')
+          style.textContent = record.custom_css
+          document.head.appendChild(style)
+        }
+
+        if (record.custom_head) {
+          const tpl = document.createElement('template')
+          tpl.innerHTML = record.custom_head
+          tpl.content.querySelectorAll<HTMLElement>('*').forEach(el => {
+            if (el.tagName === 'SCRIPT') {
+              const script = document.createElement('script')
+              Array.from(el.attributes).forEach(a => script.setAttribute(a.name, a.value))
+              script.textContent = el.textContent ?? ''
+              document.head.appendChild(script)
+            } else {
+              document.head.appendChild(el.cloneNode(true))
+            }
+          })
+        }
       } catch (err) {
         // Use defaults if settings don't exist
         setSettings(null)

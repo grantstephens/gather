@@ -10,6 +10,7 @@ interface FormData {
   allow_anonymous: boolean
   require_moderation: boolean
   custom_css: string
+  custom_head: string
   ap_enabled: boolean
 }
 
@@ -22,6 +23,7 @@ export function SettingsForm() {
     allow_anonymous: true,
     require_moderation: false,
     custom_css: '',
+    custom_head: '',
     ap_enabled: false
   })
   const [loading, setLoading] = useState(true)
@@ -41,6 +43,7 @@ export function SettingsForm() {
           allow_anonymous: record.allow_anonymous ?? true,
           require_moderation: record.require_moderation ?? false,
           custom_css: record.custom_css || '',
+          custom_head: record.custom_head || '',
           ap_enabled: record.ap_enabled ?? false
         })
       } catch (err: any) {
@@ -100,6 +103,7 @@ export function SettingsForm() {
         allow_anonymous: settings.allow_anonymous ?? true,
         require_moderation: settings.require_moderation ?? false,
         custom_css: settings.custom_css || '',
+          custom_head: settings.custom_head || '',
         ap_enabled: settings.ap_enabled ?? false
       })
     }
@@ -118,6 +122,7 @@ export function SettingsForm() {
       data.append('allow_anonymous', formData.allow_anonymous.toString())
       data.append('require_moderation', formData.require_moderation.toString())
       data.append('custom_css', formData.custom_css)
+      data.append('custom_head', formData.custom_head)
       data.append('ap_enabled', formData.ap_enabled.toString())
 
       if (formData.logo) {
@@ -253,6 +258,20 @@ export function SettingsForm() {
               />
               Enable ActivityPub federation
             </label>
+          </div>
+
+          <div class="form-group">
+            <label for="custom_head">Tracking / Head Code</label>
+            <textarea
+              id="custom_head"
+              value={formData.custom_head}
+              onInput={(e) => setFormData({ ...formData, custom_head: (e.target as HTMLTextAreaElement).value })}
+              disabled={saving}
+              rows={5}
+              style="font-family: monospace"
+              placeholder={'<script defer src="https://..." data-website-id="..."></script>'}
+            />
+            <small class="field-hint">HTML injected into &lt;head&gt; on every page — use for analytics, tracking pixels, etc.</small>
           </div>
 
           <div class="form-group">
