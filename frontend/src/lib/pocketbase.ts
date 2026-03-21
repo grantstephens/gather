@@ -74,6 +74,14 @@ export interface Settings extends BaseModel {
   logo?: string
 }
 
+export interface PageRecord extends BaseModel {
+  title: string
+  slug: string
+  content: string
+  show_in_nav: boolean
+  show_in_footer: boolean
+}
+
 // Helper to get image URL
 export function getImageUrl(record: Event, thumb?: string): string | undefined {
   if (!record.image) return undefined
