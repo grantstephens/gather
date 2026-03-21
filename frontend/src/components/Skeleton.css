@@ -1,0 +1,77 @@
+/* ── Shimmer animation ────────────────────────── */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton-block {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-tertiary) 25%,
+    var(--color-bg-secondary) 50%,
+    var(--color-bg-tertiary) 75%
+  );
+  background-size: 800px 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Featured card skeleton ───────────────────── */
+.skeleton-event-featured {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 140px;
+}
+
+.skeleton-event-featured .skeleton-thumb {
+  height: 100%;
+  min-height: 140px;
+}
+
+.skeleton-event-featured .skeleton-body {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .skeleton-event-featured {
+    grid-template-columns: 1fr;
+  }
+  .skeleton-event-featured .skeleton-thumb {
+    min-height: 0;
+    aspect-ratio: 16/9;
+  }
+}
+
+/* ── Compact card skeleton ────────────────────── */
+.skeleton-event-compact {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+}
+
+.skeleton-event-compact .skeleton-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Full page skeleton ───────────────────────── */
+.skeleton-event-page {
+  max-width: 740px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.skeleton-event-page .skeleton-block:first-child {
+  aspect-ratio: 21/9;
+  margin-bottom: var(--space-4);
+}
