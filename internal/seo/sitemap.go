@@ -30,9 +30,12 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 
 	entries := make([]SitemapEntry, 0, len(events))
 	for _, event := range events {
-		lastMod := event.GetDateTime("updated").Time().Format("2006-01-02")
-		if lastMod == "" {
+		updatedTime := event.GetDateTime("updated").Time()
+		var lastMod string
+		if updatedTime.IsZero() {
 			lastMod = time.Now().Format("2006-01-02")
+		} else {
+			lastMod = updatedTime.Format("2006-01-02")
 		}
 		urlPath := event.GetString("slug")
 		if urlPath == "" {
