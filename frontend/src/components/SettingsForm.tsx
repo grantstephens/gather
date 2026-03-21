@@ -66,12 +66,12 @@ export function SettingsForm() {
 
     const validTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp', 'image/gif']
     if (!validTypes.includes(file.type)) {
-      setError('Logo must be an image (PNG, JPG, SVG, WebP, GIF). Raster images auto-convert to WebP.')
+      setError('Favicon must be an image (PNG, JPG, SVG, WebP, GIF). Raster images auto-convert to WebP.')
       return
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      setError('Logo must be under 2MB')
+      setError('Favicon must be under 2MB')
       return
     }
 
@@ -90,7 +90,7 @@ export function SettingsForm() {
       setSettings(result)
       setFormData({ ...formData, logo: null })
     } catch (err: any) {
-      setError('Failed to remove logo')
+      setError('Failed to remove favicon')
     }
   }
 
@@ -185,12 +185,12 @@ export function SettingsForm() {
           </div>
 
           <div class="form-group">
-            <label>Logo</label>
+            <label>Favicon</label>
             {settings?.logo && (
-              <div class="logo-preview">
+              <div class="favicon-preview">
                 <img
                   src={pb.files.getUrl(settings, settings.logo, { thumb: '100x100' })}
-                  alt="Current logo"
+                  alt="Current favicon"
                 />
               </div>
             )}
@@ -207,9 +207,9 @@ export function SettingsForm() {
                 type="button"
                 onClick={handleLogoRemove}
                 disabled={saving}
-                class="btn-secondary"
+                class="btn btn-secondary"
               >
-                Remove Logo
+                Remove Favicon
               </button>
             )}
           </div>
@@ -294,11 +294,11 @@ export function SettingsForm() {
             type="button"
             onClick={handleCancel}
             disabled={saving}
-            class="btn-secondary"
+            class="btn btn-secondary"
           >
             Cancel
           </button>
-          <button type="submit" disabled={saving} class="btn-primary">
+          <button type="submit" disabled={saving} class="btn btn-primary">
             {saving ? 'Saving...' : 'Save Settings'}
           </button>
         </div>

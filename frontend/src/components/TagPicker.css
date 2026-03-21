@@ -1,87 +1,70 @@
 .tag-picker {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .tag-picker-loading {
-  color: #6b7280;
-  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
 
 .tag-picker-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .tag-picker-empty {
-  color: #6b7280;
-  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
 
 .tag-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 9999px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
   border: 1px solid var(--color-border);
-  background: white;
+  background: var(--color-bg-elevated);
   cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.15s;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  transition: border-color var(--transition-fast);
 }
 
 .tag-pill:hover {
-  border-color: var(--color-primary);
+  border-color: var(--color-accent);
 }
 
 .tag-pill.selected {
-  background: var(--tag-color, var(--color-primary));
-  border-color: var(--tag-color, var(--color-primary));
+  background: var(--tag-color, var(--color-accent));
+  border-color: var(--tag-color, var(--color-accent));
   color: white;
 }
 
 .tag-check {
-  font-size: 0.75rem;
-  margin-left: 0.125rem;
+  font-size: var(--text-xs);
+  margin-left: 2px;
 }
 
 .tag-picker-new {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .tag-picker-new input {
   flex: 1;
-  padding: 0.5rem 0.75rem;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .tag-picker-new input:focus {
   outline: none;
-  border-color: var(--color-primary);
-}
-
-.btn-small {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-}
-
-/* Dark mode overrides */
-[data-theme="dark"] .tag-picker-loading,
-[data-theme="dark"] .tag-picker-empty {
-  color: #9ca3af;
-}
-
-[data-theme="dark"] .tag-pill {
-  background: var(--color-bg);
-}
-
-[data-theme="dark"] .tag-picker-new input {
-  background: var(--color-bg);
-  color: var(--color-text);
+  border-color: var(--color-border-focus);
 }

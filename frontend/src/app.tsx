@@ -141,13 +141,6 @@ export function App() {
       <header class="site-header">
         <nav class="site-nav">
           <div class="nav-brand">
-            {settings?.logo && (
-              <img
-                src={pb.files.getUrl(settings, settings.logo, { thumb: '100x100' })}
-                alt="Logo"
-                class="header-logo"
-              />
-            )}
             <a href="/" class="nav-wordmark" onClick={handleNavClick}>
               {settings?.instance_name || 'Gather'}
             </a>

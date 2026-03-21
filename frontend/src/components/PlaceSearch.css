@@ -4,25 +4,27 @@
 
 .place-input {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 1rem;
+  padding: var(--space-3);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .place-input:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent);
 }
 
 .place-loading {
   position: absolute;
-  right: 0.75rem;
+  right: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.875rem;
-  color: #6b7280;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .place-results {
@@ -30,12 +32,12 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
+  background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  margin-top: 4px;
+  border-radius: var(--radius-md);
+  margin-top: var(--space-1);
   list-style: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
   z-index: 100;
   max-height: 300px;
   overflow-y: auto;
@@ -44,41 +46,42 @@
 .place-results li button {
   display: block;
   width: 100%;
-  padding: 0.75rem;
+  padding: var(--space-3);
   text-align: left;
   background: none;
   border: none;
   cursor: pointer;
+  color: var(--color-text);
 }
 
 .place-results li button:hover {
-  background: #f3f4f6;
+  background: var(--color-bg-tertiary);
 }
 
 .place-results .result-name {
   display: block;
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 .place-results .result-address {
   display: block;
-  font-size: 0.875rem;
-  color: #6b7280;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .place-no-results {
-  padding: 0.75rem;
-  font-size: 0.875rem;
-  color: #6b7280;
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .place-no-results .link {
   background: none;
   border: none;
-  color: var(--color-primary);
+  color: var(--color-accent);
   cursor: pointer;
   font-size: inherit;
   padding: 0;
@@ -87,12 +90,12 @@
 
 .place-manual-link {
   display: block;
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
   background: none;
   border: none;
-  color: var(--color-primary);
+  color: var(--color-accent);
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   padding: 0;
   text-decoration: underline;
 }
@@ -101,146 +104,83 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem;
+  padding: var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: #f9fafb;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
 }
 
 .place-info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 
 .place-info .place-name {
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 .place-info .place-address {
-  font-size: 0.875rem;
-  color: #6b7280;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .place-clear {
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #6b7280;
+  color: var(--color-text-muted);
   cursor: pointer;
-  padding: 0 0.5rem;
+  padding: 0 var(--space-2);
   line-height: 1;
 }
 
 .place-clear:hover {
-  color: #dc2626;
+  color: var(--color-error-text);
 }
 
 /* Manual Place Form */
 .manual-place-form {
-  padding: 1rem;
+  padding: var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: #f9fafb;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
 }
 
 .manual-place-form h4 {
-  margin-bottom: 1rem;
-  font-size: 1rem;
+  margin-bottom: var(--space-4);
+  font-size: var(--text-base);
 }
 
 .manual-place-form .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .manual-place-form label {
   display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 0.25rem;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  margin-bottom: var(--space-1);
 }
 
 .manual-place-form input {
   width: 100%;
-  padding: 0.5rem;
+  padding: var(--space-2);
   border: 1px solid var(--color-border);
-  border-radius: 4px;
-  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .manual-place-form input:focus {
   outline: none;
-  border-color: var(--color-primary);
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  border-color: var(--color-border-focus);
 }
 
 .manual-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
   justify-content: flex-end;
-  margin-top: 1rem;
-}
-
-.btn-secondary {
-  background: #e5e7eb;
-  color: var(--color-text);
-}
-
-.btn-secondary:hover {
-  background: #d1d5db;
-}
-
-/* Dark mode overrides */
-[data-theme="dark"] .place-loading {
-  color: #9ca3af;
-}
-
-[data-theme="dark"] .place-results {
-  background: var(--color-bg);
-}
-
-[data-theme="dark"] .place-results li button:hover {
-  background: #374151;
-}
-
-[data-theme="dark"] .place-results .result-address {
-  color: #9ca3af;
-}
-
-[data-theme="dark"] .place-no-results {
-  color: #9ca3af;
-}
-
-[data-theme="dark"] .place-selected {
-  background: #1f2937;
-}
-
-[data-theme="dark"] .place-info .place-address {
-  color: #9ca3af;
-}
-
-[data-theme="dark"] .place-clear {
-  color: #9ca3af;
-}
-
-[data-theme="dark"] .manual-place-form {
-  background: #1f2937;
-}
-
-[data-theme="dark"] .manual-place-form input {
-  background: var(--color-bg);
-  color: var(--color-text);
-}
-
-[data-theme="dark"] .btn-secondary {
-  background: #4b5563;
-}
-
-[data-theme="dark"] .btn-secondary:hover {
-  background: #6b7280;
+  margin-top: var(--space-4);
 }

@@ -219,7 +219,7 @@ func main() {
 			return re.NoContent(202)
 		})
 
-		// Favicon route - serves logo from settings
+		// Favicon route - serves favicon from settings
 		se.Router.GET("/favicon.ico", func(re *core.RequestEvent) error {
 			settings, err := se.App.FindFirstRecordByFilter("settings", "")
 			if err != nil {

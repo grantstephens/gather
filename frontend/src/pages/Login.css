@@ -1,34 +1,50 @@
 .login-page {
-  max-width: 400px;
-  margin: 2rem auto;
+  max-width: 420px;
+  margin: 0 auto;
+  min-height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .login-page h1 {
-  margin-bottom: 2rem;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-extrabold);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-8);
 }
 
 .login-page .error-message {
-  background: #fee;
-  border: 1px solid #c00;
-  color: #c00;
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-bg);
+  border-left: 4px solid var(--color-error-text);
+  color: var(--color-error-text);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
 }
 
 .login-page .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .toggle-mode {
-  margin-top: 1.5rem;
+  margin-top: var(--space-6);
   text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
-/* Dark mode overrides */
-[data-theme="dark"] .login-page .error-message {
-  background: #7f1d1d;
-  border-color: #b91c1c;
-  color: #fca5a5;
+.toggle-mode button {
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: var(--font-medium);
+  text-decoration: underline;
 }
 
+.toggle-mode button:hover {
+  color: var(--color-accent-hover);
+}

@@ -5,6 +5,7 @@ import type { PageRecord } from '../lib/pocketbase'
 import { MarkdownEditor } from '../components/MarkdownEditor'
 import { EventCard } from '../components/EventCard'
 import { SettingsForm } from '../components/SettingsForm'
+import { SkeletonBlock } from '../components/Skeleton'
 import './Admin.css'
 
 interface Props {
@@ -269,7 +270,16 @@ export function Admin(_props: Props) {
   }
 
   if (loading) {
-    return <div class="loading">Loading...</div>
+    return (
+      <div class="admin-page">
+        <SkeletonBlock width="200px" height="32px" borderRadius="var(--radius-sm)" />
+        <div style={{ marginTop: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          <SkeletonBlock width="100%" height="60px" borderRadius="var(--radius-lg)" />
+          <SkeletonBlock width="100%" height="60px" borderRadius="var(--radius-lg)" />
+          <SkeletonBlock width="100%" height="60px" borderRadius="var(--radius-lg)" />
+        </div>
+      </div>
+    )
   }
 
   const totalPending = pendingEvents.length + pendingPlaces.length + pendingTags.length

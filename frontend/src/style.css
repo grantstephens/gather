@@ -189,12 +189,6 @@ main {
 /* ------------------------------------------------------------
    5. Header & navigation (shell-level)
    ------------------------------------------------------------ */
-.header-logo {
-  height: 32px;
-  margin-right: var(--space-2);
-  vertical-align: middle;
-}
-
 /* .link — inline button that looks like a text link */
 .link {
   background: none;
@@ -415,7 +409,7 @@ main {
 
 .btn-success {
   background: var(--color-success-action);
-  color: #000;
+  color: var(--color-text-on-accent);
   border-color: var(--color-success-action);
 }
 .btn-success:hover {
@@ -434,7 +428,7 @@ main {
 
 .btn-warning {
   background: var(--color-warning-action);
-  color: #000;
+  color: var(--color-text-on-accent);
   border-color: var(--color-warning-action);
 }
 .btn-warning:hover {

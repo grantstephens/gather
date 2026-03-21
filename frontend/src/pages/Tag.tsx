@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { pb, Event, Tag as TagType } from '../lib/pocketbase'
-import { EventCard } from '../components/EventCard'
+import { EventTimeline } from '../components/EventTimeline'
+import { SkeletonTimeline } from '../components/Skeleton'
 import './Tag.css'
 
 interface Props {
@@ -45,7 +46,11 @@ export function Tag({ name }: Props) {
   }, [name])
 
   if (loading) {
-    return <div class="loading">Loading...</div>
+    return (
+      <div class="tag-page">
+        <SkeletonTimeline />
+      </div>
+    )
   }
 
   if (error || !tag) {
@@ -63,11 +68,7 @@ export function Tag({ name }: Props) {
       {events.length === 0 ? (
         <p class="no-events">No events with this tag yet.</p>
       ) : (
-        <div class="events-grid">
-          {events.map(event => (
-            <EventCard key={event.id} event={event} />
-          ))}
-        </div>
+        <EventTimeline events={events} />
       )}
     </div>
   )
