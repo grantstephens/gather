@@ -62,8 +62,9 @@ test.describe('Custom Pages', () => {
     createdPageIds.push(created.id);
 
     await page.goto('/');
-    await expect(page.locator(`nav a[href="/${slug}"]`)).not.toBeVisible();
+    // Wait for pages to load (footer link confirms fetch completed), then check nav is absent
     await expect(page.locator(`footer a[href="/${slug}"]`)).toBeVisible();
+    await expect(page.locator(`nav a[href="/${slug}"]`)).not.toBeVisible();
   });
 
   test('admin sees Pages tab in admin panel', async ({ page }) => {
