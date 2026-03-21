@@ -21,7 +21,7 @@ export function Page({ slug }: Props) {
     async function load() {
       try {
         const record = await pb.collection('pages').getFirstListItem<PageRecord>(
-          `slug = "${slug}"`
+          pb.filter('slug = {:slug}', { slug })
         )
         setPage(record)
       } catch {

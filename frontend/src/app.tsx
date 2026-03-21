@@ -164,6 +164,9 @@ export function App() {
 
           <div class={`nav-items ${mobileMenuOpen ? 'open' : ''}`}>
             <a href="/submit" onClick={handleNavClick}>Submit Event</a>
+            {navPages.map(p => (
+              <a key={p.id} href={`/${p.slug}`} onClick={handleNavClick}>{p.title}</a>
+            ))}
             {isModeratorOrAdmin && (
               <a href="/admin" onClick={handleNavClick}>Admin</a>
             )}
@@ -177,9 +180,6 @@ export function App() {
             ) : (
               <a href="/login" onClick={handleNavClick}>Login</a>
             )}
-            {navPages.map(p => (
-              <a key={p.id} href={`/${p.slug}`} onClick={handleNavClick}>{p.title}</a>
-            ))}
           </div>
         </nav>
       </header>
