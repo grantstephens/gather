@@ -35,7 +35,7 @@ func init() {
 		pages.ListRule = &publicRule
 		pages.ViewRule = &publicRule
 
-		adminRule := `@request.auth.role = "admin"`
+		adminRule := "@request.auth.role = 'admin'"
 		pages.CreateRule = &adminRule
 		pages.UpdateRule = &adminRule
 		pages.DeleteRule = &adminRule
