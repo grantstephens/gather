@@ -1,5 +1,6 @@
 /* ── Header shell ─────────────────────────────── */
 .site-header {
+  --nav-height: 61px;
   border-bottom: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-bg) 92%, transparent);
   backdrop-filter: blur(8px);
@@ -66,7 +67,6 @@
   border: none;
   cursor: pointer;
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
   line-height: inherit;
 }
 
@@ -151,13 +151,21 @@
   pointer-events: none;
 }
 
+/* ── Focus-visible ───────────────────────────── */
+.nav-hamburger:focus-visible,
+.nav-link:focus-visible,
+.nav-theme-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 /* ── Mobile breakpoint ────────────────────────── */
 @media (max-width: 768px) {
   .nav-hamburger { display: flex; }
 
   .nav-links {
     position: fixed;
-    top: 61px;
+    top: var(--nav-height);
     left: 0;
     right: 0;
     flex-direction: column;
@@ -193,7 +201,6 @@
 
   .nav-theme-toggle {
     width: 100%;
-    border-radius: var(--radius-md);
     height: 44px;
     justify-content: flex-start;
     padding: 0 var(--space-4);

@@ -299,24 +299,6 @@ main {
 /* ------------------------------------------------------------
    7. Fediverse dialog
    ------------------------------------------------------------ */
-.fediverse-link {
-  background: none;
-  border: 1.5px solid var(--color-border);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-family: var(--font-sans);
-  color: var(--color-text);
-  text-decoration: none;
-  cursor: pointer;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
-}
-
-.fediverse-link:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
 .fediverse-dialog-overlay {
   position: fixed;
   inset: 0;

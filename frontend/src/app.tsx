@@ -137,7 +137,7 @@ export function App() {
   const isModeratorOrAdmin = user?.role === 'admin' || user?.role === 'editor'
 
   return (
-    <div class="app">
+    <>
       <header class="site-header">
         <nav class="site-nav">
           <div class="nav-brand">
@@ -158,6 +158,7 @@ export function App() {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle navigation"
             aria-expanded={mobileMenuOpen}
+            aria-controls="primary-nav"
           >
             {mobileMenuOpen
               ? <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="2" x2="16" y2="16"/><line x1="16" y1="2" x2="2" y2="16"/></svg>
@@ -165,7 +166,7 @@ export function App() {
             }
           </button>
 
-          <div class={`nav-links${mobileMenuOpen ? ' nav-links--open' : ''}`}>
+          <div id="primary-nav" class={`nav-links${mobileMenuOpen ? ' nav-links--open' : ''}`}>
             <a href="/submit" class="nav-link nav-link--cta" onClick={handleNavClick}>Submit Event</a>
             {navPages.map(p => (
               <a key={p.id} href={`/${p.slug}`} class="nav-link" onClick={handleNavClick}>{p.title}</a>
@@ -192,6 +193,7 @@ export function App() {
           </div>
         </nav>
       </header>
+      <div class="app">
       <main>
         <Suspense fallback={null}>
           <Router>
@@ -247,6 +249,7 @@ export function App() {
           </div>
         )}
       </footer>
-    </div>
+      </div>
+    </>
   )
 }
