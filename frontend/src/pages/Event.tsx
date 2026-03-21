@@ -4,6 +4,7 @@ import { route } from 'preact-router'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { pb, Event as EventType, getImageUrl, canModerate } from '../lib/pocketbase'
+import { SkeletonEventDetailPage } from '../components/Skeleton'
 import 'leaflet/dist/leaflet.css'
 import './Event.css'
 
@@ -102,7 +103,7 @@ export function Event({ id }: Props) {
   }, [event])
 
   if (loading) {
-    return <div class="loading">Loading...</div>
+    return <SkeletonEventDetailPage />
   }
 
   if (error || !event) {
@@ -128,29 +129,31 @@ export function Event({ id }: Props) {
             </span>
           )}
           <h1>{event.title}</h1>
-          <time class="event-datetime">
-            {format(startDate, 'EEEE, MMMM d, yyyy · h:mm a')}
-            {endDate && ` - ${format(endDate, 'h:mm a')}`}
-          </time>
-          {event.expand?.tags && event.expand.tags.length > 0 && (
-            <div class="event-tags">
-              {event.expand.tags.map(tag => (
-                <a
-                  key={tag.id}
-                  href={`/tag/${tag.name}`}
-                  class="tag"
-                  style={tag.color ? { backgroundColor: tag.color } : undefined}
-                >
-                  {tag.name}
-                </a>
-              ))}
-            </div>
-          )}
+          <div class="event-meta">
+            <time class="event-datetime">
+              {format(startDate, 'EEEE, MMMM d, yyyy · h:mm a')}
+              {endDate && ` - ${format(endDate, 'h:mm a')}`}
+            </time>
+            {event.expand?.tags && event.expand.tags.length > 0 && (
+              <div class="event-tags">
+                {event.expand.tags.map(tag => (
+                  <a
+                    key={tag.id}
+                    href={`/tag/${tag.name}`}
+                    class="tag"
+                    style={tag.color ? { backgroundColor: tag.color } : undefined}
+                  >
+                    {tag.name}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
         </header>
 
         {event.expand?.place && (
           <section class="event-location">
-            <h2>Location</h2>
+            <p class="section-label">Location</p>
             <p class="place-name">{event.expand.place.name}</p>
             {event.expand.place.address && (
               <p class="place-address">{event.expand.place.address}</p>
@@ -161,7 +164,7 @@ export function Event({ id }: Props) {
 
         {event.description && (
           <section class="event-description">
-            <h2>About</h2>
+            <p class="section-label">About</p>
             <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(event.description) as string) }} />
           </section>
         )}
