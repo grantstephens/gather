@@ -30,9 +30,14 @@ func main() {
 			h := e.Response.Header()
 
 			// Apply to all routes
-			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 			h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
-			h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+			h.Set("X-Content-Type-Options", "nosniff")
+			h.Set("X-Frame-Options", "DENY")
+			h.Set("X-Permitted-Cross-Domain-Policies", "none")
+			h.Set("Cross-Origin-Opener-Policy", "same-origin")
+			h.Set("Cross-Origin-Resource-Policy", "same-origin")
+			h.Set("Permissions-Policy", "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), usb=(), web-share=()")
 
 			// CSP only for frontend routes — skip admin UI and API
 			if !strings.HasPrefix(path, "/_/") && !strings.HasPrefix(path, "/api/") {
