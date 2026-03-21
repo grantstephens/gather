@@ -13,6 +13,12 @@ interface Props {
 
 type TabType = 'pending-events' | 'pending-places' | 'pending-tags' | 'all-events' | 'settings' | 'pages'
 
+const RESERVED_SLUGS = ['submit', 'login', 'admin', 'event', 'tag', 'place', 'edit']
+
+function slugify(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
 export function Admin(_props: Props) {
   const [pendingEvents, setPendingEvents] = useState<Event[]>([])
   const [allEvents, setAllEvents] = useState<Event[]>([])
@@ -33,12 +39,6 @@ export function Admin(_props: Props) {
   })
   const [pageFormError, setPageFormError] = useState<string | null>(null)
   const [pageSaving, setPageSaving] = useState(false)
-
-  const RESERVED_SLUGS = ['submit', 'login', 'admin', 'event', 'tag', 'place', 'edit']
-
-  function slugify(title: string): string {
-    return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-  }
 
   useEffect(() => {
     if (!canModerate()) {
@@ -232,12 +232,12 @@ export function Admin(_props: Props) {
   }
 
   const handlePageSave = async () => {
-    if (RESERVED_SLUGS.includes(pageForm.slug)) {
-      setPageFormError(`"${pageForm.slug}" is a reserved slug and cannot be used.`)
-      return
-    }
     if (!pageForm.title.trim() || !pageForm.slug.trim()) {
       setPageFormError('Title and slug are required.')
+      return
+    }
+    if (RESERVED_SLUGS.includes(pageForm.slug)) {
+      setPageFormError(`"${pageForm.slug}" is a reserved slug and cannot be used.`)
       return
     }
     setPageSaving(true)
@@ -450,9 +450,8 @@ export function Admin(_props: Props) {
                         <p class="item-detail">
                           /{page.slug}
                           {' · '}
-                          {page.show_in_nav ? 'Nav' : ''}
-                          {page.show_in_nav && page.show_in_footer ? ' · ' : ''}
-                          {page.show_in_footer ? 'Footer' : ''}
+                          {[page.show_in_nav && 'Nav', page.show_in_footer && 'Footer']
+                            .filter(Boolean).join(' · ') || 'Not linked'}
                         </p>
                       </div>
                       <div class="admin-event-actions">
