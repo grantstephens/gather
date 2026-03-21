@@ -289,6 +289,10 @@ func main() {
 			f, err := frontend.Open(path)
 			if err == nil {
 				f.Close()
+				// Vite assets have content hashes — safe to cache for 1 year
+				if strings.HasPrefix(path, "assets/") {
+					re.Response.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+				}
 				return re.FileFS(frontend, path)
 			}
 
