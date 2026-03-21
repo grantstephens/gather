@@ -199,9 +199,6 @@ export function App() {
         </Suspense>
       </main>
       <footer class="app-footer">
-        {footerPages.map(p => (
-          <a key={p.id} href={`/${p.slug}`} class="footer-page-link">{p.title}</a>
-        ))}
         <button onClick={() => setFediverseDialogOpen(true)} class="fediverse-link">
           Follow @events@{window.location.host}
         </button>
@@ -228,6 +225,9 @@ export function App() {
         <button onClick={handleToggleTheme} class="theme-toggle">
           {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
         </button>
+        {footerPages.map(p => (
+          <a key={p.id} href={`/${p.slug}`} class="footer-page-link">{p.title}</a>
+        ))}
       </footer>
     </div>
   )
