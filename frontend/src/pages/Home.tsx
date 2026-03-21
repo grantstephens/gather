@@ -25,24 +25,32 @@ export function Home(_props: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const today = new Date().toISOString().split('T')[0]
 
-  // Fetch dates for calendar and tag counts from upcoming published events
+  // Fetch dates for the calendar
   useEffect(() => {
     const controller = new AbortController()
     pb.collection('events').getFullList({
       filter: `status = 'published' && start_datetime >= '${today}'`,
+      fields: 'start_datetime',
       signal: controller.signal,
     }).then((items: any[]) => {
       const dates = new Set<string>()
-      const counts: Record<string, number> = {}
-      items.forEach(e => {
-        dates.add(e.start_datetime.split(' ')[0])
-        if (Array.isArray(e.tags)) {
-          e.tags.forEach((id: string) => { counts[id] = (counts[id] ?? 0) + 1 })
-        }
-      })
+      items.forEach(e => dates.add(e.start_datetime.split(' ')[0]))
       setEventDates(dates)
-      setTagCounts(counts)
     }).catch(() => {})
+    return () => controller.abort()
+  }, [])
+
+  // Fetch tag counts from backend
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch('/api/tags/counts', { signal: controller.signal })
+      .then(r => r.json())
+      .then((rows: { id: string; count: number }[]) => {
+        const counts: Record<string, number> = {}
+        rows.forEach(r => { counts[r.id] = r.count })
+        setTagCounts(counts)
+      })
+      .catch(() => {})
     return () => controller.abort()
   }, [])
 
