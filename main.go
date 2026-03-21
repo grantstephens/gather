@@ -22,6 +22,31 @@ func main() {
 	app := pocketbase.New()
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		// Security headers middleware
+		se.Router.BindFunc(func(e *core.RequestEvent) error {
+			path := e.Request.URL.Path
+			h := e.Response.Header()
+
+			// Apply to all routes
+			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+			h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+
+			// CSP only for frontend routes — skip admin UI and API
+			if !strings.HasPrefix(path, "/_/") && !strings.HasPrefix(path, "/api/") {
+				h.Set("Content-Security-Policy",
+					"default-src 'self'; "+
+						"img-src 'self' https://*.tile.openstreetmap.org data: blob:; "+
+						"style-src 'self' 'unsafe-inline'; "+
+						"connect-src 'self'; "+
+						"frame-ancestors 'none'; "+
+						"object-src 'none'; "+
+						"base-uri 'self'")
+			}
+
+			return e.Next()
+		})
+
 		// Initialize AP keypair on first run
 		if err := activitypub.EnsureKeypair(se.App); err != nil {
 			log.Println("Warning: failed to ensure AP keypair:", err)
