@@ -7,8 +7,8 @@ import (
 
 func TestBuildHomeHTML(t *testing.T) {
 	result := buildHomeHTML("Perthshire Events", "Community calendar for Perthshire", "https://example.com/logo.webp", "https://example.com", []HomeEvent{
-		{ID: "abc123", Title: "Summer Fest", StartDate: "Saturday, 1 June 2026"},
-		{ID: "def456", Title: "Folk Night", StartDate: "Sunday, 2 June 2026"},
+		{Slug: "abc123", Title: "Summer Fest", StartDate: "Saturday, 1 June 2026"},
+		{Slug: "def456", Title: "Folk Night", StartDate: "Sunday, 2 June 2026"},
 	})
 
 	if !strings.Contains(result, "<title>Perthshire Events</title>") {

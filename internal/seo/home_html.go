@@ -11,7 +11,7 @@ import (
 
 // HomeEvent is a minimal event for the bot-facing home page listing
 type HomeEvent struct {
-	ID        string
+	Slug      string
 	Title     string
 	StartDate string
 }
@@ -44,8 +44,12 @@ func GenerateHomeHTML(app core.App, baseURL string) ([]byte, error) {
 	homeEvents := make([]HomeEvent, 0, len(events))
 	for _, e := range events {
 		startTime := e.GetDateTime("start_datetime").Time()
+		slug := e.GetString("slug")
+		if slug == "" {
+			slug = e.Id
+		}
 		homeEvents = append(homeEvents, HomeEvent{
-			ID:        e.Id,
+			Slug:      slug,
 			Title:     e.GetString("title"),
 			StartDate: startTime.Format("Monday, 2 January 2006"),
 		})
@@ -100,7 +104,7 @@ func buildHomeHTML(instanceName, description, logoURL, baseURL string, events []
 		for _, e := range events {
 			b.WriteString(fmt.Sprintf(
 				"    <li><a href=\"%s/event/%s\">%s &mdash; %s</a></li>\n",
-				baseURL, htmlEscape(e.ID), htmlEscape(e.Title), htmlEscape(e.StartDate),
+				baseURL, htmlEscape(e.Slug), htmlEscape(e.Title), htmlEscape(e.StartDate),
 			))
 		}
 		b.WriteString("  </ul>\n")

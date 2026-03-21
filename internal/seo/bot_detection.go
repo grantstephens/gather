@@ -4,6 +4,8 @@ import "strings"
 
 var botUserAgents = []string{
 	"Googlebot",
+	"Google-InspectionTool",
+	"Google-Read-Aloud",
 	"facebookexternalhit",
 	"Twitterbot",
 	"LinkedInBot",
