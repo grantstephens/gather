@@ -2,8 +2,8 @@ import { useState } from 'preact/hooks'
 import './MiniCalendar.css'
 
 interface Props {
-  eventDates?: Set<string>  // Dates in YYYY-MM-DD format that have events
-  selectedDate?: string     // Currently selected date in YYYY-MM-DD format
+  eventDates?: Map<string, string[]>  // date → unique tag colors ('' = default)
+  selectedDate?: string               // Currently selected date in YYYY-MM-DD format
   onDateSelect?: (date: string) => void
 }
 
@@ -97,7 +97,8 @@ export function MiniCalendar({ eventDates, selectedDate, onDateSelect }: Props) 
           const dateStr = formatDate(new Date(year, month, day))
           const isToday = dateStr === todayStr
           const isSelected = dateStr === selectedDate
-          const hasEvents = eventDates?.has(dateStr)
+          const dotColors = eventDates?.get(dateStr)
+          const hasEvents = dotColors !== undefined
           const isPast = new Date(year, month, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate())
 
           return (
@@ -107,7 +108,17 @@ export function MiniCalendar({ eventDates, selectedDate, onDateSelect }: Props) 
               onClick={() => handleDateClick(day)}
             >
               {day}
-              {hasEvents && <span class="event-dot" />}
+              {hasEvents && (
+                <div class="event-dots">
+                  {(dotColors!.length > 0 ? dotColors!.slice(0, 3) : ['']).map((color, i) => (
+                    <span
+                      key={i}
+                      class="event-dot"
+                      style={color && !isSelected && !isPast ? { backgroundColor: color } : undefined}
+                    />
+                  ))}
+                </div>
+              )}
             </button>
           )
         })}

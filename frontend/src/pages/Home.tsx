@@ -14,7 +14,7 @@ export function Home(_props: Props) {
   const [events, setEvents] = useState<Event[]>([])
   const [tags, setTags] = useState<Tag[]>([])
   const [tagCounts, setTagCounts] = useState<Record<string, number>>({})
-  const [eventDates, setEventDates] = useState<Set<string>>(new Set())
+  const [eventDates, setEventDates] = useState<Map<string, string[]>>(new Map())
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -25,18 +25,32 @@ export function Home(_props: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const today = new Date().toISOString().split('T')[0]
 
-  // Fetch dates for the calendar
+  // Fetch dates + tag colors for the calendar.
   // '$autoCancel': false prevents the SDK from cancelling this request when the
   // main events getList fires (both use the same collection path as requestKey).
   useEffect(() => {
     pb.collection('events').getFullList({
       filter: `status = 'published' && start_datetime >= '${today}'`,
-      fields: 'start_datetime',
+      fields: 'start_datetime,expand.tags.color',
+      expand: 'tags',
       '$autoCancel': false,
     }).then((items: any[]) => {
-      const dates = new Set<string>()
-      items.forEach(e => dates.add(e.start_datetime.split(' ')[0]))
-      setEventDates(dates)
+      const dateColors = new Map<string, string[]>()
+      items.forEach(e => {
+        const date = e.start_datetime.split(' ')[0]
+        const colors: string[] = (e.expand?.tags ?? [])
+          .map((t: any) => t.color)
+          .filter(Boolean)
+        if (!dateColors.has(date)) dateColors.set(date, [])
+        const existing = dateColors.get(date)!
+        // Add unique colors; fall back to empty string (→ default CSS color) if untagged
+        if (colors.length === 0) {
+          if (!existing.includes('')) existing.push('')
+        } else {
+          colors.forEach(c => { if (!existing.includes(c)) existing.push(c) })
+        }
+      })
+      setEventDates(dateColors)
     }).catch(() => {})
   }, [])
 

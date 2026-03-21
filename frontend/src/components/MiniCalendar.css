@@ -100,22 +100,29 @@
   color: white;
 }
 
-.calendar-day.has-events .event-dot {
+.event-dots {
   position: absolute;
   bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.event-dot {
   width: 4px;
   height: 4px;
   border-radius: 50%;
   background: var(--color-primary);
+  flex-shrink: 0;
 }
 
 .calendar-day.selected .event-dot {
   background: white;
 }
 
-.calendar-day.past.has-events .event-dot {
+.calendar-day.past .event-dot {
   background: #9ca3af;
 }
 
