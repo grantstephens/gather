@@ -1,7 +1,7 @@
 import { useState, useEffect, Suspense } from 'preact/compat'
 import Router from 'preact-router'
 import { lazy } from 'preact/compat'
-import { pb, User, Settings } from './lib/pocketbase'
+import { pb, User, Settings, PageRecord } from './lib/pocketbase'
 import { getTheme, toggleTheme } from './lib/theme'
 import './style.css'
 import './components/Navigation.css'
@@ -14,11 +14,14 @@ const Place = lazy(() => import('./pages/Place').then(m => ({ default: m.Place }
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
 const Admin = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })))
 const Edit = lazy(() => import('./pages/Edit').then(m => ({ default: m.Edit })))
+const Page = lazy(() => import('./pages/Page').then(m => ({ default: m.Page })))
 
 export function App() {
   const [user, setUser] = useState<User | null>(pb.authStore.model as User | null)
   const [theme, setThemeState] = useState(getTheme())
   const [settings, setSettings] = useState<Settings | null>(null)
+  const [navPages, setNavPages] = useState<PageRecord[]>([])
+  const [footerPages, setFooterPages] = useState<PageRecord[]>([])
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [fediverseDialogOpen, setFediverseDialogOpen] = useState(false)
   const [fediverseInstance, setFediverseInstance] = useState('')
@@ -80,6 +83,21 @@ export function App() {
       }
     }
     loadSettings()
+  }, [])
+
+  useEffect(() => {
+    async function loadPages() {
+      try {
+        const records = await pb.collection('pages').getFullList<PageRecord>({
+          sort: 'created',
+        })
+        setNavPages(records.filter(p => p.show_in_nav))
+        setFooterPages(records.filter(p => p.show_in_footer))
+      } catch {
+        // Graceful degradation: no page links rendered
+      }
+    }
+    loadPages()
   }, [])
 
   // Close mobile menu on escape key or click outside
@@ -159,6 +177,9 @@ export function App() {
             ) : (
               <a href="/login" onClick={handleNavClick}>Login</a>
             )}
+            {navPages.map(p => (
+              <a key={p.id} href={`/${p.slug}`} onClick={handleNavClick}>{p.title}</a>
+            ))}
           </div>
         </nav>
       </header>
@@ -173,10 +194,14 @@ export function App() {
             <Login path="/login" />
             <Admin path="/admin" />
             <Edit path="/edit/:id" />
+            <Page path="/:slug" />
           </Router>
         </Suspense>
       </main>
       <footer class="app-footer">
+        {footerPages.map(p => (
+          <a key={p.id} href={`/${p.slug}`} class="footer-page-link">{p.title}</a>
+        ))}
         <button onClick={() => setFediverseDialogOpen(true)} class="fediverse-link">
           Follow @events@{window.location.host}
         </button>
