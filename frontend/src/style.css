@@ -18,6 +18,13 @@
   padding: 0;
 }
 
+.field-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
 body {
   font-family: system-ui, -apple-system, sans-serif;
   color: var(--color-text);

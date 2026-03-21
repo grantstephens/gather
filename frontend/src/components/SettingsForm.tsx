@@ -196,6 +196,7 @@ export function SettingsForm() {
               onChange={handleLogoChange}
               disabled={saving}
             />
+            <small class="field-hint">Square images work best (e.g. 400×400px). Automatically resized to 400px and converted to WebP.</small>
             {settings?.logo && (
               <button
                 type="button"

@@ -94,7 +94,11 @@ func convertAndReplaceImage(e *core.RecordEvent, fieldName string, allowSVG bool
 	}
 
 	// Convert to WebP
-	webpBytes, newFilename, err := images.ConvertToWebP(bytes.NewReader(fileData), filename, 85)
+	maxDimension := 0
+	if fieldName == "logo" {
+		maxDimension = 400
+	}
+	webpBytes, newFilename, err := images.ConvertToWebP(bytes.NewReader(fileData), filename, 85, maxDimension)
 	if err != nil {
 		// Check if it's an animated GIF
 		if err.Error() == "animated GIFs are not supported" {

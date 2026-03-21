@@ -19,9 +19,10 @@ import (
 	_ "golang.org/x/image/webp" // WebP decoder
 )
 
-// ConvertToWebP converts an image to WebP format or passes through if already WebP/SVG
-// Returns the converted bytes, new filename, and any error
-func ConvertToWebP(file io.Reader, filename string, quality int) ([]byte, string, error) {
+// ConvertToWebP converts an image to WebP format, optionally resizing it.
+// If maxDimension > 0, the image is resized to fit within that square before encoding.
+// Returns the converted bytes, new filename, and any error.
+func ConvertToWebP(file io.Reader, filename string, quality int, maxDimension int) ([]byte, string, error) {
 	// Read file into buffer so we can reuse it
 	buf := new(bytes.Buffer)
 	if _, err := io.Copy(buf, file); err != nil {
@@ -72,6 +73,14 @@ func ConvertToWebP(file io.Reader, filename string, quality int) ([]byte, string
 
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	// Resize if maxDimension set and image exceeds it
+	if maxDimension > 0 {
+		bounds := img.Bounds()
+		if bounds.Dx() > maxDimension || bounds.Dy() > maxDimension {
+			img = imaging.Fit(img, maxDimension, maxDimension, imaging.Lanczos)
+		}
 	}
 
 	// Check for transparency
