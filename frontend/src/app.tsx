@@ -50,6 +50,10 @@ export function App() {
         const record = await pb.collection('settings').getFirstListItem<Settings>('')
         setSettings(record)
 
+        if (record.instance_name) {
+          document.title = record.instance_name
+        }
+
         if (record.custom_css) {
           const style = document.createElement('style')
           style.textContent = record.custom_css

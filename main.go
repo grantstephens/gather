@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	dbx "github.com/pocketbase/dbx"
@@ -27,6 +28,22 @@ func main() {
 	app := pocketbase.New()
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		// Build initial CSP from custom_head setting
+		var cachedCSP atomic.Value
+		if s, err := se.App.FindFirstRecordByFilter("settings", ""); err == nil {
+			origins := seo.ExtractExternalOrigins(s.GetString("custom_head"))
+			cachedCSP.Store(seo.BuildCSP(origins))
+		} else {
+			cachedCSP.Store(seo.BuildCSP(nil))
+		}
+
+		// Refresh CSP whenever settings are updated
+		se.App.OnRecordAfterUpdateSuccess("settings").BindFunc(func(e *core.RecordEvent) error {
+			origins := seo.ExtractExternalOrigins(e.Record.GetString("custom_head"))
+			cachedCSP.Store(seo.BuildCSP(origins))
+			return e.Next()
+		})
+
 		// Security headers middleware
 		se.Router.BindFunc(func(e *core.RequestEvent) error {
 			path := e.Request.URL.Path
@@ -44,14 +61,7 @@ func main() {
 
 			// CSP only for frontend routes — skip admin UI and API
 			if !strings.HasPrefix(path, "/_/") && !strings.HasPrefix(path, "/api/") {
-				h.Set("Content-Security-Policy",
-					"default-src 'self'; "+
-						"img-src 'self' https://*.tile.openstreetmap.org data: blob:; "+
-						"style-src 'self' 'unsafe-inline'; "+
-						"connect-src 'self'; "+
-						"frame-ancestors 'none'; "+
-						"object-src 'none'; "+
-						"base-uri 'self'")
+				h.Set("Content-Security-Policy", cachedCSP.Load().(string))
 			}
 
 			return e.Next()
