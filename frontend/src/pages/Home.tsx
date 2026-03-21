@@ -1,13 +1,23 @@
-import { useEffect, useState, useRef } from 'preact/hooks'
+import { useEffect, useState, useRef, useMemo } from 'preact/hooks'
+import { format, parseISO } from 'date-fns'
 import { pb, Event, Tag } from '../lib/pocketbase'
 import { EventCard } from '../components/EventCard'
 import { MiniCalendar } from '../components/MiniCalendar'
+import { SkeletonTimeline } from '../components/Skeleton'
 import './Home.css'
 
 const PAGE_SIZE = 20
 
 interface Props {
   path?: string
+}
+
+function formatDayHeading(dateKey: string): string {
+  try {
+    return format(parseISO(dateKey), 'EEEE, MMMM d')
+  } catch {
+    return dateKey
+  }
 }
 
 export function Home(_props: Props) {
@@ -129,7 +139,34 @@ export function Home(_props: Props) {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   }
 
-  if (loading) return <div class="loading">Loading events...</div>
+  // Group events by date (YYYY-MM-DD extracted from start_datetime)
+  const grouped = useMemo(() => {
+    const map = new Map<string, Event[]>()
+    for (const event of events) {
+      const dateKey = event.start_datetime?.split(' ')[0] ?? ''
+      if (!map.has(dateKey)) map.set(dateKey, [])
+      map.get(dateKey)!.push(event)
+    }
+    return map
+  }, [events])
+
+  if (loading) return (
+    <div class="home">
+      <div class="home-main">
+        <SkeletonTimeline />
+      </div>
+      <aside class="home-sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Browse by date</div>
+          <MiniCalendar
+            eventDates={eventDates}
+            selectedDate={selectedDate ?? undefined}
+            onDateSelect={handleDateSelect}
+          />
+        </div>
+      </aside>
+    </div>
+  )
   if (error) return <div class="error">{error}</div>
 
   return (
@@ -146,9 +183,23 @@ export function Home(_props: Props) {
             {selectedDate ? 'No events on this date' : 'No upcoming events'}
           </p>
         ) : (
-          <div class="events-grid">
-            {events.map(event => (
-              <EventCard key={event.id} event={event} />
+          <div class="timeline">
+            {[...grouped.entries()].map(([dateKey, dayEvents]) => (
+              <section key={dateKey} class="timeline-day">
+                <div class="timeline-date-marker">
+                  <time class="timeline-date-label">{formatDayHeading(dateKey)}</time>
+                </div>
+                <div class="timeline-day-events">
+                  <EventCard event={dayEvents[0]} variant="featured" />
+                  {dayEvents.length > 1 && (
+                    <div class="timeline-compact-row">
+                      {dayEvents.slice(1).map(e => (
+                        <EventCard key={e.id} event={e} variant="compact" />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
             ))}
           </div>
         )}
@@ -157,6 +208,7 @@ export function Home(_props: Props) {
       </div>
       <aside class="home-sidebar">
         <div class="sidebar-section">
+          <div class="sidebar-section-title">Browse by date</div>
           <MiniCalendar
             eventDates={eventDates}
             selectedDate={selectedDate ?? undefined}
@@ -164,7 +216,7 @@ export function Home(_props: Props) {
           />
         </div>
         <div class="sidebar-section">
-          <h3>Tags</h3>
+          <div class="sidebar-section-title">Browse by tag</div>
           <div class="tag-cloud">
             {[...tags]
               .sort((a, b) => (tagCounts[b.id] ?? 0) - (tagCounts[a.id] ?? 0))
@@ -181,6 +233,7 @@ export function Home(_props: Props) {
           </div>
         </div>
         <div class="sidebar-section">
+          <div class="sidebar-section-title">Got an event?</div>
           <a href="/submit" class="btn btn-primary">
             + Add Event
           </a>
