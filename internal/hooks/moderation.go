@@ -17,17 +17,19 @@ func hashColor(name string) string {
 }
 
 func RegisterModerationHooks(app core.App) {
-	// Backfill colors for any existing tags that have none
+	// Backfill colors for any existing tags that have none (non-blocking)
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
-		tags, err := e.App.FindAllRecords("tags")
-		if err == nil {
-			for _, tag := range tags {
-				if tag.GetString("color") == "" {
-					tag.Set("color", hashColor(tag.GetString("name")))
-					_ = e.App.Save(tag)
+		go func() {
+			tags, err := e.App.FindAllRecords("tags")
+			if err == nil {
+				for _, tag := range tags {
+					if tag.GetString("color") == "" {
+						tag.Set("color", hashColor(tag.GetString("name")))
+						_ = e.App.Save(tag)
+					}
 				}
 			}
-		}
+		}()
 		return e.Next()
 	})
 

@@ -266,6 +266,7 @@ func main() {
 					FROM events e, json_each(e.tags) je
 					WHERE e.status = 'published'
 					  AND e.start_datetime >= {:today}
+					  AND json_valid(e.tags)
 					GROUP BY je.value
 				) cnt ON cnt.tag_id = t.id
 				WHERE t.status = 'approved'
@@ -349,7 +350,8 @@ func main() {
 			}
 
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
+			// no-store: prevent CDN from caching bot-specific HTML and serving it to humans
+			re.Response.Header().Set("Cache-Control", "no-store")
 			return re.Blob(200, "text/html", html)
 		})
 
