@@ -67,6 +67,36 @@ func RegisterModerationHooks(app core.App) {
 		return e.Next()
 	})
 
+	// Auto-approve place and tags when an admin/editor creates or updates an event
+	approveEventDeps := func(e *core.RecordRequestEvent) {
+		isPrivileged := e.HasSuperuserAuth() || (e.Auth != nil && e.Auth.GetString("role") == "admin")
+		if !isPrivileged {
+			return
+		}
+		if placeId := e.Record.GetString("place"); placeId != "" {
+			if place, err := app.FindRecordById("places", placeId); err == nil && place.GetString("status") == "pending" {
+				place.Set("status", "approved")
+				_ = app.Save(place)
+			}
+		}
+		for _, tagId := range e.Record.GetStringSlice("tags") {
+			if tag, err := app.FindRecordById("tags", tagId); err == nil && tag.GetString("status") == "pending" {
+				tag.Set("status", "approved")
+				_ = app.Save(tag)
+			}
+		}
+	}
+
+	app.OnRecordCreateRequest("events").BindFunc(func(e *core.RecordRequestEvent) error {
+		approveEventDeps(e)
+		return e.Next()
+	})
+
+	app.OnRecordUpdateRequest("events").BindFunc(func(e *core.RecordRequestEvent) error {
+		approveEventDeps(e)
+		return e.Next()
+	})
+
 	// Cascade blocking: prevent event publish if place or tags are pending
 	app.OnRecordUpdateRequest("events").BindFunc(func(e *core.RecordRequestEvent) error {
 		newStatus := e.Record.GetString("status")
