@@ -35,6 +35,7 @@
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
+  color: var(--color-text);
 }
 
 .calendar-title:hover {
@@ -133,7 +134,7 @@
 }
 
 [data-theme="dark"] .calendar-day-name {
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 [data-theme="dark"] .calendar-day {

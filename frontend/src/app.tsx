@@ -1,17 +1,19 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, Suspense } from 'preact/compat'
 import Router from 'preact-router'
-import { Home } from './pages/Home'
-import { Event } from './pages/Event'
-import { Submit } from './pages/Submit'
-import { Tag } from './pages/Tag'
-import { Place } from './pages/Place'
-import { Login } from './pages/Login'
-import { Admin } from './pages/Admin'
-import { Edit } from './pages/Edit'
+import { lazy } from 'preact/compat'
 import { pb, User, Settings } from './lib/pocketbase'
 import { getTheme, toggleTheme } from './lib/theme'
 import './style.css'
 import './components/Navigation.css'
+
+const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })))
+const Event = lazy(() => import('./pages/Event').then(m => ({ default: m.Event })))
+const Submit = lazy(() => import('./pages/Submit').then(m => ({ default: m.Submit })))
+const Tag = lazy(() => import('./pages/Tag').then(m => ({ default: m.Tag })))
+const Place = lazy(() => import('./pages/Place').then(m => ({ default: m.Place })))
+const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
+const Admin = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })))
+const Edit = lazy(() => import('./pages/Edit').then(m => ({ default: m.Edit })))
 
 export function App() {
   const [user, setUser] = useState<User | null>(pb.authStore.model as User | null)
@@ -136,16 +138,18 @@ export function App() {
         </nav>
       </header>
       <main>
-        <Router>
-          <Home path="/" />
-          <Event path="/event/:id" />
-          <Submit path="/submit" />
-          <Tag path="/tag/:name" />
-          <Place path="/place/:id" />
-          <Login path="/login" />
-          <Admin path="/admin" />
-          <Edit path="/edit/:id" />
-        </Router>
+        <Suspense fallback={null}>
+          <Router>
+            <Home path="/" />
+            <Event path="/event/:id" />
+            <Submit path="/submit" />
+            <Tag path="/tag/:name" />
+            <Place path="/place/:id" />
+            <Login path="/login" />
+            <Admin path="/admin" />
+            <Edit path="/edit/:id" />
+          </Router>
+        </Suspense>
       </main>
       <footer class="app-footer">
         <button onClick={() => setFediverseDialogOpen(true)} class="fediverse-link">
