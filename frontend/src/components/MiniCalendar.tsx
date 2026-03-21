@@ -107,7 +107,7 @@ export function MiniCalendar({ eventDates, selectedDate, onDateSelect }: Props) 
               class={`calendar-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${hasEvents ? 'has-events' : ''} ${isPast ? 'past' : ''}`}
               onClick={() => handleDateClick(day)}
             >
-              {day}
+              <span>{day}</span>
               {hasEvents && (
                 <div class="event-dots">
                   {(dotColors!.length > 0 ? dotColors!.slice(0, 3) : ['']).map((color, i) => (
