@@ -100,7 +100,7 @@ export function Admin(_props: Props) {
     if (activeTab !== 'pages' || !isAdmin() || pagesLoaded) return
     async function loadPages() {
       try {
-        const records = await pb.collection('pages').getFullList<PageRecord>({ sort: 'created' })
+        const records = await pb.collection('pages').getFullList<PageRecord>({ sort: 'title' })
         setPages(records)
       } catch (err) {
         console.error('Failed to load pages:', err)

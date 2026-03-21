@@ -25,18 +25,40 @@ export async function loginViaAPI(email: string, password: string): Promise<stri
   return data.token;
 }
 
+export async function loginViaAPIFull(email: string, password: string): Promise<{ token: string; record: Record<string, unknown> }> {
+  const apiContext = await request.newContext({
+    baseURL: 'http://127.0.0.1:8090',
+  });
+
+  const response = await apiContext.post('/api/collections/users/auth-with-password', {
+    data: {
+      identity: email,
+      password: password,
+    },
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Login failed: ${response.status()} ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  await apiContext.dispose();
+
+  return { token: data.token, record: data.record };
+}
+
 export async function setupAuthenticatedPage(page: Page, role: UserRole): Promise<void> {
   const user = TEST_USERS[role];
-  const token = await loginViaAPI(user.email, user.password);
+  const { token, record } = await loginViaAPIFull(user.email, user.password);
 
   // Set auth in localStorage (PocketBase stores auth there)
   await page.goto('/');
   await page.evaluate((authData) => {
     localStorage.setItem('pocketbase_auth', JSON.stringify({
       token: authData.token,
-      model: { email: authData.email }
+      model: authData.record,
     }));
-  }, { token, email: user.email });
+  }, { token, record });
 
   // Reload to apply auth
   await page.reload();
