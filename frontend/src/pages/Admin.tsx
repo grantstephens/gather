@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'preact/hooks'
 import { route } from 'preact-router'
-import { pb, Event, Place, Tag, canModerate, eventPath } from '../lib/pocketbase'
+import { pb, Event, Place, Tag, canModerate, eventPath, isAdmin } from '../lib/pocketbase'
+import type { PageRecord } from '../lib/pocketbase'
+import { MarkdownEditor } from '../components/MarkdownEditor'
 import { EventCard } from '../components/EventCard'
 import { SettingsForm } from '../components/SettingsForm'
 import './Admin.css'
@@ -9,7 +11,7 @@ interface Props {
   path?: string
 }
 
-type TabType = 'pending-events' | 'pending-places' | 'pending-tags' | 'all-events' | 'settings'
+type TabType = 'pending-events' | 'pending-places' | 'pending-tags' | 'all-events' | 'settings' | 'pages'
 
 export function Admin(_props: Props) {
   const [pendingEvents, setPendingEvents] = useState<Event[]>([])
@@ -18,6 +20,25 @@ export function Admin(_props: Props) {
   const [pendingTags, setPendingTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabType>('pending-events')
+  const [pages, setPages] = useState<PageRecord[]>([])
+  const [pagesLoaded, setPagesLoaded] = useState(false)
+  const [showPageForm, setShowPageForm] = useState(false)
+  const [editingPageId, setEditingPageId] = useState<string | null>(null)
+  const [pageForm, setPageForm] = useState({
+    title: '',
+    slug: '',
+    content: '',
+    show_in_nav: true,
+    show_in_footer: true,
+  })
+  const [pageFormError, setPageFormError] = useState<string | null>(null)
+  const [pageSaving, setPageSaving] = useState(false)
+
+  const RESERVED_SLUGS = ['submit', 'login', 'admin', 'event', 'tag', 'place', 'edit']
+
+  function slugify(title: string): string {
+    return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  }
 
   useEffect(() => {
     if (!canModerate()) {
@@ -74,6 +95,21 @@ export function Admin(_props: Props) {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (activeTab !== 'pages' || !isAdmin() || pagesLoaded) return
+    async function loadPages() {
+      try {
+        const records = await pb.collection('pages').getFullList<PageRecord>({ sort: 'created' })
+        setPages(records)
+      } catch (err) {
+        console.error('Failed to load pages:', err)
+      } finally {
+        setPagesLoaded(true)
+      }
+    }
+    loadPages()
+  }, [activeTab, pagesLoaded])
 
   const checkEventDependencies = async (event: Event): Promise<string | null> => {
     // Check if place is pending
@@ -175,6 +211,63 @@ export function Admin(_props: Props) {
     }
   }
 
+  const handlePageNew = () => {
+    setEditingPageId(null)
+    setPageForm({ title: '', slug: '', content: '', show_in_nav: true, show_in_footer: true })
+    setPageFormError(null)
+    setShowPageForm(true)
+  }
+
+  const handlePageEdit = (page: PageRecord) => {
+    setEditingPageId(page.id)
+    setPageForm({
+      title: page.title,
+      slug: page.slug,
+      content: page.content,
+      show_in_nav: page.show_in_nav,
+      show_in_footer: page.show_in_footer,
+    })
+    setPageFormError(null)
+    setShowPageForm(true)
+  }
+
+  const handlePageSave = async () => {
+    if (RESERVED_SLUGS.includes(pageForm.slug)) {
+      setPageFormError(`"${pageForm.slug}" is a reserved slug and cannot be used.`)
+      return
+    }
+    if (!pageForm.title.trim() || !pageForm.slug.trim()) {
+      setPageFormError('Title and slug are required.')
+      return
+    }
+    setPageSaving(true)
+    setPageFormError(null)
+    try {
+      if (editingPageId) {
+        const updated = await pb.collection('pages').update<PageRecord>(editingPageId, pageForm)
+        setPages(prev => prev.map(p => p.id === editingPageId ? updated : p))
+      } else {
+        const created = await pb.collection('pages').create<PageRecord>(pageForm)
+        setPages(prev => [...prev, created])
+      }
+      setShowPageForm(false)
+    } catch (err: any) {
+      setPageFormError(err?.data?.data?.slug?.message || 'Failed to save page.')
+    } finally {
+      setPageSaving(false)
+    }
+  }
+
+  const handlePageDelete = async (pageId: string) => {
+    if (!confirm('Delete this page? This cannot be undone.')) return
+    try {
+      await pb.collection('pages').delete(pageId)
+      setPages(prev => prev.filter(p => p.id !== pageId))
+    } catch {
+      alert('Failed to delete page.')
+    }
+  }
+
   if (loading) {
     return <div class="loading">Loading...</div>
   }
@@ -216,6 +309,14 @@ export function Admin(_props: Props) {
         >
           Settings
         </button>
+        {isAdmin() && (
+          <button
+            class={`tab ${activeTab === 'pages' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pages')}
+          >
+            Pages
+          </button>
+        )}
       </div>
 
       {totalPending > 0 && activeTab.startsWith('pending') && (
@@ -330,6 +431,115 @@ export function Admin(_props: Props) {
       )}
 
       {activeTab === 'settings' && <SettingsForm />}
+
+      {activeTab === 'pages' && (
+        <div class="pages-admin">
+          {!showPageForm ? (
+            <>
+              <div class="pages-list-header">
+                <button class="btn btn-primary" onClick={handlePageNew}>New Page</button>
+              </div>
+              {pages.length === 0 ? (
+                <p class="no-events">No pages yet. Create your first page above.</p>
+              ) : (
+                <div class="items-list">
+                  {pages.map(page => (
+                    <div key={page.id} class="admin-item-card">
+                      <div class="item-info">
+                        <h3>{page.title}</h3>
+                        <p class="item-detail">
+                          /{page.slug}
+                          {' · '}
+                          {page.show_in_nav ? 'Nav' : ''}
+                          {page.show_in_nav && page.show_in_footer ? ' · ' : ''}
+                          {page.show_in_footer ? 'Footer' : ''}
+                        </p>
+                      </div>
+                      <div class="admin-event-actions">
+                        <a href={`/${page.slug}`} target="_blank" class="btn btn-secondary">View</a>
+                        <button class="btn btn-secondary" onClick={() => handlePageEdit(page)}>Edit</button>
+                        <button class="btn btn-danger" onClick={() => handlePageDelete(page.id)}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div class="page-form">
+              <h2>{editingPageId ? 'Edit Page' : 'New Page'}</h2>
+              {pageFormError && <div class="error">{pageFormError}</div>}
+              <div class="form-group">
+                <label for="page-title">Title</label>
+                <input
+                  type="text"
+                  id="page-title"
+                  value={pageForm.title}
+                  onInput={(e) => {
+                    const title = (e.target as HTMLInputElement).value
+                    setPageForm(f => ({
+                      ...f,
+                      title,
+                      slug: editingPageId ? f.slug : slugify(title),
+                    }))
+                  }}
+                  disabled={pageSaving}
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="page-slug">Slug (URL path)</label>
+                <input
+                  type="text"
+                  id="page-slug"
+                  value={pageForm.slug}
+                  onInput={(e) => setPageForm(f => ({ ...f, slug: (e.target as HTMLInputElement).value }))}
+                  disabled={pageSaving}
+                  required
+                />
+                <small>Page will be accessible at /{pageForm.slug}</small>
+              </div>
+              <div class="form-group">
+                <label>Content</label>
+                <MarkdownEditor
+                  value={pageForm.content}
+                  onChange={(content) => setPageForm(f => ({ ...f, content }))}
+                />
+              </div>
+              <div class="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={pageForm.show_in_nav}
+                    onChange={(e) => setPageForm(f => ({ ...f, show_in_nav: (e.target as HTMLInputElement).checked }))}
+                    disabled={pageSaving}
+                  />
+                  {' '}Show in navigation
+                </label>
+              </div>
+              <div class="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={pageForm.show_in_footer}
+                    onChange={(e) => setPageForm(f => ({ ...f, show_in_footer: (e.target as HTMLInputElement).checked }))}
+                    disabled={pageSaving}
+                  />
+                  {' '}Show in footer
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onClick={() => setShowPageForm(false)} disabled={pageSaving}>
+                  Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onClick={handlePageSave} disabled={pageSaving}>
+                  {pageSaving ? 'Saving...' : 'Save Page'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
