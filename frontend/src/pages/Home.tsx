@@ -26,18 +26,18 @@ export function Home(_props: Props) {
   const today = new Date().toISOString().split('T')[0]
 
   // Fetch dates for the calendar
+  // '$autoCancel': false prevents the SDK from cancelling this request when the
+  // main events getList fires (both use the same collection path as requestKey).
   useEffect(() => {
-    const controller = new AbortController()
     pb.collection('events').getFullList({
       filter: `status = 'published' && start_datetime >= '${today}'`,
       fields: 'start_datetime',
-      signal: controller.signal,
+      '$autoCancel': false,
     }).then((items: any[]) => {
       const dates = new Set<string>()
       items.forEach(e => dates.add(e.start_datetime.split(' ')[0]))
       setEventDates(dates)
     }).catch(() => {})
-    return () => controller.abort()
   }, [])
 
   // Fetch tag counts from backend
