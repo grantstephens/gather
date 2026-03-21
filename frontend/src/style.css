@@ -189,34 +189,13 @@ main {
 /* ------------------------------------------------------------
    5. Header & navigation (shell-level)
    ------------------------------------------------------------ */
-header {
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: var(--space-4);
-  margin-bottom: var(--space-8);
-  position: relative;
-}
-
 .header-logo {
   height: 32px;
   margin-right: var(--space-2);
   vertical-align: middle;
 }
 
-.logo {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  text-decoration: none;
-  color: inherit;
-  letter-spacing: -0.02em;
-}
-
-header nav a {
-  color: var(--color-accent);
-  text-decoration: none;
-}
-
 /* .link — inline button that looks like a text link */
-header .link,
 .link {
   background: none;
   border: none;
@@ -231,81 +210,90 @@ header .link,
   text-decoration: underline;
 }
 
-/* Nav layout classes used by app.tsx */
-.nav-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.nav-items {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.user-email {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-/* Hamburger — mobile nav toggle */
-.hamburger-button {
-  display: none;
-  background: none;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-2);
-  cursor: pointer;
-  color: var(--color-text);
-  line-height: 1;
-}
-
-@media (max-width: 639px) {
-  .hamburger-button { display: flex; align-items: center; }
-
-  .nav-items {
-    display: none;
-    flex-direction: column;
-    align-items: flex-start;
-    width: 100%;
-    padding-top: var(--space-3);
-    gap: var(--space-3);
-  }
-
-  .nav-items.open {
-    display: flex;
-  }
-}
-
 /* ------------------------------------------------------------
    6. Footer
    ------------------------------------------------------------ */
 .app-footer {
-  position: sticky;
-  bottom: 0;
-  margin-top: var(--space-12);
-  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-16);
   border-top: 1px solid var(--color-border);
-  background: var(--color-bg);
+  padding: var(--space-8) 0 var(--space-6);
+}
+
+.footer-inner {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
   flex-wrap: wrap;
-  z-index: 10;
+  gap: var(--space-6);
 }
 
-.footer-page-link {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  transition: color var(--transition-fast);
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
-.footer-page-link:hover {
+.footer-wordmark {
+  font-size: var(--text-base);
+  font-weight: var(--font-extrabold);
+  letter-spacing: -0.04em;
+  color: var(--color-text);
+}
+
+.footer-wordmark::after {
+  content: '.';
   color: var(--color-accent);
+}
+
+.footer-tagline {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.footer-link {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.footer-link:hover {
+  color: var(--color-text);
+  background: var(--color-bg-tertiary);
+}
+
+.footer-fediverse-btn {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  font-family: var(--font-sans);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-muted);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.footer-fediverse-btn:hover {
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  border-color: var(--color-accent);
+}
+
+@media (max-width: 480px) {
+  .footer-inner {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
 }
 
 /* ------------------------------------------------------------
@@ -382,24 +370,8 @@ header .link,
 }
 
 /* ------------------------------------------------------------
-   8. Theme toggle
+   8. Theme toggle (now in nav — see Navigation.css .nav-theme-toggle)
    ------------------------------------------------------------ */
-.theme-toggle {
-  background: none;
-  border: 1.5px solid var(--color-border);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-family: var(--font-sans);
-  color: var(--color-text);
-  transition: border-color var(--transition-fast), color var(--transition-fast);
-}
-
-.theme-toggle:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
 
 /* ------------------------------------------------------------
    9. Buttons
