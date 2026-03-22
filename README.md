@@ -4,6 +4,8 @@ A self-hosted community calendar. Collect, moderate, and share local events with
 
 Built with Go ([PocketBase](https://pocketbase.io)) and [Preact](https://preactjs.com). Single binary, no external dependencies.
 
+**Live example:** [perthshire.events](https://perthshire.events)
+
 ## Features
 
 - Event submission with optional moderation workflow
