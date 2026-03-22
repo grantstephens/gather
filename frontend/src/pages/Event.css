@@ -89,6 +89,15 @@
   border: 1px solid var(--color-border);
 }
 
+/* Tint OSM tiles to match site palette */
+.event-map .leaflet-tile-pane {
+  filter: saturate(0.3) sepia(0.15) hue-rotate(120deg) brightness(1.02);
+}
+
+[data-theme="dark"] .event-map .leaflet-tile-pane {
+  filter: invert(1) saturate(0.3) sepia(0.15) hue-rotate(120deg) brightness(0.8) contrast(1.1);
+}
+
 .event-description {
   margin-bottom: var(--space-8);
   line-height: var(--leading-relaxed);
