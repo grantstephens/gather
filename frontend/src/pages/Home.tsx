@@ -163,12 +163,6 @@ export function Home(_props: Props) {
             ))}
         </div>
       </div>
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">Got an event?</div>
-        <a href="/submit" class="btn btn-primary">
-          + Add Event
-        </a>
-      </div>
     </aside>
   )
 

@@ -102,7 +102,7 @@ export function Admin(_props: Props) {
     if (activeTab !== 'pages' || !isAdmin() || pagesLoaded) return
     async function loadPages() {
       try {
-        const records = await pb.collection('pages').getFullList<PageRecord>({ sort: 'title' })
+        const records = await pb.collection('pages').getFullList<PageRecord>({ sort: 'sort_order,title' })
         setPages(records)
       } catch (err) {
         console.error('Failed to load pages:', err)
@@ -249,7 +249,7 @@ export function Admin(_props: Props) {
         const updated = await pb.collection('pages').update<PageRecord>(editingPageId, pageForm)
         setPages(prev => prev.map(p => p.id === editingPageId ? updated : p))
       } else {
-        const created = await pb.collection('pages').create<PageRecord>(pageForm)
+        const created = await pb.collection('pages').create<PageRecord>({ ...pageForm, sort_order: pages.length })
         setPages(prev => [...prev, created])
       }
       setShowPageForm(false)
@@ -267,6 +267,26 @@ export function Admin(_props: Props) {
       setPages(prev => prev.filter(p => p.id !== pageId))
     } catch {
       alert('Failed to delete page.')
+    }
+  }
+
+  const handlePageMove = async (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= pages.length) return
+
+    const newPages = [...pages]
+    const [moved] = newPages.splice(index, 1)
+    newPages.splice(targetIndex, 0, moved)
+
+    setPages(newPages)
+
+    try {
+      await Promise.all(
+        newPages.map((p, i) => pb.collection('pages').update(p.id, { sort_order: i }))
+      )
+      setPages(prev => prev.map((p, i) => ({ ...p, sort_order: i })))
+    } catch {
+      setPagesLoaded(false) // reload on failure
     }
   }
 
@@ -454,8 +474,26 @@ export function Admin(_props: Props) {
                 <p class="no-events">No pages yet. Create your first page above.</p>
               ) : (
                 <div class="items-list">
-                  {pages.map(page => (
+                  {pages.map((page, i) => (
                     <div key={page.id} class="admin-item-card">
+                      <div class="page-reorder">
+                        <button
+                          class="reorder-btn"
+                          onClick={() => handlePageMove(i, -1)}
+                          disabled={i === 0}
+                          aria-label="Move up"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v10"/><path d="M3 6l4-4 4 4"/></svg>
+                        </button>
+                        <button
+                          class="reorder-btn"
+                          onClick={() => handlePageMove(i, 1)}
+                          disabled={i === pages.length - 1}
+                          aria-label="Move down"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v10"/><path d="M3 8l4 4 4-4"/></svg>
+                        </button>
+                      </div>
                       <div class="item-info">
                         <h3>{page.title}</h3>
                         <p class="item-detail">

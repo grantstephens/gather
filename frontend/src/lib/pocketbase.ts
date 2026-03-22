@@ -81,6 +81,7 @@ export interface PageRecord extends BaseModel {
   content: string
   show_in_nav: boolean
   show_in_footer: boolean
+  sort_order: number
 }
 
 // Helper to get image URL

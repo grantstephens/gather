@@ -109,7 +109,7 @@ export function App() {
     async function loadPages() {
       try {
         const records = await pb.collection('pages').getFullList<PageRecord>({
-          sort: 'title',
+          sort: 'sort_order,title',
         })
         setNavPages(records.filter(p => p.show_in_nav))
         setFooterPages(records.filter(p => p.show_in_footer))
