@@ -25,6 +25,8 @@ import (
 	_ "gather/migrations"
 )
 
+const defaultFavicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#6366f1"/><rect x="6" y="4" width="20" height="24" rx="3" fill="#fff"/><rect x="10" y="3" width="2" height="4" rx="1" fill="#6366f1"/><rect x="20" y="3" width="2" height="4" rx="1" fill="#6366f1"/><line x1="6" y1="12" x2="26" y2="12" stroke="#e0e0e0" stroke-width="1"/><circle cx="12" cy="17" r="1.5" fill="#6366f1"/><circle cx="16" cy="17" r="1.5" fill="#6366f1"/><circle cx="20" cy="17" r="1.5" fill="#6366f1"/><circle cx="12" cy="22" r="1.5" fill="#6366f1"/><circle cx="16" cy="22" r="1.5" fill="#6366f1"/></svg>`
+
 func main() {
 	app := pocketbase.New()
 
@@ -223,44 +225,47 @@ func main() {
 			return re.NoContent(202)
 		})
 
-		// Favicon route - serves favicon from settings
+		// Favicon route - serves favicon from settings, with default SVG fallback
 		se.Router.GET("/favicon.ico", func(re *core.RequestEvent) error {
 			settings, err := se.App.FindFirstRecordByFilter("settings", "")
-			if err != nil {
-				return re.NotFoundError("No favicon configured", nil)
+			if err == nil {
+				favicon := settings.GetString("favicon")
+				if favicon != "" {
+					fs, err := se.App.NewFilesystem()
+					if err == nil {
+						defer fs.Close()
+
+						filePath := settings.BaseFilesPath() + "/" + favicon
+						reader, err := fs.GetReader(filePath)
+						if err == nil {
+							defer reader.Close()
+
+							contentType := "image/svg+xml"
+							if strings.HasSuffix(favicon, ".png") {
+								contentType = "image/png"
+							} else if strings.HasSuffix(favicon, ".webp") {
+								contentType = "image/webp"
+							} else if strings.HasSuffix(favicon, ".jpg") || strings.HasSuffix(favicon, ".jpeg") {
+								contentType = "image/jpeg"
+							} else if strings.HasSuffix(favicon, ".ico") {
+								contentType = "image/x-icon"
+							}
+
+							re.Response.Header().Set("Content-Type", contentType)
+							re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300")
+							re.Response.WriteHeader(http.StatusOK)
+							_, err = io.Copy(re.Response, reader)
+							return err
+						}
+					}
+				}
 			}
 
-			logo := settings.GetString("logo")
-			if logo == "" {
-				return re.NotFoundError("No favicon configured", nil)
-			}
-
-			fs, err := se.App.NewFilesystem()
-			if err != nil {
-				return re.NotFoundError("No favicon configured", nil)
-			}
-			defer fs.Close()
-
-			filePath := settings.BaseFilesPath() + "/" + logo
-			reader, err := fs.GetReader(filePath)
-			if err != nil {
-				return re.NotFoundError("No favicon configured", nil)
-			}
-			defer reader.Close()
-
-			contentType := "image/x-icon"
-			if strings.HasSuffix(logo, ".png") {
-				contentType = "image/png"
-			} else if strings.HasSuffix(logo, ".webp") {
-				contentType = "image/webp"
-			} else if strings.HasSuffix(logo, ".jpg") || strings.HasSuffix(logo, ".jpeg") {
-				contentType = "image/jpeg"
-			}
-
-			re.Response.Header().Set("Content-Type", contentType)
+			// Default SVG favicon
+			re.Response.Header().Set("Content-Type", "image/svg+xml")
 			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300")
 			re.Response.WriteHeader(http.StatusOK)
-			_, err = io.Copy(re.Response, reader)
+			_, err = re.Response.Write([]byte(defaultFavicon))
 			return err
 		})
 

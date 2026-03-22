@@ -71,7 +71,7 @@ export interface Settings extends BaseModel {
   ap_enabled: boolean
   ap_private_key: string
   ap_public_key: string
-  logo?: string
+  favicon?: string
 }
 
 export interface PageRecord extends BaseModel {

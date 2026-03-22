@@ -6,7 +6,7 @@ import './SettingsForm.css'
 interface FormData {
   instance_name: string
   instance_description: string
-  logo: File | null
+  favicon: File | null
   allow_anonymous: boolean
   require_moderation: boolean
   custom_css: string
@@ -19,7 +19,7 @@ export function SettingsForm() {
   const [formData, setFormData] = useState<FormData>({
     instance_name: 'Gather',
     instance_description: 'Community Events Calendar',
-    logo: null,
+    favicon: null,
     allow_anonymous: true,
     require_moderation: false,
     custom_css: '',
@@ -39,7 +39,7 @@ export function SettingsForm() {
         setFormData({
           instance_name: record.instance_name || 'Gather',
           instance_description: record.instance_description || 'Community Events Calendar',
-          logo: null,
+          favicon: null,
           allow_anonymous: record.allow_anonymous ?? true,
           require_moderation: record.require_moderation ?? false,
           custom_css: record.custom_css || '',
@@ -75,7 +75,7 @@ export function SettingsForm() {
       return
     }
 
-    setFormData({ ...formData, logo: file })
+    setFormData({ ...formData, favicon: file })
     setError(null)
   }
 
@@ -84,11 +84,11 @@ export function SettingsForm() {
 
     try {
       const data = new FormData()
-      data.append('logo', '')
+      data.append('favicon', '')
 
       const result = await pb.collection('settings').update<Settings>(settings.id, data)
       setSettings(result)
-      setFormData({ ...formData, logo: null })
+      setFormData({ ...formData, favicon: null })
     } catch (err: any) {
       setError('Failed to remove favicon')
     }
@@ -99,7 +99,7 @@ export function SettingsForm() {
       setFormData({
         instance_name: settings.instance_name || 'Gather',
         instance_description: settings.instance_description || 'Community Events Calendar',
-        logo: null,
+        favicon: null,
         allow_anonymous: settings.allow_anonymous ?? true,
         require_moderation: settings.require_moderation ?? false,
         custom_css: settings.custom_css || '',
@@ -125,8 +125,8 @@ export function SettingsForm() {
       data.append('custom_head', formData.custom_head)
       data.append('ap_enabled', formData.ap_enabled.toString())
 
-      if (formData.logo) {
-        data.append('logo', formData.logo)
+      if (formData.favicon) {
+        data.append('favicon', formData.favicon)
       }
 
       let result
@@ -137,7 +137,7 @@ export function SettingsForm() {
       }
 
       setSettings(result)
-      setFormData({ ...formData, logo: null })
+      setFormData({ ...formData, favicon: null })
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
@@ -186,23 +186,23 @@ export function SettingsForm() {
 
           <div class="form-group">
             <label>Favicon</label>
-            {settings?.logo && (
+            {settings?.favicon && (
               <div class="favicon-preview">
                 <img
-                  src={pb.files.getUrl(settings, settings.logo, { thumb: '100x100' })}
+                  src={pb.files.getUrl(settings, settings.favicon, { thumb: '100x100' })}
                   alt="Current favicon"
                 />
               </div>
             )}
             <input
               type="file"
-              id="logo"
+              id="favicon"
               accept="image/*"
               onChange={handleLogoChange}
               disabled={saving}
             />
             <small class="field-hint">Square images work best (e.g. 400×400px). Automatically resized to 400px and converted to WebP.</small>
-            {settings?.logo && (
+            {settings?.favicon && (
               <button
                 type="button"
                 onClick={handleLogoRemove}

@@ -24,13 +24,13 @@ func RegisterImageConversionHooks(app core.App) {
 		return convertAndReplaceImage(e, "image", false)
 	})
 
-	// Settings collection: logo field, allow SVG
+	// Settings collection: favicon field, allow SVG
 	app.OnRecordAfterCreateSuccess("settings").BindFunc(func(e *core.RecordEvent) error {
-		return convertAndReplaceImage(e, "logo", true)
+		return convertAndReplaceImage(e, "favicon", true)
 	})
 
 	app.OnRecordAfterUpdateSuccess("settings").BindFunc(func(e *core.RecordEvent) error {
-		return convertAndReplaceImage(e, "logo", true)
+		return convertAndReplaceImage(e, "favicon", true)
 	})
 
 	// Serve pre-generated WebP thumbnails instead of PocketBase's PNG thumbnails
@@ -95,7 +95,7 @@ func convertAndReplaceImage(e *core.RecordEvent, fieldName string, allowSVG bool
 
 	// Convert to WebP
 	maxDimension := 0
-	if fieldName == "logo" {
+	if fieldName == "favicon" {
 		maxDimension = 400
 	}
 	webpBytes, newFilename, err := images.ConvertToWebP(bytes.NewReader(fileData), filename, 85, maxDimension)
