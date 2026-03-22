@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from 'preact/compat'
+import { useState, useEffect, useRef, Suspense } from 'preact/compat'
 import Router from 'preact-router'
 import { lazy } from 'preact/compat'
 import { pb, User, Settings, PageRecord } from './lib/pocketbase'
@@ -33,6 +33,18 @@ export function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [fediverseDialogOpen, setFediverseDialogOpen] = useState(false)
   const [fediverseInstance, setFediverseInstance] = useState('')
+  const [footerVisible, setFooterVisible] = useState(true)
+  const lastScrollY = useRef(0)
+
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY
+      setFooterVisible(y < 50 || y < lastScrollY.current)
+      lastScrollY.current = y
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const handleFediverseFollow = (e: Event) => {
     e.preventDefault()
@@ -213,7 +225,7 @@ export function App() {
           </Router>
         </Suspense>
       </main>
-      <footer class="app-footer">
+      <footer class={`app-footer${footerVisible ? '' : ' app-footer--hidden'}`}>
         <div class="footer-inner">
           <div class="footer-brand">
             <span class="footer-wordmark"><BrandName name={settings?.instance_name || 'gather'} /></span>

@@ -186,7 +186,7 @@ a:hover {
 main {
   flex: 1;
   padding-top: var(--space-8);
-  padding-bottom: var(--space-12);
+  padding-bottom: 5rem;
 }
 
 /* ------------------------------------------------------------
@@ -211,17 +211,32 @@ main {
    6. Footer
    ------------------------------------------------------------ */
 .app-footer {
-  margin-top: var(--space-16);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   border-top: 1px solid var(--color-border);
-  padding: var(--space-8) 0 var(--space-6);
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: var(--space-3) var(--space-4);
+  z-index: 200;
+  transform: translateY(0);
+  transition: transform var(--transition-slow);
+}
+
+.app-footer--hidden {
+  transform: translateY(100%);
 }
 
 .footer-inner {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-6);
+  gap: var(--space-4);
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .footer-brand {
@@ -282,11 +297,9 @@ main {
   border-color: var(--color-accent);
 }
 
-@media (max-width: 480px) {
-  .footer-inner {
-    flex-direction: column;
-    gap: var(--space-4);
-  }
+@media (max-width: 640px) {
+  .footer-brand { display: none; }
+  .footer-inner { justify-content: center; }
 }
 
 /* ------------------------------------------------------------
