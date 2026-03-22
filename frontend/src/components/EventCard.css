@@ -41,6 +41,14 @@
   font-size: var(--text-xs);
   color: var(--color-text-muted);
   margin-top: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.icon-pin {
+  flex-shrink: 0;
+  opacity: 0.6;
 }
 
 /* ── Tags ─────────────────────────────────────── */
