@@ -63,6 +63,7 @@ export interface User {
 
 export interface Settings extends BaseModel {
   instance_name: string
+  subtitle: string
   instance_description: string
   allow_anonymous: boolean
   require_moderation: boolean

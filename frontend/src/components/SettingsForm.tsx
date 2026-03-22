@@ -5,6 +5,7 @@ import './SettingsForm.css'
 
 interface FormData {
   instance_name: string
+  subtitle: string
   instance_description: string
   favicon: File | null
   allow_anonymous: boolean
@@ -18,6 +19,7 @@ export function SettingsForm() {
   const [settings, setSettings] = useState<Settings | null>(null)
   const [formData, setFormData] = useState<FormData>({
     instance_name: 'Gather',
+    subtitle: '',
     instance_description: 'Community Events Calendar',
     favicon: null,
     allow_anonymous: true,
@@ -38,6 +40,7 @@ export function SettingsForm() {
         setSettings(record)
         setFormData({
           instance_name: record.instance_name || 'Gather',
+          subtitle: record.subtitle || '',
           instance_description: record.instance_description || 'Community Events Calendar',
           favicon: null,
           allow_anonymous: record.allow_anonymous ?? true,
@@ -98,6 +101,7 @@ export function SettingsForm() {
     if (settings) {
       setFormData({
         instance_name: settings.instance_name || 'Gather',
+        subtitle: settings.subtitle || '',
         instance_description: settings.instance_description || 'Community Events Calendar',
         favicon: null,
         allow_anonymous: settings.allow_anonymous ?? true,
@@ -118,6 +122,7 @@ export function SettingsForm() {
     try {
       const data = new FormData()
       data.append('instance_name', formData.instance_name)
+      data.append('subtitle', formData.subtitle)
       data.append('instance_description', formData.instance_description)
       data.append('allow_anonymous', formData.allow_anonymous.toString())
       data.append('require_moderation', formData.require_moderation.toString())
@@ -171,6 +176,20 @@ export function SettingsForm() {
               required
               disabled={saving}
             />
+          </div>
+
+          <div class="form-group">
+            <label for="subtitle">Subtitle</label>
+            <input
+              type="text"
+              id="subtitle"
+              value={formData.subtitle}
+              onInput={(e) => setFormData({ ...formData, subtitle: (e.target as HTMLInputElement).value })}
+              disabled={saving}
+              maxLength={60}
+              placeholder="e.g. Community events calendar"
+            />
+            <small class="field-hint">Short phrase shown below the site name in the header (3–5 words).</small>
           </div>
 
           <div class="form-group">

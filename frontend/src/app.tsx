@@ -152,6 +152,9 @@ export function App() {
             <a href="/" class="nav-wordmark" onClick={handleNavClick}>
               <BrandName name={settings?.instance_name || 'Gather'} />
             </a>
+            {settings?.subtitle && (
+              <span class="nav-subtitle">{settings.subtitle}</span>
+            )}
           </div>
 
           <button
