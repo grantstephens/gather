@@ -1,7 +1,9 @@
 package main
 
 import (
+	"html"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -101,6 +103,30 @@ func main() {
 		}
 		if baseURL == "" {
 			baseURL = "http://127.0.0.1:8090"
+		}
+
+		// Build SPA index.html with injected instance metadata
+		var spaHTML []byte
+		if rawHTML, err := fs.ReadFile(frontend, "index.html"); err == nil {
+			spaHTML = rawHTML
+			if s, err := se.App.FindFirstRecordByFilter("settings", ""); err == nil {
+				page := string(rawHTML)
+				if name := s.GetString("instance_name"); name != "" {
+					page = strings.Replace(page, "<title>Gather</title>", "<title>"+html.EscapeString(name)+"</title>", 1)
+				}
+				if desc := s.GetString("instance_description"); desc != "" {
+					page = strings.Replace(page,
+						`content="Community events calendar — discover upcoming events near you."`,
+						`content="`+html.EscapeString(desc)+`"`, 1)
+				}
+				spaHTML = []byte(page)
+			}
+		}
+		serveSPA := func(re *core.RequestEvent) error {
+			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+			re.Response.Header().Set("Cache-Control", "no-cache")
+			_, err := re.Response.Write(spaHTML)
+			return err
 		}
 
 		// RSS feeds
@@ -330,7 +356,7 @@ func main() {
 
 			// Non-bots get the SPA
 			if !seo.IsBot(userAgent) {
-				return re.FileFS(frontend, "index.html")
+				return serveSPA(re)
 			}
 
 			id := re.Request.PathValue("id")
@@ -341,19 +367,19 @@ func main() {
 				event, err = se.App.FindRecordById("events", id)
 			}
 			if err != nil {
-				return re.FileFS(frontend, "index.html") // Let SPA handle 404
+				return serveSPA(re) // Let SPA handle 404
 			}
 
 			// Only serve metadata for published events
 			if event.GetString("status") != "published" {
-				return re.FileFS(frontend, "index.html")
+				return serveSPA(re)
 			}
 
 			// Generate HTML with metadata
 			html, err := seo.GenerateEventHTML(se.App, event, baseURL)
 			if err != nil {
 				log.Println("Failed to generate SEO HTML:", err)
-				return re.FileFS(frontend, "index.html") // Fallback to SPA
+				return serveSPA(re) // Fallback to SPA
 			}
 
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -370,13 +396,13 @@ func main() {
 					viteProxy.ServeHTTP(re.Response, re.Request)
 					return nil
 				}
-				return re.FileFS(frontend, "index.html")
+				return serveSPA(re)
 			}
 
 			html, err := seo.GenerateHomeHTML(se.App, baseURL)
 			if err != nil {
 				log.Println("Failed to generate home SEO HTML:", err)
-				return re.FileFS(frontend, "index.html")
+				return serveSPA(re)
 			}
 
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -411,10 +437,8 @@ func main() {
 				return re.FileFS(frontend, path)
 			}
 
-			// Fallback to index.html for SPA — always revalidate so
-			// browsers pick up new asset hashes after deploys
-			re.Response.Header().Set("Cache-Control", "no-cache")
-			return re.FileFS(frontend, "index.html")
+			// Fallback to index.html for SPA
+			return serveSPA(re)
 		})
 
 		return se.Next()

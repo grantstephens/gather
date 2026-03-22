@@ -6,7 +6,7 @@ import (
 )
 
 func TestBuildHomeHTML(t *testing.T) {
-	result := buildHomeHTML("Perthshire Events", "Community calendar for Perthshire", "https://example.com", []HomeEvent{
+	result := buildHomeHTML("Perthshire Events", "Community calendar for Perthshire", "https://example.com/api/files/settings/1/favicon.webp", "https://example.com", []HomeEvent{
 		{Slug: "abc123", Title: "Summer Fest", StartDate: "Saturday, 1 June 2026"},
 		{Slug: "def456", Title: "Folk Night", StartDate: "Sunday, 2 June 2026"},
 	})
@@ -38,10 +38,13 @@ func TestBuildHomeHTML(t *testing.T) {
 	if !strings.Contains(result, `type="application/rss+xml"`) {
 		t.Error("home HTML should contain RSS link")
 	}
+	if !strings.Contains(result, `og:image`) {
+		t.Error("home HTML should contain og:image when favicon is set")
+	}
 }
 
 func TestBuildHomeHTMLNoEvents(t *testing.T) {
-	result := buildHomeHTML("Gather", "", "https://example.com", nil)
+	result := buildHomeHTML("Gather", "", "", "https://example.com", nil)
 	if !strings.Contains(result, "<title>Gather</title>") {
 		t.Error("home HTML should still render title with no events")
 	}
@@ -51,7 +54,7 @@ func TestBuildHomeHTMLNoEvents(t *testing.T) {
 }
 
 func TestBuildHomeHTMLXSSEscape(t *testing.T) {
-	result := buildHomeHTML(`<script>alert("xss")</script>`, "", "https://example.com", nil)
+	result := buildHomeHTML(`<script>alert("xss")</script>`, "", "", "https://example.com", nil)
 	if strings.Contains(result, "<script>alert") {
 		t.Error("home HTML should escape XSS in instance name")
 	}

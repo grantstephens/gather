@@ -15,7 +15,8 @@ type SitemapEntry struct {
 	LastMod string
 }
 
-// GenerateSitemap fetches all published events and returns sitemap XML bytes
+// GenerateSitemap fetches all published events, approved tags/places, and
+// custom pages, then returns sitemap XML bytes.
 func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 	events, err := app.FindRecordsByFilter(
 		"events",
@@ -28,7 +29,7 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 		return nil, err
 	}
 
-	entries := make([]SitemapEntry, 0, len(events))
+	entries := make([]SitemapEntry, 0, len(events)+50)
 	for _, event := range events {
 		updatedTime := event.GetDateTime("updated").Time()
 		var lastMod string
@@ -44,6 +45,38 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 		entries = append(entries, SitemapEntry{
 			URL:     fmt.Sprintf("%s/event/%s", baseURL, urlPath),
 			LastMod: lastMod,
+		})
+	}
+
+	// Custom pages
+	pages, _ := app.FindRecordsByFilter("pages", "", "sort_order,title", 100, 0)
+	for _, page := range pages {
+		updatedTime := page.GetDateTime("updated").Time()
+		lastMod := time.Now().Format("2006-01-02")
+		if !updatedTime.IsZero() {
+			lastMod = updatedTime.Format("2006-01-02")
+		}
+		entries = append(entries, SitemapEntry{
+			URL:     fmt.Sprintf("%s/%s", baseURL, page.GetString("slug")),
+			LastMod: lastMod,
+		})
+	}
+
+	// Approved tags
+	tags, _ := app.FindRecordsByFilter("tags", "status = 'approved'", "name", 200, 0)
+	for _, tag := range tags {
+		entries = append(entries, SitemapEntry{
+			URL:     fmt.Sprintf("%s/tag/%s", baseURL, tag.GetString("name")),
+			LastMod: time.Now().Format("2006-01-02"),
+		})
+	}
+
+	// Approved places
+	places, _ := app.FindRecordsByFilter("places", "status = 'approved'", "name", 200, 0)
+	for _, place := range places {
+		entries = append(entries, SitemapEntry{
+			URL:     fmt.Sprintf("%s/place/%s", baseURL, place.Id),
+			LastMod: time.Now().Format("2006-01-02"),
 		})
 	}
 

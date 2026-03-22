@@ -229,8 +229,8 @@ export function App() {
             {footerPages.map(page => (
               <a key={page.id} href={`/${page.slug}`} class="footer-link">{page.title}</a>
             ))}
-            <a href="/feed/events.rss" class="footer-link">RSS</a>
-            <a href="/ical/events.ics" class="footer-link">iCal</a>
+            <a href="/feed.rss" class="footer-link">RSS</a>
+            <a href="/feed.ics" class="footer-link">iCal</a>
           </div>
           <div class="footer-actions">
             <button class="footer-fediverse-btn" onClick={() => setFediverseDialogOpen(true)}>
