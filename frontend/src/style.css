@@ -39,10 +39,6 @@
   --color-draft-bg:     #f1f5f9;
   --color-draft-text:   #475569;
 
-  /* Action button tokens */
-  --color-success-action: #10b981;
-  --color-warning-action: #f59e0b;
-
   /* Backward-compatible alias */
   --color-primary: var(--color-accent);
 
@@ -137,8 +133,6 @@
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -4px rgba(0,0,0,0.3);
 
-  --color-success-action: #34d399;
-  --color-warning-action: #fbbf24;
 }
 
 /* ------------------------------------------------------------
@@ -162,6 +156,15 @@ body {
   color: var(--color-text);
   background: var(--color-bg);
   min-height: 100vh;
+}
+
+a {
+  color: var(--color-accent);
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  color: var(--color-accent-hover);
 }
 
 /* ------------------------------------------------------------
@@ -407,32 +410,14 @@ main {
   border-color: var(--color-text-muted);
 }
 
-.btn-success {
-  background: var(--color-success-action);
-  color: var(--color-text-on-accent);
-  border-color: var(--color-success-action);
-}
-.btn-success:hover {
-  filter: brightness(0.9);
-}
-
 .btn-danger {
   background: transparent;
-  color: var(--color-error-text);
-  border-color: var(--color-error-bg);
+  color: #f87171;
+  border-color: #7f1d1d;
 }
 .btn-danger:hover {
-  background: var(--color-error-bg);
-  border-color: var(--color-error-text);
-}
-
-.btn-warning {
-  background: var(--color-warning-action);
-  color: var(--color-text-on-accent);
-  border-color: var(--color-warning-action);
-}
-.btn-warning:hover {
-  filter: brightness(0.9);
+  background: #7f1d1d;
+  color: #fca5a5;
 }
 
 /* Size modifiers */
@@ -648,7 +633,5 @@ main {
     --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
     --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
     --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -4px rgba(0,0,0,0.3);
-    --color-success-action: #34d399;
-    --color-warning-action: #fbbf24;
   }
 }

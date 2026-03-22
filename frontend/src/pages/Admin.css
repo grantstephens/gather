@@ -78,7 +78,7 @@
 .moderation-tip {
   background: var(--color-warning-bg);
   border: 1px solid var(--color-warning-bg);
-  border-left: 4px solid var(--color-warning-action);
+  border-left: 4px solid var(--color-warning-text);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-6);

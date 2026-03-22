@@ -182,7 +182,7 @@ export function Event({ id }: Props) {
               </a>
               {event.status === 'pending' && (
                 <button
-                  class="btn btn-success"
+                  class="btn btn-primary"
                   onClick={() => handleStatusChange('published')}
                   disabled={actionLoading}
                 >
@@ -191,7 +191,7 @@ export function Event({ id }: Props) {
               )}
               {event.status === 'published' && (
                 <button
-                  class="btn btn-warning"
+                  class="btn btn-secondary"
                   onClick={() => handleStatusChange('cancelled')}
                   disabled={actionLoading}
                 >
@@ -200,7 +200,7 @@ export function Event({ id }: Props) {
               )}
               {event.status === 'cancelled' && (
                 <button
-                  class="btn btn-success"
+                  class="btn btn-primary"
                   onClick={() => handleStatusChange('published')}
                   disabled={actionLoading}
                 >

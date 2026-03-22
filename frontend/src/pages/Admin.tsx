@@ -345,7 +345,7 @@ export function Admin(_props: Props) {
               <div key={event.id} class="admin-event-card">
                 <EventCard event={event} />
                 <div class="admin-event-actions">
-                  <button class="btn btn-success" onClick={() => handleApproveEvent(event.id)}>
+                  <button class="btn btn-primary" onClick={() => handleApproveEvent(event.id)}>
                     Approve
                   </button>
                   <a href={eventPath(event)} class="btn btn-secondary">
@@ -374,7 +374,7 @@ export function Admin(_props: Props) {
                   {place.city && <p class="item-detail">{place.city}</p>}
                 </div>
                 <div class="admin-event-actions">
-                  <button class="btn btn-success" onClick={() => handleApprovePlace(place.id)}>
+                  <button class="btn btn-primary" onClick={() => handleApprovePlace(place.id)}>
                     Approve
                   </button>
                   <button class="btn btn-danger" onClick={() => handleRejectPlace(place.id)}>
@@ -403,7 +403,7 @@ export function Admin(_props: Props) {
                   </span>
                 </div>
                 <div class="admin-event-actions">
-                  <button class="btn btn-success" onClick={() => handleApproveTag(tag.id)}>
+                  <button class="btn btn-primary" onClick={() => handleApproveTag(tag.id)}>
                     Approve
                   </button>
                   <button class="btn btn-danger" onClick={() => handleRejectTag(tag.id)}>
