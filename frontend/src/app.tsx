@@ -244,27 +244,27 @@ export function App() {
             </button>
           </div>
         </div>
-        {fediverseDialogOpen && (
-          <div class="fediverse-dialog-overlay" onClick={() => setFediverseDialogOpen(false)}>
-            <div class="fediverse-dialog" onClick={(e) => e.stopPropagation()}>
-              <p>Enter your Mastodon/Fediverse instance:</p>
-              <form onSubmit={handleFediverseFollow}>
-                <input
-                  type="text"
-                  placeholder="mastodon.social"
-                  value={fediverseInstance}
-                  onInput={(e) => setFediverseInstance((e.target as HTMLInputElement).value)}
-                  autoFocus
-                />
-                <div class="fediverse-dialog-actions">
-                  <button type="button" onClick={() => setFediverseDialogOpen(false)}>Cancel</button>
-                  <button type="submit">Follow</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </footer>
+      {fediverseDialogOpen && (
+        <div class="fediverse-dialog-overlay" onClick={() => setFediverseDialogOpen(false)}>
+          <div class="fediverse-dialog" onClick={(e) => e.stopPropagation()}>
+            <p>Enter your Mastodon/Fediverse instance:</p>
+            <form onSubmit={handleFediverseFollow}>
+              <input
+                type="text"
+                placeholder="mastodon.social"
+                value={fediverseInstance}
+                onInput={(e) => setFediverseInstance((e.target as HTMLInputElement).value)}
+                autoFocus
+              />
+              <div class="fediverse-dialog-actions">
+                <button type="button" class="btn btn-secondary" onClick={() => setFediverseDialogOpen(false)}>Cancel</button>
+                <button type="submit" class="btn btn-primary">Follow</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       </div>
     </>
   )
