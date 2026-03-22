@@ -42,8 +42,7 @@
   line-height: 1;
 }
 
-.nav-wordmark::after {
-  content: '.';
+.brand-dot {
   color: var(--color-accent);
 }
 

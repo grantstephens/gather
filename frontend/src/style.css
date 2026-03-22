@@ -237,10 +237,6 @@ main {
   color: var(--color-text);
 }
 
-.footer-wordmark::after {
-  content: '.';
-  color: var(--color-accent);
-}
 
 .footer-tagline {
   font-size: var(--text-xs);

@@ -6,6 +6,14 @@ import { getTheme, toggleTheme } from './lib/theme'
 import './style.css'
 import './components/Navigation.css'
 
+function BrandName({ name }: { name: string }) {
+  const spaceIdx = name.indexOf(' ')
+  if (spaceIdx === -1) {
+    return <>{name}<span class="brand-dot">.</span></>
+  }
+  return <>{name.slice(0, spaceIdx)}<span class="brand-dot">.</span>{name.slice(spaceIdx)}</>
+}
+
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })))
 const Event = lazy(() => import('./pages/Event').then(m => ({ default: m.Event })))
 const Submit = lazy(() => import('./pages/Submit').then(m => ({ default: m.Submit })))
@@ -142,7 +150,7 @@ export function App() {
         <nav class="site-nav">
           <div class="nav-brand">
             <a href="/" class="nav-wordmark" onClick={handleNavClick}>
-              {settings?.instance_name || 'Gather'}
+              <BrandName name={settings?.instance_name || 'Gather'} />
             </a>
           </div>
 
@@ -205,7 +213,7 @@ export function App() {
       <footer class="app-footer">
         <div class="footer-inner">
           <div class="footer-brand">
-            <span class="footer-wordmark">{settings?.instance_name || 'gather'}</span>
+            <span class="footer-wordmark"><BrandName name={settings?.instance_name || 'gather'} /></span>
             <span class="footer-tagline">Community events calendar</span>
           </div>
           <div class="footer-links">
