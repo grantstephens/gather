@@ -67,6 +67,17 @@ func main() {
 				h.Set("Content-Security-Policy", cachedCSP.Load().(string))
 			}
 
+			// Short cache for public read-only API list/view endpoints (GET only, no auth)
+			if strings.HasPrefix(path, "/api/collections/") && e.Request.Method == "GET" &&
+				e.Request.Header.Get("Authorization") == "" {
+				h.Set("Cache-Control", "public, max-age=60, stale-while-revalidate=30")
+			}
+
+			// Cache uploaded file downloads (images etc.) — content-addressed by filename
+			if strings.HasPrefix(path, "/api/files/") && e.Request.Method == "GET" {
+				h.Set("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400")
+			}
+
 			return e.Next()
 		})
 
@@ -400,7 +411,9 @@ func main() {
 				return re.FileFS(frontend, path)
 			}
 
-			// Fallback to index.html for SPA
+			// Fallback to index.html for SPA — always revalidate so
+			// browsers pick up new asset hashes after deploys
+			re.Response.Header().Set("Cache-Control", "no-cache")
 			return re.FileFS(frontend, "index.html")
 		})
 
