@@ -20,7 +20,7 @@ export function SettingsForm() {
   const [formData, setFormData] = useState<FormData>({
     instance_name: 'Gather',
     subtitle: '',
-    instance_description: 'Community Events Calendar',
+    instance_description: '',
     favicon: null,
     allow_anonymous: true,
     require_moderation: false,
@@ -41,7 +41,7 @@ export function SettingsForm() {
         setFormData({
           instance_name: record.instance_name || 'Gather',
           subtitle: record.subtitle || '',
-          instance_description: record.instance_description || 'Community Events Calendar',
+          instance_description: record.instance_description || '',
           favicon: null,
           allow_anonymous: record.allow_anonymous ?? true,
           require_moderation: record.require_moderation ?? false,
@@ -102,7 +102,7 @@ export function SettingsForm() {
       setFormData({
         instance_name: settings.instance_name || 'Gather',
         subtitle: settings.subtitle || '',
-        instance_description: settings.instance_description || 'Community Events Calendar',
+        instance_description: settings.instance_description || '',
         favicon: null,
         allow_anonymous: settings.allow_anonymous ?? true,
         require_moderation: settings.require_moderation ?? false,
@@ -193,14 +193,16 @@ export function SettingsForm() {
           </div>
 
           <div class="form-group">
-            <label for="instance_description">Description/Tagline</label>
+            <label for="instance_description">SEO Description</label>
             <textarea
               id="instance_description"
               value={formData.instance_description}
               onInput={(e) => setFormData({ ...formData, instance_description: (e.target as HTMLTextAreaElement).value })}
               disabled={saving}
-              rows={3}
+              rows={2}
+              placeholder="e.g. Discover community events happening in Perthshire — workshops, markets, festivals and more."
             />
+            <small class="field-hint">Used in search results, social previews, and RSS feeds. Can be longer than the subtitle.</small>
           </div>
 
           <div class="form-group">

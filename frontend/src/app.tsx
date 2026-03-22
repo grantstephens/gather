@@ -223,7 +223,7 @@ export function App() {
         <div class="footer-inner">
           <div class="footer-brand">
             <span class="footer-wordmark"><BrandName name={settings?.instance_name || 'gather'} /></span>
-            <span class="footer-tagline">Community events calendar</span>
+            {settings?.subtitle && <span class="footer-tagline">{settings.subtitle}</span>}
           </div>
           <div class="footer-links">
             {footerPages.map(page => (
