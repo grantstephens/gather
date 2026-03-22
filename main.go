@@ -19,6 +19,7 @@ import (
 	"gather/internal/activitypub"
 	"gather/internal/hooks"
 	"gather/internal/ical"
+	"gather/internal/middleware"
 	"gather/internal/rss"
 	"gather/internal/seo"
 	_ "gather/migrations"
@@ -66,6 +67,9 @@ func main() {
 
 			return e.Next()
 		})
+
+		// Compression middleware (zstd, gzip, deflate via klauspost/compress)
+		se.Router.BindFunc(middleware.Compress)
 
 		// Initialize AP keypair on first run
 		if err := activitypub.EnsureKeypair(se.App); err != nil {
