@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
 import { format } from 'date-fns'
+import { tagStyle } from '../lib/color'
 import { route } from 'preact-router'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
@@ -141,7 +142,7 @@ export function Event({ id }: Props) {
                     key={tag.id}
                     href={`/tag/${tag.name}`}
                     class="tag"
-                    style={tag.color ? { backgroundColor: tag.color } : undefined}
+                    style={tagStyle(tag.color)}
                   >
                     {tag.name}
                   </a>

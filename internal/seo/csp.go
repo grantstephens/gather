@@ -31,7 +31,7 @@ func ExtractExternalOrigins(html string) []string {
 // BuildCSP returns the full Content-Security-Policy header value.
 // extraOrigins (derived from custom_head) are added to script-src and connect-src.
 func BuildCSP(extraOrigins []string) string {
-	scriptSrc := "'self'"
+	scriptSrc := "'self' 'sha256-tBGiZqQH9MMf5f20bIZnnQz1p4lvVBHKyBmzgeAIBcE=' 'unsafe-hashes' 'sha256-MhtPZXr7+LpJUY5qtMutB+qWfQtMaPccfe7QXtCcEYc='"
 	connectSrc := "'self'"
 	if len(extraOrigins) > 0 {
 		extra := strings.Join(extraOrigins, " ")

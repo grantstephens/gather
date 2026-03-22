@@ -29,25 +29,42 @@ export function EventTimeline({ events }: Props) {
 
   if (events.length === 0) return null
 
+  const entries = [...grouped.entries()]
+
   return (
     <div class="timeline">
-      {[...grouped.entries()].map(([dateKey, dayEvents]) => (
-        <section key={dateKey} class="timeline-day">
-          <div class="timeline-date-marker">
-            <time class="timeline-date-label">{formatDayHeading(dateKey)}</time>
-          </div>
-          <div class="timeline-day-events">
-            <EventCard event={dayEvents[0]} variant="featured" />
-            {dayEvents.length > 1 && (
-              <div class="timeline-compact-row">
-                {dayEvents.slice(1).map(e => (
-                  <EventCard key={e.id} event={e} variant="compact" />
-                ))}
+      {entries.map(([dateKey, dayEvents], i) => {
+        const month = dateKey.slice(0, 7) // "YYYY-MM"
+        const prevMonth = i > 0 ? entries[i - 1][0].slice(0, 7) : month
+        const showMonthBreak = i > 0 && month !== prevMonth
+
+        return (
+          <>
+            {showMonthBreak && (
+              <div class="timeline-month-break" key={`month-${month}`}>
+                <span class="timeline-month-label">
+                  {format(parseISO(dateKey), 'MMMM yyyy')}
+                </span>
               </div>
             )}
-          </div>
-        </section>
-      ))}
+            <section key={dateKey} class="timeline-day">
+              <div class="timeline-date-marker">
+                <time class="timeline-date-label">{formatDayHeading(dateKey)}</time>
+              </div>
+              <div class="timeline-day-events">
+                <EventCard event={dayEvents[0]} variant="featured" />
+                {dayEvents.length > 1 && (
+                  <div class="timeline-compact-row">
+                    {dayEvents.slice(1).map(e => (
+                      <EventCard key={e.id} event={e} variant="compact" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          </>
+        )
+      })}
     </div>
   )
 }

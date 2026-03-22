@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import { pb, Event, Place, Tag, canModerate, eventPath, isAdmin } from '../lib/pocketbase'
+import { tagStyle } from '../lib/color'
 import type { PageRecord } from '../lib/pocketbase'
 import { MarkdownEditor } from '../components/MarkdownEditor'
 import { EventCard } from '../components/EventCard'
@@ -396,7 +397,7 @@ export function Admin(_props: Props) {
                 <div class="item-info">
                   <span
                     class="tag-preview"
-                    style={tag.color ? { backgroundColor: tag.color, color: 'white' } : undefined}
+                    style={tagStyle(tag.color)}
                   >
                     {tag.name}
                   </span>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
 import { pb, Event, Tag } from '../lib/pocketbase'
 import { MiniCalendar } from '../components/MiniCalendar'
+import { tagStyle } from '../lib/color'
 import { EventTimeline } from '../components/EventTimeline'
 import { SkeletonTimeline } from '../components/Skeleton'
 import './Home.css'
@@ -21,6 +22,7 @@ export function Home(_props: Props) {
   const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [mobilePanel, setMobilePanel] = useState<'calendar' | 'tags' | null>(null)
   const pageRef = useRef(1)
   const loadingMoreRef = useRef(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -130,21 +132,52 @@ export function Home(_props: Props) {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   }
 
+  const togglePanel = (panel: 'calendar' | 'tags') => {
+    setMobilePanel(prev => prev === panel ? null : panel)
+  }
+
+  const sidebarContent = (
+    <aside class="home-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Browse by date</div>
+        <MiniCalendar
+          eventDates={eventDates}
+          selectedDate={selectedDate ?? undefined}
+          onDateSelect={handleDateSelect}
+        />
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Browse by tag</div>
+        <div class="tag-cloud">
+          {[...tags]
+            .sort((a, b) => (tagCounts[b.id] ?? 0) - (tagCounts[a.id] ?? 0))
+            .map(tag => (
+              <a
+                key={tag.id}
+                href={`/tag/${tag.name}`}
+                class="tag"
+                style={tagStyle(tag.color)}
+              >
+                {tag.name}{tagCounts[tag.id] ? ` (${tagCounts[tag.id]})` : ''}
+              </a>
+            ))}
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Got an event?</div>
+        <a href="/submit" class="btn btn-primary">
+          + Add Event
+        </a>
+      </div>
+    </aside>
+  )
+
   if (loading) return (
     <div class="home">
       <div class="home-main">
         <SkeletonTimeline />
       </div>
-      <aside class="home-sidebar">
-        <div class="sidebar-section">
-          <div class="sidebar-section-title">Browse by date</div>
-          <MiniCalendar
-            eventDates={eventDates}
-            selectedDate={selectedDate ?? undefined}
-            onDateSelect={handleDateSelect}
-          />
-        </div>
-      </aside>
+      {sidebarContent}
     </div>
   )
   if (error) return <div class="error">{error}</div>
@@ -168,39 +201,59 @@ export function Home(_props: Props) {
         <div ref={sentinelRef} />
         {loadingMore && <p class="loading-more">Loading more events...</p>}
       </div>
-      <aside class="home-sidebar">
-        <div class="sidebar-section">
-          <div class="sidebar-section-title">Browse by date</div>
-          <MiniCalendar
-            eventDates={eventDates}
-            selectedDate={selectedDate ?? undefined}
-            onDateSelect={handleDateSelect}
-          />
+      {sidebarContent}
+
+      {/* Mobile floating buttons + panels */}
+      {mobilePanel && (
+        <div class="mobile-panel-backdrop" onClick={() => setMobilePanel(null)} />
+      )}
+      <div class={`mobile-panel ${mobilePanel === 'calendar' ? 'open' : ''}`}>
+        <MiniCalendar
+          eventDates={eventDates}
+          selectedDate={selectedDate ?? undefined}
+          onDateSelect={(date) => { handleDateSelect(date); setMobilePanel(null) }}
+        />
+      </div>
+      <div class={`mobile-panel mobile-panel-tags ${mobilePanel === 'tags' ? 'open' : ''}`}>
+        <div class="tag-cloud">
+          {[...tags]
+            .sort((a, b) => (tagCounts[b.id] ?? 0) - (tagCounts[a.id] ?? 0))
+            .map(tag => (
+              <a
+                key={tag.id}
+                href={`/tag/${tag.name}`}
+                class="tag"
+                style={tagStyle(tag.color)}
+              >
+                {tag.name}{tagCounts[tag.id] ? ` (${tagCounts[tag.id]})` : ''}
+              </a>
+            ))}
         </div>
-        <div class="sidebar-section">
-          <div class="sidebar-section-title">Browse by tag</div>
-          <div class="tag-cloud">
-            {[...tags]
-              .sort((a, b) => (tagCounts[b.id] ?? 0) - (tagCounts[a.id] ?? 0))
-              .map(tag => (
-                <a
-                  key={tag.id}
-                  href={`/tag/${tag.name}`}
-                  class="tag"
-                  style={tag.color ? { backgroundColor: tag.color } : undefined}
-                >
-                  {tag.name}{tagCounts[tag.id] ? ` (${tagCounts[tag.id]})` : ''}
-                </a>
-              ))}
-          </div>
-        </div>
-        <div class="sidebar-section">
-          <div class="sidebar-section-title">Got an event?</div>
-          <a href="/submit" class="btn btn-primary">
-            + Add Event
-          </a>
-        </div>
-      </aside>
+      </div>
+      <div class="mobile-fab-bar">
+        <button
+          class={`mobile-fab ${mobilePanel === 'calendar' ? 'active' : ''}`}
+          onClick={() => togglePanel('calendar')}
+          aria-label="Calendar"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        </button>
+        <button
+          class={`mobile-fab ${mobilePanel === 'tags' ? 'active' : ''}`}
+          onClick={() => togglePanel('tags')}
+          aria-label="Tags"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
+            <line x1="7" y1="7" x2="7.01" y2="7" />
+          </svg>
+        </button>
+      </div>
     </div>
   )
 }

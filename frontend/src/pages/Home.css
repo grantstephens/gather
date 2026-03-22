@@ -7,7 +7,7 @@
 
 @media (max-width: 900px) {
   .home { grid-template-columns: 1fr; }
-  .home-sidebar { position: static; }
+  .home-sidebar { display: none; }
 }
 
 /* ── Page header ──────────────────────────────── */
@@ -91,4 +91,87 @@
   padding: var(--space-12) var(--space-4);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
+}
+
+/* ── Mobile FAB bar & panels (hidden on desktop) */
+.mobile-fab-bar,
+.mobile-panel,
+.mobile-panel-backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  /* Floating action buttons */
+  .mobile-fab-bar {
+    display: flex;
+    position: fixed;
+    bottom: var(--space-4);
+    left: 50%;
+    transform: translateX(-50%);
+    gap: var(--space-3);
+    z-index: 100;
+  }
+
+  .mobile-fab {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-elevated);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,.15));
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+  }
+
+  .mobile-fab:active {
+    transform: scale(0.93);
+  }
+
+  .mobile-fab.active {
+    background: var(--color-accent);
+    color: var(--color-text-on-accent);
+    border-color: var(--color-accent);
+  }
+
+  /* Backdrop */
+  .mobile-panel-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 90;
+    animation: fadeIn 0.15s ease;
+  }
+
+  /* Slide-up panels */
+  .mobile-panel {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 95;
+    background: var(--color-bg-elevated);
+    border-top: 1px solid var(--color-border);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: var(--space-4);
+    padding-bottom: calc(var(--space-4) + 64px); /* space for FAB bar */
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .mobile-panel.open {
+    transform: translateY(0);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 }

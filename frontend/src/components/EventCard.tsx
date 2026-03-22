@@ -1,5 +1,6 @@
 import { format } from 'date-fns'
 import { Event, eventPath, getImageUrl } from '../lib/pocketbase'
+import { tagStyle } from '../lib/color'
 import './EventCard.css'
 
 interface Props {
@@ -27,7 +28,7 @@ export function EventCard({ event, variant = 'featured' }: Props) {
         </div>
         {imageUrl && (
           <div class="event-card-compact-thumb">
-            <img src={imageUrl} alt="" />
+            <img src={imageUrl} alt="" width="80" height="60" loading="lazy" />
           </div>
         )}
       </a>
@@ -41,7 +42,7 @@ export function EventCard({ event, variant = 'featured' }: Props) {
     <a href={eventPath(event)} class={cardClass}>
       {imageUrl ? (
         <div class="event-card-thumb">
-          <img src={imageUrl} alt="" />
+          <img src={imageUrl} alt="" width="400" height="300" loading="lazy" />
         </div>
       ) : (
         <div class="event-card-thumb">
@@ -64,7 +65,7 @@ export function EventCard({ event, variant = 'featured' }: Props) {
               <span
                 key={tag.id}
                 class="tag"
-                style={tag.color ? { backgroundColor: tag.color } : undefined}
+                style={tagStyle(tag.color)}
               >
                 {tag.name}
               </span>

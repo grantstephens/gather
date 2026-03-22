@@ -101,7 +101,6 @@
 
 .calendar-day.past {
   color: var(--color-text-muted);
-  opacity: 0.5;
 }
 
 .calendar-day.today {

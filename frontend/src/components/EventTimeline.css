@@ -33,3 +33,26 @@
 @media (max-width: 480px) {
   .timeline-compact-row { grid-template-columns: 1fr; }
 }
+
+/* ── Month break ─────────────────────────────── */
+.timeline-month-break {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+}
+
+.timeline-month-break::before,
+.timeline-month-break::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.timeline-month-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}

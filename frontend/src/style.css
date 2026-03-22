@@ -21,7 +21,7 @@
   /* Text */
   --color-text:          #0f172a;
   --color-text-secondary:#475569;
-  --color-text-muted:    #94a3b8;
+  --color-text-muted:    #5c6b7f;
   --color-text-on-accent:#ffffff;
 
   /* Borders */
@@ -117,7 +117,7 @@
 
   --color-text:          #f1f5f9;
   --color-text-secondary:#94a3b8;
-  --color-text-muted:    #64748b;
+  --color-text-muted:    #94a3b8;
   --color-text-on-accent:#0f172a;
 
   --color-border:        #334155;
@@ -485,8 +485,7 @@ main {
 
 .tag:hover { opacity: 0.8; }
 
-/* When a tag has an inline color style set, force white text */
-.tag[style] { color: white; }
+/* Tag text color is set inline via tagStyle() for contrast */
 
 /* ------------------------------------------------------------
    12. Form inputs (global)
@@ -637,7 +636,7 @@ main {
     --color-bg-elevated:   #1e293b;
     --color-text:          #f1f5f9;
     --color-text-secondary:#94a3b8;
-    --color-text-muted:    #64748b;
+    --color-text-muted:    #94a3b8;
     --color-text-on-accent:#0f172a;
     --color-border:        #334155;
     --color-border-subtle: #1e293b;
