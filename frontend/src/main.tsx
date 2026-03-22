@@ -1,3 +1,4 @@
+import '@fontsource-variable/inter'
 import { render } from 'preact'
 import { App } from './app'
 import { initTheme } from './lib/theme'

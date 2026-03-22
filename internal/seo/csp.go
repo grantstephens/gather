@@ -41,8 +41,8 @@ func BuildCSP(extraOrigins []string) string {
 	return fmt.Sprintf(
 		"default-src 'self'; "+
 			"img-src 'self' https://*.tile.openstreetmap.org data: blob:; "+
-			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
-			"font-src 'self' https://fonts.gstatic.com; "+
+			"style-src 'self' 'unsafe-inline'; "+
+			"font-src 'self'; "+
 			"script-src %s; "+
 			"connect-src %s; "+
 			"frame-ancestors 'none'; "+
