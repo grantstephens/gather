@@ -265,6 +265,16 @@ main {
   align-items: center;
 }
 
+.footer-powered {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+
+.footer-powered-link {
+  font-weight: var(--font-semibold);
+}
+
 .footer-link {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
