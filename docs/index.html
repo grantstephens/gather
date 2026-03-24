@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gather — Self-Hosted Community Calendar</title>
+  <meta name="description" content="Gather is a self-hosted community calendar built with Go and Preact. Single binary, no external dependencies. Collect, moderate, and share local events." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f7f4;
+      --surface: #ffffff;
+      --border: #e5e0d8;
+      --text: #1a1714;
+      --muted: #6b6560;
+      --accent: #4a7c59;
+      --accent-dark: #365e42;
+      --accent-light: #eef4f0;
+      --code-bg: #f3f0eb;
+      --radius: 8px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141210;
+        --surface: #1e1c19;
+        --border: #2e2a26;
+        --text: #f0ece6;
+        --muted: #9a9490;
+        --accent: #6aac7e;
+        --accent-dark: #8dc99e;
+        --accent-light: #1a2a1e;
+        --code-bg: #252220;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-dark); text-decoration: underline; }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Header */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 0;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .logo span { color: var(--accent); }
+
+    nav { display: flex; gap: 1.5rem; }
+    nav a { color: var(--muted); font-size: 0.9rem; }
+    nav a:hover { color: var(--text); text-decoration: none; }
+
+    /* Hero */
+    .hero {
+      padding: 4rem 0 3rem;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 2rem;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.65rem 1.4rem;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: opacity 0.15s;
+    }
+
+    .btn:hover { opacity: 0.85; text-decoration: none; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* Example banner */
+    .example-banner {
+      background: var(--accent-light);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin-bottom: 3rem;
+      text-align: center;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .example-banner a { font-weight: 600; color: var(--accent); }
+    .example-banner strong { color: var(--text); }
+
+    /* Features */
+    section { margin-bottom: 3.5rem; }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1.25rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.25rem;
+    }
+
+    .feature-card .icon {
+      font-size: 1.4rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .feature-card strong {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .feature-card p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* Steps */
+    .steps { counter-reset: step; }
+
+    .step {
+      display: flex;
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      counter-increment: step;
+      flex-shrink: 0;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-content h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .step-content p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    /* Code blocks */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      margin: 0.5rem 0;
+    }
+
+    code {
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+    }
+
+    p code, li code {
+      background: var(--code-bg);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      font-size: 0.88em;
+      border: 1px solid var(--border);
+    }
+
+    /* Env table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    td:first-child code { font-size: 0.82rem; }
+
+    /* Note boxes */
+    .note {
+      background: var(--accent-light);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 0.75rem 1rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin: 0.75rem 0;
+    }
+
+    .note strong { color: var(--text); }
+
+    /* Alternatives */
+    .alt-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .alt-tab {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: default;
+    }
+
+    .alt-tab.active {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="logo">gather<span>.</span></div>
+      <nav>
+        <a href="https://github.com/grantstephens/gather">GitHub</a>
+        <a href="https://github.com/grantstephens/gather/blob/main/README.md">Docs</a>
+        <a href="https://perthshire.events" target="_blank" rel="noopener">Live Example</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+
+    <div class="hero">
+      <h1>A community calendar<br>you actually own</h1>
+      <p>Gather is a self-hosted calendar app for local communities. Collect, moderate, and share events — with federation, feeds, and no vendor lock-in.</p>
+      <div class="button-row">
+        <a href="#self-hosting" class="btn btn-primary">Self-host in minutes</a>
+        <a href="https://github.com/grantstephens/gather" class="btn btn-secondary">View on GitHub</a>
+      </div>
+    </div>
+
+    <div class="example-banner">
+      <strong>See it live:</strong> <a href="https://perthshire.events" target="_blank" rel="noopener">perthshire.events</a> — a community calendar for Perthshire, Scotland, running on Gather.
+    </div>
+
+    <!-- Features -->
+    <section>
+      <h2>Features</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="icon">📅</div>
+          <strong>Event submission</strong>
+          <p>Let your community submit events with optional moderation before publishing.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🛡️</div>
+          <strong>Moderation workflow</strong>
+          <p>Role-based access control — user, editor, and admin roles with fine-grained permissions.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🦣</div>
+          <strong>ActivityPub federation</strong>
+          <p>Follow your calendar from Mastodon or any ActivityPub-compatible app.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">📡</div>
+          <strong>RSS &amp; iCal feeds</strong>
+          <p>Subscribe to events in any feed reader or calendar app.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🗺️</div>
+          <strong>Location support</strong>
+          <p>Location-based events using OpenStreetMap data — no Google Maps needed.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🔁</div>
+          <strong>Recurring events</strong>
+          <p>Schedule weekly, monthly, and custom recurring events with ease.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">📝</div>
+          <strong>Custom pages</strong>
+          <p>Create About, FAQ, and Code of Conduct pages with Markdown support.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🎨</div>
+          <strong>Custom branding</strong>
+          <p>Set your site name, favicon, SEO description, and custom CSS.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">📦</div>
+          <strong>Single binary</strong>
+          <p>One binary, no external database, no external dependencies. Easy to run anywhere.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Self-hosting -->
+    <section id="self-hosting">
+      <h2>Self-Hosting</h2>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h3>Create a <code>docker-compose.yml</code></h3>
+            <p>The quickest way to run Gather is with Docker Compose. Create the file below on your server:</p>
+            <pre><code>services:
+  gather:
+    image: ghcr.io/grantstephens/gather:latest
+    container_name: gather
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - gather_data:/app/pb_data
+    environment:
+      - PB_ADMIN_EMAIL=admin@example.com
+      - PB_ADMIN_PASSWORD=changeme
+      - BASE_URL=https://your-domain.com
+
+volumes:
+  gather_data:</code></pre>
+            <div class="note">
+              <strong>Change the defaults:</strong> Set a real email, a strong password, and your actual domain for <code>BASE_URL</code>.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h3>Start the container</h3>
+            <pre><code>docker compose up -d</code></pre>
+            <p>Gather is now running at <code>http://localhost:8090</code>.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h3>Put it behind a reverse proxy</h3>
+            <p>For HTTPS in production, proxy port 8090 with Caddy, nginx, or Traefik.</p>
+            <p><strong>Caddy</strong> (simplest — auto-HTTPS):</p>
+            <pre><code>your-domain.com {
+    reverse_proxy localhost:8090
+}</code></pre>
+            <p><strong>nginx:</strong></p>
+            <pre><code>server {
+    listen 443 ssl http2;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:8090;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h3>Create your admin account</h3>
+            <p>Gather has two separate account systems (a PocketBase limitation):</p>
+            <ul style="font-size:0.9rem; color:var(--muted); margin: 0.5rem 0 0.75rem 1.25rem; line-height:1.7;">
+              <li><strong style="color:var(--text)">PocketBase superuser</strong> — manages the database at <code>/_/</code>, created from your env vars.</li>
+              <li><strong style="color:var(--text)">App user</strong> — logs into the frontend. Register at <code>/login</code>, then promote to admin via <code>/_/</code> &gt; Collections &gt; users &gt; set role to <code>admin</code>.</li>
+            </ul>
+            <p>Once you have a frontend admin account, visit <strong>Admin &gt; Settings</strong> to configure your site name, federation, and moderation settings.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Alternatives -->
+      <h3 style="font-size:1.1rem; margin-bottom: 0.75rem;">Alternative: Docker Run</h3>
+      <pre><code>docker run -d \
+  --name gather \
+  -p 8090:8090 \
+  -v gather-data:/app/pb_data \
+  -e PB_ADMIN_EMAIL=admin@example.com \
+  -e PB_ADMIN_PASSWORD=changeme \
+  -e BASE_URL=https://your-domain.com \
+  ghcr.io/grantstephens/gather:latest</code></pre>
+
+      <h3 style="font-size:1.1rem; margin: 1.5rem 0 0.75rem;">Alternative: Build from Source</h3>
+      <p style="font-size:0.9rem; color:var(--muted); margin-bottom: 0.75rem;">Requires Go 1.25+, Node.js 18+, and libwebp-dev.</p>
+      <pre><code>git clone https://github.com/grantstephens/gather.git
+cd gather
+make build
+./gather serve</code></pre>
+    </section>
+
+    <!-- Configuration -->
+    <section>
+      <h2>Configuration</h2>
+
+      <h3 style="font-size:1rem; font-weight:600; margin-bottom: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.8rem;">Environment Variables</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Variable</th>
+            <th>Default</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>PB_ADMIN_EMAIL</code></td>
+            <td><code>admin@example.com</code></td>
+            <td>Superuser email for the PocketBase dashboard</td>
+          </tr>
+          <tr>
+            <td><code>PB_ADMIN_PASSWORD</code></td>
+            <td><code>changeme</code></td>
+            <td>Superuser password — change this!</td>
+          </tr>
+          <tr>
+            <td><code>BASE_URL</code></td>
+            <td><code>http://localhost:8090</code></td>
+            <td>Public URL (used for ActivityPub and feeds)</td>
+          </tr>
+          <tr>
+            <td><code>PB_ENCRYPTION_KEY</code></td>
+            <td><em>empty</em></td>
+            <td>Encryption key for sensitive data (<code>openssl rand -hex 32</code>)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note" style="margin-top:1rem;">
+        <strong>Feeds:</strong> Once running, your instance provides RSS at <code>/feed/events.rss</code>, iCal at <code>/ical/events.ics</code>, and ActivityPub at <code>/ap/actor</code>.
+      </div>
+    </section>
+
+    <!-- Updates & Backup -->
+    <section>
+      <h2>Updates &amp; Backups</h2>
+
+      <h3 style="font-size:1rem; margin-bottom:0.5rem;">Updating</h3>
+      <pre><code>docker compose pull
+docker compose down
+docker compose up -d</code></pre>
+
+      <h3 style="font-size:1rem; margin: 1.25rem 0 0.5rem;">Backup</h3>
+      <p style="font-size:0.9rem; color:var(--muted); margin-bottom: 0.5rem;">All data lives in the <code>pb_data</code> volume. Back it up with:</p>
+      <pre><code>docker run --rm \
+  -v gather_gather_data:/data \
+  -v $(pwd):/backup \
+  alpine tar czf /backup/gather-backup-$(date +%Y%m%d).tar.gz -C /data .</code></pre>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <p>
+      <a href="https://github.com/grantstephens/gather">GitHub</a> &middot;
+      <a href="https://github.com/grantstephens/gather/issues">Issues</a> &middot;
+      <a href="https://perthshire.events" target="_blank" rel="noopener">Live Example</a> &middot;
+      Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
