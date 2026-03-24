@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { pb } from '../lib/pocketbase'
 import type { PageRecord } from '../lib/pocketbase'
+import './Page.css'
 
 interface Props {
   path?: string

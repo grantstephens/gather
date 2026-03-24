@@ -221,30 +221,24 @@ export function App() {
       </main>
       <footer class={`app-footer${footerVisible ? '' : ' app-footer--hidden'}`}>
         <div class="footer-inner">
-          <div class="footer-brand">
-            <span class="footer-wordmark"><BrandName name={settings?.instance_name || 'gather'} /></span>
-            {settings?.subtitle && <span class="footer-tagline">{settings.subtitle}</span>}
-          </div>
+          <button class="footer-theme-toggle" onClick={handleToggleTheme} aria-label="Toggle theme">
+            {theme === 'light'
+              ? <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><line x1="8" y1="1" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="1" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="15" y2="8"/><line x1="2.9" y1="2.9" x2="4.3" y2="4.3"/><line x1="11.7" y1="11.7" x2="13.1" y2="13.1"/><line x1="2.9" y1="13.1" x2="4.3" y2="11.7"/><line x1="11.7" y1="4.3" x2="13.1" y2="2.9"/></svg>
+              : <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 10.5A5.5 5.5 0 0 1 5.5 3a5.5 5.5 0 1 0 7.5 7.5z"/></svg>
+            }
+          </button>
           <div class="footer-links">
             {footerPages.map(page => (
               <a key={page.id} href={`/${page.slug}`} class="footer-link">{page.title}</a>
             ))}
             <a href="/feed.rss" class="footer-link">RSS</a>
             <a href="/feed.ics" class="footer-link">iCal</a>
+            <button class="footer-link footer-fediverse-link" onClick={() => setFediverseDialogOpen(true)}>
+              Fediverse
+            </button>
           </div>
           <div class="footer-powered">
             Powered by <a href="https://github.com/grantstephens/gather" class="footer-link footer-powered-link" target="_blank" rel="noopener noreferrer">gather<span class="brand-dot">.</span></a>
-          </div>
-          <div class="footer-actions">
-            <button class="footer-fediverse-btn" onClick={() => setFediverseDialogOpen(true)}>
-              Follow on Fediverse
-            </button>
-            <button class="footer-theme-toggle" onClick={handleToggleTheme} aria-label="Toggle theme">
-              {theme === 'light'
-                ? <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><line x1="8" y1="1" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="1" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="15" y2="8"/><line x1="2.9" y1="2.9" x2="4.3" y2="4.3"/><line x1="11.7" y1="11.7" x2="13.1" y2="13.1"/><line x1="2.9" y1="13.1" x2="4.3" y2="11.7"/><line x1="11.7" y1="4.3" x2="13.1" y2="2.9"/></svg>
-                : <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 10.5A5.5 5.5 0 0 1 5.5 3a5.5 5.5 0 1 0 7.5 7.5z"/></svg>
-              }
-            </button>
           </div>
         </div>
       </footer>
