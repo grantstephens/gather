@@ -232,6 +232,9 @@ export function App() {
             <a href="/feed.rss" class="footer-link">RSS</a>
             <a href="/feed.ics" class="footer-link">iCal</a>
           </div>
+          <div class="footer-powered">
+            Powered by <a href="https://github.com/grantstephens/gather" class="footer-link footer-powered-link" target="_blank" rel="noopener noreferrer">gather<span class="brand-dot">.</span></a>
+          </div>
           <div class="footer-actions">
             <button class="footer-fediverse-btn" onClick={() => setFediverseDialogOpen(true)}>
               Follow on Fediverse
