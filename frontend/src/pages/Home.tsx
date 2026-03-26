@@ -22,6 +22,7 @@ export function Home(_props: Props) {
   const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
   const [mobilePanel, setMobilePanel] = useState<'calendar' | 'tags' | 'towns' | null>(null)
   const [towns, setTowns] = useState<{ name: string; count: number }[]>([])
   const [selectedTown, setSelectedTown] = useState<string | null>(null)
@@ -30,12 +31,19 @@ export function Home(_props: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const today = new Date().toISOString().split('T')[0]
 
+  // Serialise selectedTags for use as a dependency key (Sets aren't comparable)
+  const selectedTagsKey = [...selectedTags].sort().join(',')
+
   // Fetch dates + tag colors for the calendar.
   // '$autoCancel': false prevents the SDK from cancelling this request when the
   // main events getList fires (both use the same collection path as requestKey).
   useEffect(() => {
+    const filters = [`status = 'published'`, `start_datetime >= '${today}'`]
+    if (selectedTags.size > 0) {
+      filters.push(`(${[...selectedTags].map(id => `tags.id ?= '${id}'`).join(' || ')})`)
+    }
     pb.collection('events').getFullList({
-      filter: `status = 'published' && start_datetime >= '${today}'`,
+      filter: filters.join(' && '),
       fields: 'start_datetime,expand.tags.color',
       expand: 'tags',
       '$autoCancel': false,
@@ -57,7 +65,7 @@ export function Home(_props: Props) {
       })
       setEventDates(dateColors)
     }).catch(() => {})
-  }, [])
+  }, [selectedTagsKey])
 
   // Fetch tag counts from backend
   useEffect(() => {
@@ -86,7 +94,7 @@ export function Home(_props: Props) {
     return () => controller.abort()
   }, [])
 
-  const fetchPage = async (page: number, date: string | null, town: string | null): Promise<boolean> => {
+  const fetchPage = async (page: number, date: string | null, town: string | null, tagIds: Set<string>): Promise<boolean> => {
     const filters = [`status = 'published'`]
     if (date) {
       filters.push(`start_datetime >= '${date} 00:00:00' && start_datetime <= '${date} 23:59:59'`)
@@ -95,6 +103,9 @@ export function Home(_props: Props) {
     }
     if (town) {
       filters.push(`place.city = '${town}'`)
+    }
+    if (tagIds.size > 0) {
+      filters.push(`(${[...tagIds].map(id => `tags.id ?= '${id}'`).join(' || ')})`)
     }
     const result = await pb.collection('events').getList<Event>(page, PAGE_SIZE, {
       filter: filters.join(' && '),
@@ -105,21 +116,21 @@ export function Home(_props: Props) {
     return result.page < result.totalPages
   }
 
-  // Reset and load page 1 whenever date or town filter changes
+  // Reset and load page 1 whenever any filter changes
   useEffect(() => {
     pageRef.current = 1
     setLoading(true)
     setError(null)
-    fetchPage(1, selectedDate, selectedTown)
+    fetchPage(1, selectedDate, selectedTown, selectedTags)
       .then(more => setHasMore(more))
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load events'))
       .finally(() => setLoading(false))
-  }, [selectedDate, selectedTown])
+  }, [selectedDate, selectedTown, selectedTagsKey])
 
-  // Infinite scroll — only when no date filter active
+  // Infinite scroll — only when no date/tag filter active
   useEffect(() => {
     const sentinel = sentinelRef.current
-    if (!sentinel || !hasMore || selectedDate) return
+    if (!sentinel || !hasMore || selectedDate || selectedTags.size > 0) return
 
     const observer = new IntersectionObserver(async (entries) => {
       if (!entries[0].isIntersecting || loadingMoreRef.current) return
@@ -127,7 +138,7 @@ export function Home(_props: Props) {
       setLoadingMore(true)
       const nextPage = pageRef.current + 1
       try {
-        const more = await fetchPage(nextPage, null, selectedTown)
+        const more = await fetchPage(nextPage, null, selectedTown, selectedTags)
         pageRef.current = nextPage
         setHasMore(more)
       } finally {
@@ -138,10 +149,19 @@ export function Home(_props: Props) {
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [hasMore, selectedDate, selectedTown, loading])
+  }, [hasMore, selectedDate, selectedTown, selectedTagsKey, loading])
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(prev => prev === date ? null : date)
+  }
+
+  const handleTagToggle = (tagId: string) => {
+    setSelectedTags(prev => {
+      const next = new Set(prev)
+      if (next.has(tagId)) next.delete(tagId)
+      else next.add(tagId)
+      return next
+    })
   }
 
   const formatSelectedDate = (dateStr: string) => {
@@ -156,6 +176,8 @@ export function Home(_props: Props) {
   const togglePanel = (panel: 'calendar' | 'tags' | 'towns') => {
     setMobilePanel(prev => prev === panel ? null : panel)
   }
+
+  const hasActiveFilters = selectedDate || selectedTown || selectedTags.size > 0
 
   const sidebarContent = (
     <aside class="home-sidebar">
@@ -173,15 +195,15 @@ export function Home(_props: Props) {
           {[...tags]
             .sort((a, b) => (tagCounts[b.id] ?? 0) - (tagCounts[a.id] ?? 0))
             .map(tag => (
-              <a
+              <button
                 key={tag.id}
-                href={`/tag/${tag.name}`}
-                class="tag"
+                class={`tag${selectedTags.has(tag.id) ? ' tag--selected' : ''}`}
                 style={tagStyle(tag.color)}
+                onClick={() => handleTagToggle(tag.id)}
                 data-umami-event="home-tag-click"
               >
                 {tag.name}{tagCounts[tag.id] ? ` (${tagCounts[tag.id]})` : ''}
-              </a>
+              </button>
             ))}
         </div>
       </div>
@@ -266,7 +288,7 @@ export function Home(_props: Props) {
                   ? `Events in ${selectedTown}`
                   : 'Upcoming Events'}
           </h2>
-          {(selectedDate || selectedTown) && (
+          {hasActiveFilters && (
             <div class="active-filters">
               {selectedDate && (
                 <button class="clear-filter" onClick={() => setSelectedDate(null)}>
@@ -278,12 +300,32 @@ export function Home(_props: Props) {
                   Clear town
                 </button>
               )}
+              {selectedTags.size > 0 && (
+                <button class="clear-filter" onClick={() => setSelectedTags(new Set())}>
+                  Clear tags
+                </button>
+              )}
             </div>
           )}
         </div>
+        {selectedTags.size > 0 && (
+          <div class="filter-chips">
+            {tags.filter(t => selectedTags.has(t.id)).map(tag => (
+              <button
+                key={tag.id}
+                class="filter-chip"
+                style={tagStyle(tag.color)}
+                onClick={() => handleTagToggle(tag.id)}
+              >
+                {tag.name}
+                <span class="filter-chip-x">&times;</span>
+              </button>
+            ))}
+          </div>
+        )}
         {events.length === 0 ? (
           <p class="no-events">
-            {selectedDate ? 'No events on this date' : 'No upcoming events'}
+            {hasActiveFilters ? 'No events matching your filters' : 'No upcoming events'}
           </p>
         ) : (
           <EventTimeline events={events} />
@@ -309,15 +351,15 @@ export function Home(_props: Props) {
           {[...tags]
             .sort((a, b) => (tagCounts[b.id] ?? 0) - (tagCounts[a.id] ?? 0))
             .map(tag => (
-              <a
+              <button
                 key={tag.id}
-                href={`/tag/${tag.name}`}
-                class="tag"
+                class={`tag${selectedTags.has(tag.id) ? ' tag--selected' : ''}`}
                 style={tagStyle(tag.color)}
+                onClick={() => handleTagToggle(tag.id)}
                 data-umami-event="home-tag-click"
               >
                 {tag.name}{tagCounts[tag.id] ? ` (${tagCounts[tag.id]})` : ''}
-              </a>
+              </button>
             ))}
         </div>
       </div>

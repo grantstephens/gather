@@ -84,6 +84,50 @@
   gap: var(--space-2);
 }
 
+.tag-cloud .tag {
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.tag-cloud .tag--selected {
+  border-color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Filter chips ────────────────────────────── */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  font-family: var(--font-sans);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.filter-chip:hover {
+  opacity: 0.8;
+}
+
+.filter-chip-x {
+  font-size: 1.1em;
+  line-height: 1;
+  opacity: 0.7;
+  margin-left: 2px;
+}
+
 /* ── Town cloud ──────────────────────────────── */
 .town-cloud {
   display: flex;
