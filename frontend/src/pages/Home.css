@@ -45,6 +45,12 @@
   color: var(--color-text-on-accent);
 }
 
+.active-filters {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 /* ── Sidebar ──────────────────────────────────── */
 .home-sidebar {
   display: flex;
@@ -76,6 +82,38 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+/* ── Town cloud ──────────────────────────────── */
+.town-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.town {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.town:hover {
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+.town.active {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  border-color: var(--color-accent);
 }
 
 /* ── Loading more ─────────────────────────────── */
