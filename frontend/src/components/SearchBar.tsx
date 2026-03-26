@@ -156,6 +156,7 @@ export function SearchBar() {
           <button
             class="search-dropdown-item search-dropdown-viewall"
             onClick={() => { setOpen(false); route(`/search?q=${encodeURIComponent(query.trim())}`) }}
+            data-umami-event="search-view-all"
           >
             View all results
           </button>

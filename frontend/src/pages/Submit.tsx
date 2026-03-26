@@ -234,7 +234,7 @@ export function Submit(_props: Props) {
         )}
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary btn-large" disabled={submitting}>
+          <button type="submit" class="btn btn-primary btn-large" disabled={submitting} data-umami-event="event-submit">
             {submitting ? 'Submitting...' : isLoggedIn ? 'Publish Event' : 'Submit for Review'}
           </button>
         </div>

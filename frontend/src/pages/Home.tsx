@@ -157,6 +157,7 @@ export function Home(_props: Props) {
                 href={`/tag/${tag.name}`}
                 class="tag"
                 style={tagStyle(tag.color)}
+                data-umami-event="home-tag-click"
               >
                 {tag.name}{tagCounts[tag.id] ? ` (${tagCounts[tag.id]})` : ''}
               </a>
@@ -247,6 +248,7 @@ export function Home(_props: Props) {
                 href={`/tag/${tag.name}`}
                 class="tag"
                 style={tagStyle(tag.color)}
+                data-umami-event="home-tag-click"
               >
                 {tag.name}{tagCounts[tag.id] ? ` (${tagCounts[tag.id]})` : ''}
               </a>

@@ -151,6 +151,7 @@ export function Event({ id }: Props) {
                     href={`/tag/${tag.name}`}
                     class="tag"
                     style={tagStyle(tag.color)}
+                    data-umami-event="event-tag-click"
                   >
                     {tag.name}
                   </a>
@@ -179,7 +180,7 @@ export function Event({ id }: Props) {
         )}
 
         <footer class="event-actions">
-          <a href={`/ics/event/${event.id}`} class="btn">
+          <a href={`/ics/event/${event.id}`} class="btn" data-umami-event="event-ical-download">
             Download .ics
           </a>
 

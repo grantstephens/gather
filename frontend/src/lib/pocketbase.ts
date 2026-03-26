@@ -73,6 +73,8 @@ export interface Settings extends BaseModel {
   ap_private_key: string
   ap_public_key: string
   favicon?: string
+  umami_src: string
+  umami_website_id: string
 }
 
 export interface PageRecord extends BaseModel {

@@ -38,6 +38,9 @@ func main() {
 		var cachedCSP atomic.Value
 		if s, err := se.App.FindFirstRecordByFilter("settings", ""); err == nil {
 			origins := seo.ExtractExternalOrigins(s.GetString("custom_head"))
+			if o := seo.OriginFromURL(s.GetString("umami_src")); o != "" {
+				origins = append(origins, o)
+			}
 			cachedCSP.Store(seo.BuildCSP(origins))
 		} else {
 			cachedCSP.Store(seo.BuildCSP(nil))
@@ -46,6 +49,9 @@ func main() {
 		// Refresh CSP whenever settings are updated
 		se.App.OnRecordAfterUpdateSuccess("settings").BindFunc(func(e *core.RecordEvent) error {
 			origins := seo.ExtractExternalOrigins(e.Record.GetString("custom_head"))
+			if o := seo.OriginFromURL(e.Record.GetString("umami_src")); o != "" {
+				origins = append(origins, o)
+			}
 			cachedCSP.Store(seo.BuildCSP(origins))
 			return e.Next()
 		})

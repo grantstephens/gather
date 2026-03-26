@@ -62,7 +62,7 @@ export function Tag({ name }: Props) {
       <header class="tag-header">
         <h1 style={tag.color ? { color: tag.color } : undefined}>#{tag.name}</h1>
         <p class="tag-count">{events.length} event{events.length !== 1 ? 's' : ''}</p>
-        <a href={`/feed/tag/${tag.name}.rss`} class="feed-link">RSS Feed</a>
+        <a href={`/feed/tag/${tag.name}.rss`} class="feed-link" data-umami-event="tag-rss">RSS Feed</a>
       </header>
 
       {events.length === 0 ? (

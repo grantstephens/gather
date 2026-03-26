@@ -28,6 +28,16 @@ func ExtractExternalOrigins(html string) []string {
 	return origins
 }
 
+// OriginFromURL extracts the scheme://host origin from a URL string.
+// Returns empty string for relative paths or unparseable URLs.
+func OriginFromURL(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Host == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+}
+
 // BuildCSP returns the full Content-Security-Policy header value.
 // extraOrigins (derived from custom_head) are added to script-src and connect-src.
 func BuildCSP(extraOrigins []string) string {

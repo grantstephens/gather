@@ -13,6 +13,8 @@ interface FormData {
   custom_css: string
   custom_head: string
   ap_enabled: boolean
+  umami_src: string
+  umami_website_id: string
 }
 
 export function SettingsForm() {
@@ -26,7 +28,9 @@ export function SettingsForm() {
     require_moderation: false,
     custom_css: '',
     custom_head: '',
-    ap_enabled: false
+    ap_enabled: false,
+    umami_src: '',
+    umami_website_id: ''
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -47,7 +51,9 @@ export function SettingsForm() {
           require_moderation: record.require_moderation ?? false,
           custom_css: record.custom_css || '',
           custom_head: record.custom_head || '',
-          ap_enabled: record.ap_enabled ?? false
+          ap_enabled: record.ap_enabled ?? false,
+          umami_src: record.umami_src || '',
+          umami_website_id: record.umami_website_id || ''
         })
       } catch (err: any) {
         if (err.status === 404) {
@@ -108,7 +114,9 @@ export function SettingsForm() {
         require_moderation: settings.require_moderation ?? false,
         custom_css: settings.custom_css || '',
           custom_head: settings.custom_head || '',
-        ap_enabled: settings.ap_enabled ?? false
+        ap_enabled: settings.ap_enabled ?? false,
+        umami_src: settings.umami_src || '',
+        umami_website_id: settings.umami_website_id || ''
       })
     }
     setError(null)
@@ -129,6 +137,8 @@ export function SettingsForm() {
       data.append('custom_css', formData.custom_css)
       data.append('custom_head', formData.custom_head)
       data.append('ap_enabled', formData.ap_enabled.toString())
+      data.append('umami_src', formData.umami_src)
+      data.append('umami_website_id', formData.umami_website_id)
 
       if (formData.favicon) {
         data.append('favicon', formData.favicon)
@@ -262,6 +272,36 @@ export function SettingsForm() {
               />
               Require moderation for new events
             </label>
+          </div>
+        </section>
+
+        {/* Analytics Section */}
+        <section class="settings-section">
+          <h2>Analytics</h2>
+
+          <div class="form-group">
+            <label for="umami_src">Umami Script URL</label>
+            <input
+              type="text"
+              id="umami_src"
+              value={formData.umami_src}
+              onInput={(e) => setFormData({ ...formData, umami_src: (e.target as HTMLInputElement).value })}
+              disabled={saving}
+              placeholder="https://analytics.example.com/script.js"
+            />
+            <small class="field-hint">Supports relative paths (e.g. <code>/stats/script.js</code>) for proxy setups.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="umami_website_id">Umami Website ID</label>
+            <input
+              type="text"
+              id="umami_website_id"
+              value={formData.umami_website_id}
+              onInput={(e) => setFormData({ ...formData, umami_website_id: (e.target as HTMLInputElement).value })}
+              disabled={saving}
+              placeholder="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            />
           </div>
         </section>
 

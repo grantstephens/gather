@@ -14,7 +14,7 @@ export function EventCard({ event, variant = 'featured' }: Props) {
 
   if (variant === 'compact') {
     return (
-      <a href={eventPath(event)} class="event-card event-card--compact">
+      <a href={eventPath(event)} class="event-card event-card--compact" data-umami-event="event-click" data-umami-event-type="compact">
         <div class="event-card-compact-inner">
           <time class="event-card-date">
             {format(startDate, 'EEE, MMM d · h:mm a')}
@@ -39,7 +39,7 @@ export function EventCard({ event, variant = 'featured' }: Props) {
   const cardClass = `event-card event-card--featured${!imageUrl ? ' event-card--no-image' : ''}`
 
   return (
-    <a href={eventPath(event)} class={cardClass}>
+    <a href={eventPath(event)} class={cardClass} data-umami-event="event-click" data-umami-event-type="featured">
       {imageUrl ? (
         <div class="event-card-thumb">
           <img src={imageUrl} alt="" width="400" height="300" loading="lazy" />
