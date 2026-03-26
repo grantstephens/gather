@@ -28,6 +28,11 @@ func init() {
 		publicCreate := ""
 		places.CreateRule = &publicCreate
 
+		// Allow admins/editors to update and delete places
+		moderatorRule := "@request.auth.role = 'admin' || @request.auth.role = 'editor'"
+		places.UpdateRule = &moderatorRule
+		places.DeleteRule = &moderatorRule
+
 		if err := app.Save(places); err != nil {
 			return err
 		}
@@ -62,6 +67,10 @@ func init() {
 		// Allow public creation (anonymous users can create tags)
 		tags.CreateRule = &publicCreate
 
+		// Allow admins/editors to update and delete tags
+		tags.UpdateRule = &moderatorRule
+		tags.DeleteRule = &moderatorRule
+
 		if err := app.Save(tags); err != nil {
 			return err
 		}
@@ -87,6 +96,8 @@ func init() {
 			places.ListRule = &publicRule
 			places.ViewRule = &publicRule
 			places.CreateRule = nil // admin only
+			places.UpdateRule = nil
+			places.DeleteRule = nil
 			app.Save(places)
 		}
 
@@ -97,6 +108,8 @@ func init() {
 			tags.ListRule = &publicRule
 			tags.ViewRule = &publicRule
 			tags.CreateRule = nil // admin only
+			tags.UpdateRule = nil
+			tags.DeleteRule = nil
 			app.Save(tags)
 		}
 
