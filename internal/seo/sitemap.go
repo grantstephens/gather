@@ -114,6 +114,8 @@ func BuildRobotsTxt(baseURL string) string {
 Allow: /
 Disallow: /api/
 Disallow: /_/
+Disallow: /search
+Disallow: /login
 
 Sitemap: %s/sitemap.xml
 `, baseURL)

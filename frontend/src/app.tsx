@@ -3,6 +3,7 @@ import Router from 'preact-router'
 import { lazy } from 'preact/compat'
 import { pb, User, Settings, PageRecord } from './lib/pocketbase'
 import { getTheme, toggleTheme } from './lib/theme'
+import { SearchBar } from './components/SearchBar'
 import './style.css'
 import './components/Navigation.css'
 
@@ -22,6 +23,7 @@ const Place = lazy(() => import('./pages/Place').then(m => ({ default: m.Place }
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
 const Admin = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })))
 const Edit = lazy(() => import('./pages/Edit').then(m => ({ default: m.Edit })))
+const Search = lazy(() => import('./pages/Search').then(m => ({ default: m.Search })))
 const Page = lazy(() => import('./pages/Page').then(m => ({ default: m.Page })))
 
 export function App() {
@@ -169,6 +171,8 @@ export function App() {
             )}
           </div>
 
+          <SearchBar />
+
           <button
             class="nav-hamburger"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -215,6 +219,7 @@ export function App() {
             <Login path="/login" />
             <Admin path="/admin" />
             <Edit path="/edit/:id" />
+            <Search path="/search" />
             <Page path="/:slug" />
           </Router>
         </Suspense>

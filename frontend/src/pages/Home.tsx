@@ -166,9 +166,37 @@ export function Home(_props: Props) {
     </aside>
   )
 
+  const mobileFilterBar = (
+    <div class="mobile-filter-bar">
+      <button
+        class={`mobile-filter-btn ${mobilePanel === 'calendar' ? 'active' : ''}`}
+        onClick={() => togglePanel('calendar')}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+        Dates
+      </button>
+      <button
+        class={`mobile-filter-btn ${mobilePanel === 'tags' ? 'active' : ''}`}
+        onClick={() => togglePanel('tags')}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
+          <line x1="7" y1="7" x2="7.01" y2="7" />
+        </svg>
+        Tags
+      </button>
+    </div>
+  )
+
   if (loading) return (
     <div class="home">
       <div class="home-main">
+        {mobileFilterBar}
         <SkeletonTimeline />
       </div>
       {sidebarContent}
@@ -179,6 +207,7 @@ export function Home(_props: Props) {
   return (
     <div class="home">
       <div class="home-main">
+        {mobileFilterBar}
         <div class="events-header">
           <h2>{selectedDate ? formatSelectedDate(selectedDate) : 'Upcoming Events'}</h2>
           {selectedDate && (
@@ -197,7 +226,7 @@ export function Home(_props: Props) {
       </div>
       {sidebarContent}
 
-      {/* Mobile floating buttons + panels */}
+      {/* Mobile filter bar + panels */}
       {mobilePanel && (
         <div class="mobile-panel-backdrop" onClick={() => setMobilePanel(null)} />
       )}
@@ -223,30 +252,6 @@ export function Home(_props: Props) {
               </a>
             ))}
         </div>
-      </div>
-      <div class="mobile-fab-bar">
-        <button
-          class={`mobile-fab ${mobilePanel === 'calendar' ? 'active' : ''}`}
-          onClick={() => togglePanel('calendar')}
-          aria-label="Calendar"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-          </svg>
-        </button>
-        <button
-          class={`mobile-fab ${mobilePanel === 'tags' ? 'active' : ''}`}
-          onClick={() => togglePanel('tags')}
-          aria-label="Tags"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
-            <line x1="7" y1="7" x2="7.01" y2="7" />
-          </svg>
-        </button>
       </div>
     </div>
   )

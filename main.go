@@ -9,6 +9,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -332,6 +333,120 @@ func main() {
 			}
 			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
 			return re.JSON(200, rows)
+		})
+
+		// Unified search endpoint
+		se.Router.GET("/api/search", func(re *core.RequestEvent) error {
+			q := strings.TrimSpace(re.Request.URL.Query().Get("q"))
+			if len(q) < 2 {
+				return re.JSON(200, map[string]any{
+					"events": []any{},
+					"places": []any{},
+					"tags":   []any{},
+				})
+			}
+
+			limit := 20
+			if l, err := strconv.Atoi(re.Request.URL.Query().Get("limit")); err == nil && l > 0 && l <= 50 {
+				limit = l
+			}
+
+			// Search events
+			events, _ := se.App.FindRecordsByFilter(
+				"events",
+				"status = 'published' && (title ~ {:q} || description ~ {:q})",
+				"-start_datetime",
+				limit,
+				0,
+				dbx.Params{"q": q},
+			)
+
+			// Expand place and tags for events
+			eventResults := make([]map[string]any, 0, len(events))
+			for _, e := range events {
+				ev := map[string]any{
+					"id":             e.Id,
+					"slug":           e.GetString("slug"),
+					"title":          e.GetString("title"),
+					"description":    e.GetString("description"),
+					"start_datetime": e.GetString("start_datetime"),
+					"end_datetime":   e.GetString("end_datetime"),
+					"status":         e.GetString("status"),
+					"image":          e.GetString("image"),
+				}
+				expand := map[string]any{}
+				if placeID := e.GetString("place"); placeID != "" {
+					if place, err := se.App.FindRecordById("places", placeID); err == nil {
+						expand["place"] = map[string]any{
+							"id":      place.Id,
+							"name":    place.GetString("name"),
+							"address": place.GetString("address"),
+							"city":    place.GetString("city"),
+						}
+					}
+				}
+				tagIDs := e.GetStringSlice("tags")
+				if len(tagIDs) > 0 {
+					tagList := make([]map[string]any, 0, len(tagIDs))
+					for _, tid := range tagIDs {
+						if tag, err := se.App.FindRecordById("tags", tid); err == nil {
+							tagList = append(tagList, map[string]any{
+								"id":    tag.Id,
+								"name":  tag.GetString("name"),
+								"color": tag.GetString("color"),
+							})
+						}
+					}
+					expand["tags"] = tagList
+				}
+				if len(expand) > 0 {
+					ev["expand"] = expand
+				}
+				eventResults = append(eventResults, ev)
+			}
+
+			// Search places
+			places, _ := se.App.FindRecordsByFilter(
+				"places",
+				"status = 'approved' && (name ~ {:q} || address ~ {:q} || city ~ {:q})",
+				"name",
+				limit,
+				0,
+				dbx.Params{"q": q},
+			)
+			placeResults := make([]map[string]any, 0, len(places))
+			for _, p := range places {
+				placeResults = append(placeResults, map[string]any{
+					"id":      p.Id,
+					"name":    p.GetString("name"),
+					"address": p.GetString("address"),
+					"city":    p.GetString("city"),
+				})
+			}
+
+			// Search tags
+			tags, _ := se.App.FindRecordsByFilter(
+				"tags",
+				"status = 'approved' && name ~ {:q}",
+				"name",
+				limit,
+				0,
+				dbx.Params{"q": q},
+			)
+			tagResults := make([]map[string]any, 0, len(tags))
+			for _, t := range tags {
+				tagResults = append(tagResults, map[string]any{
+					"id":    t.Id,
+					"name":  t.GetString("name"),
+					"color": t.GetString("color"),
+				})
+			}
+
+			return re.JSON(200, map[string]any{
+				"events": eventResults,
+				"places": placeResults,
+				"tags":   tagResults,
+			})
 		})
 
 		// Register hooks
