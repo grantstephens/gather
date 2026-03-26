@@ -341,6 +341,32 @@ func main() {
 			return re.JSON(200, rows)
 		})
 
+		// Town event counts — distinct cities from places linked to upcoming published events
+		se.Router.GET("/api/towns/counts", func(re *core.RequestEvent) error {
+			today := time.Now().UTC().Format("2006-01-02")
+			type row struct {
+				Name  string `db:"name"  json:"name"`
+				Count int    `db:"count" json:"count"`
+			}
+			var rows []row
+			err := se.App.DB().NewQuery(`
+				SELECT p.city AS name, COUNT(*) AS count
+				FROM events e
+				JOIN places p ON p.id = e.place
+				WHERE e.status = 'published'
+				  AND e.start_datetime >= {:today}
+				  AND p.status = 'approved'
+				  AND p.city != ''
+				GROUP BY p.city
+				ORDER BY count DESC
+			`).Bind(dbx.Params{"today": today}).All(&rows)
+			if err != nil {
+				return re.InternalServerError("Failed to query town counts", err)
+			}
+			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
+			return re.JSON(200, rows)
+		})
+
 		// Unified search endpoint
 		se.Router.GET("/api/search", func(re *core.RequestEvent) error {
 			q := strings.TrimSpace(re.Request.URL.Query().Get("q"))
