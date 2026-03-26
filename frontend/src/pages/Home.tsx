@@ -22,7 +22,9 @@ export function Home(_props: Props) {
   const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [mobilePanel, setMobilePanel] = useState<'calendar' | 'tags' | null>(null)
+  const [mobilePanel, setMobilePanel] = useState<'calendar' | 'tags' | 'towns' | null>(null)
+  const [towns, setTowns] = useState<{ name: string; count: number }[]>([])
+  const [selectedTown, setSelectedTown] = useState<string | null>(null)
   const pageRef = useRef(1)
   const loadingMoreRef = useRef(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -75,12 +77,27 @@ export function Home(_props: Props) {
     pb.collection('tags').getFullList<Tag>().then(setTags).catch(() => {})
   }, [])
 
-  const fetchPage = async (page: number, date: string | null): Promise<boolean> => {
-    const dateFilter = date
-      ? `start_datetime >= '${date} 00:00:00' && start_datetime <= '${date} 23:59:59'`
-      : `start_datetime >= '${today}'`
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch('/api/towns/counts', { signal: controller.signal })
+      .then(r => r.json())
+      .then((rows: { name: string; count: number }[]) => setTowns(rows))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [])
+
+  const fetchPage = async (page: number, date: string | null, town: string | null): Promise<boolean> => {
+    const filters = [`status = 'published'`]
+    if (date) {
+      filters.push(`start_datetime >= '${date} 00:00:00' && start_datetime <= '${date} 23:59:59'`)
+    } else {
+      filters.push(`start_datetime >= '${today}'`)
+    }
+    if (town) {
+      filters.push(`place.city = '${town}'`)
+    }
     const result = await pb.collection('events').getList<Event>(page, PAGE_SIZE, {
-      filter: `status = 'published' && ${dateFilter}`,
+      filter: filters.join(' && '),
       sort: 'start_datetime',
       expand: 'place,tags',
     })
@@ -88,16 +105,16 @@ export function Home(_props: Props) {
     return result.page < result.totalPages
   }
 
-  // Reset and load page 1 whenever date filter changes
+  // Reset and load page 1 whenever date or town filter changes
   useEffect(() => {
     pageRef.current = 1
     setLoading(true)
     setError(null)
-    fetchPage(1, selectedDate)
+    fetchPage(1, selectedDate, selectedTown)
       .then(more => setHasMore(more))
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load events'))
       .finally(() => setLoading(false))
-  }, [selectedDate])
+  }, [selectedDate, selectedTown])
 
   // Infinite scroll — only when no date filter active
   useEffect(() => {
@@ -110,7 +127,7 @@ export function Home(_props: Props) {
       setLoadingMore(true)
       const nextPage = pageRef.current + 1
       try {
-        const more = await fetchPage(nextPage, null)
+        const more = await fetchPage(nextPage, null, selectedTown)
         pageRef.current = nextPage
         setHasMore(more)
       } finally {
@@ -121,7 +138,7 @@ export function Home(_props: Props) {
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [hasMore, selectedDate, loading])
+  }, [hasMore, selectedDate, selectedTown, loading])
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(prev => prev === date ? null : date)
@@ -132,7 +149,11 @@ export function Home(_props: Props) {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   }
 
-  const togglePanel = (panel: 'calendar' | 'tags') => {
+  const handleTownSelect = (town: string) => {
+    setSelectedTown(prev => prev === town ? null : town)
+  }
+
+  const togglePanel = (panel: 'calendar' | 'tags' | 'towns') => {
     setMobilePanel(prev => prev === panel ? null : panel)
   }
 
@@ -164,6 +185,22 @@ export function Home(_props: Props) {
             ))}
         </div>
       </div>
+      {towns.length > 0 && (
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Browse by town</div>
+          <div class="town-cloud">
+            {towns.map(town => (
+              <button
+                key={town.name}
+                class={`town ${selectedTown === town.name ? 'active' : ''}`}
+                onClick={() => handleTownSelect(town.name)}
+              >
+                {town.name} ({town.count})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </aside>
   )
 
@@ -191,6 +228,16 @@ export function Home(_props: Props) {
         </svg>
         Tags
       </button>
+      <button
+        class={`mobile-filter-btn ${mobilePanel === 'towns' ? 'active' : ''}`}
+        onClick={() => togglePanel('towns')}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+          <circle cx="12" cy="9" r="2.5"/>
+        </svg>
+        Towns
+      </button>
     </div>
   )
 
@@ -210,9 +257,28 @@ export function Home(_props: Props) {
       <div class="home-main">
         {mobileFilterBar}
         <div class="events-header">
-          <h2>{selectedDate ? formatSelectedDate(selectedDate) : 'Upcoming Events'}</h2>
-          {selectedDate && (
-            <button class="clear-filter" onClick={() => setSelectedDate(null)}>Show all</button>
+          <h2>
+            {selectedDate && selectedTown
+              ? `${formatSelectedDate(selectedDate)} in ${selectedTown}`
+              : selectedDate
+                ? formatSelectedDate(selectedDate)
+                : selectedTown
+                  ? `Events in ${selectedTown}`
+                  : 'Upcoming Events'}
+          </h2>
+          {(selectedDate || selectedTown) && (
+            <div class="active-filters">
+              {selectedDate && (
+                <button class="clear-filter" onClick={() => setSelectedDate(null)}>
+                  Clear date
+                </button>
+              )}
+              {selectedTown && (
+                <button class="clear-filter" onClick={() => setSelectedTown(null)}>
+                  Clear town
+                </button>
+              )}
+            </div>
           )}
         </div>
         {events.length === 0 ? (
@@ -253,6 +319,19 @@ export function Home(_props: Props) {
                 {tag.name}{tagCounts[tag.id] ? ` (${tagCounts[tag.id]})` : ''}
               </a>
             ))}
+        </div>
+      </div>
+      <div class={`mobile-panel mobile-panel-towns ${mobilePanel === 'towns' ? 'open' : ''}`}>
+        <div class="town-cloud">
+          {towns.map(town => (
+            <button
+              key={town.name}
+              class={`town ${selectedTown === town.name ? 'active' : ''}`}
+              onClick={() => { handleTownSelect(town.name); setMobilePanel(null) }}
+            >
+              {town.name} ({town.count})
+            </button>
+          ))}
         </div>
       </div>
     </div>
