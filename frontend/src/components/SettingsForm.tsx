@@ -15,6 +15,7 @@ interface FormData {
   ap_enabled: boolean
   umami_src: string
   umami_website_id: string
+  umami_host_url: string
 }
 
 export function SettingsForm() {
@@ -30,7 +31,8 @@ export function SettingsForm() {
     custom_head: '',
     ap_enabled: false,
     umami_src: '',
-    umami_website_id: ''
+    umami_website_id: '',
+    umami_host_url: ''
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -53,7 +55,8 @@ export function SettingsForm() {
           custom_head: record.custom_head || '',
           ap_enabled: record.ap_enabled ?? false,
           umami_src: record.umami_src || '',
-          umami_website_id: record.umami_website_id || ''
+          umami_website_id: record.umami_website_id || '',
+          umami_host_url: record.umami_host_url || ''
         })
       } catch (err: any) {
         if (err.status === 404) {
@@ -116,7 +119,8 @@ export function SettingsForm() {
           custom_head: settings.custom_head || '',
         ap_enabled: settings.ap_enabled ?? false,
         umami_src: settings.umami_src || '',
-        umami_website_id: settings.umami_website_id || ''
+        umami_website_id: settings.umami_website_id || '',
+        umami_host_url: settings.umami_host_url || ''
       })
     }
     setError(null)
@@ -139,6 +143,7 @@ export function SettingsForm() {
       data.append('ap_enabled', formData.ap_enabled.toString())
       data.append('umami_src', formData.umami_src)
       data.append('umami_website_id', formData.umami_website_id)
+      data.append('umami_host_url', formData.umami_host_url)
 
       if (formData.favicon) {
         data.append('favicon', formData.favicon)
@@ -302,6 +307,19 @@ export function SettingsForm() {
               disabled={saving}
               placeholder="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
             />
+          </div>
+
+          <div class="form-group">
+            <label for="umami_host_url">Umami Host URL</label>
+            <input
+              type="text"
+              id="umami_host_url"
+              value={formData.umami_host_url}
+              onInput={(e) => setFormData({ ...formData, umami_host_url: (e.target as HTMLInputElement).value })}
+              disabled={saving}
+              placeholder="/stats"
+            />
+            <small class="field-hint">Sets <code>data-host-url</code> on the tracking script. Use when proxying Umami behind a subpath (e.g. <code>/stats</code>).</small>
           </div>
         </section>
 

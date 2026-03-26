@@ -75,6 +75,7 @@ export interface Settings extends BaseModel {
   favicon?: string
   umami_src: string
   umami_website_id: string
+  umami_host_url: string
 }
 
 export interface PageRecord extends BaseModel {

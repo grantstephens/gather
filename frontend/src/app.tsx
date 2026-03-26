@@ -90,6 +90,9 @@ export function App() {
           script.defer = true
           script.src = record.umami_src
           script.setAttribute('data-website-id', record.umami_website_id)
+          if (record.umami_host_url) {
+            script.setAttribute('data-host-url', record.umami_host_url)
+          }
           document.head.appendChild(script)
         }
 
