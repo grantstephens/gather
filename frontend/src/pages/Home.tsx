@@ -209,7 +209,7 @@ export function Home(_props: Props) {
       </div>
       {towns.length > 0 && (
         <div class="sidebar-section">
-          <div class="sidebar-section-title">Browse by town</div>
+          <div class="sidebar-section-title">Browse by location</div>
           <div class="town-cloud">
             {towns.map(town => (
               <button
@@ -258,7 +258,7 @@ export function Home(_props: Props) {
           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
           <circle cx="12" cy="9" r="2.5"/>
         </svg>
-        Towns
+        Locations
       </button>
     </div>
   )
@@ -297,7 +297,7 @@ export function Home(_props: Props) {
               )}
               {selectedTown && (
                 <button class="clear-filter" onClick={() => setSelectedTown(null)}>
-                  Clear town
+                  Clear location
                 </button>
               )}
               {selectedTags.size > 0 && (
