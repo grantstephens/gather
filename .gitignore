@@ -21,6 +21,9 @@ gather
 # Worktrees
 .worktrees/
 
+# Superpowers
+.superpowers/
+
 # Test artifacts
 tests/e2e/node_modules/
 tests/e2e/playwright-report/
