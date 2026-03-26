@@ -165,6 +165,7 @@ export function App() {
 
   const handleNavClick = () => {
     setMobileMenuOpen(false)
+    window.dispatchEvent(new CustomEvent('gather:reset-filters'))
   }
 
   const isModeratorOrAdmin = user?.role === 'admin' || user?.role === 'editor'
@@ -247,8 +248,8 @@ export function App() {
             {footerPages.map(page => (
               <a key={page.id} href={`/${page.slug}`} class="footer-link" data-umami-event={`footer-page-${page.slug}`}>{page.title}</a>
             ))}
-            <a href="/feed.rss" class="footer-link" data-umami-event="feed-rss">RSS</a>
-            <a href="/feed.ics" class="footer-link" data-umami-event="feed-ical">iCal</a>
+            <a href="/feed.rss" class="footer-link" data-umami-event="feed-rss" data-native>RSS</a>
+            <a href="/feed.ics" class="footer-link" data-umami-event="feed-ical" data-native>iCal</a>
             <button class="footer-link footer-fediverse-link" onClick={() => setFediverseDialogOpen(true)} data-umami-event="fediverse-follow">
               Fediverse
             </button>

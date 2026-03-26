@@ -31,6 +31,18 @@ export function Home(_props: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const today = new Date().toISOString().split('T')[0]
 
+  // Reset all filters when the brand/logo link is clicked
+  useEffect(() => {
+    const reset = () => {
+      setSelectedDate(null)
+      setSelectedTown(null)
+      setSelectedTags(new Set())
+      setMobilePanel(null)
+    }
+    window.addEventListener('gather:reset-filters', reset)
+    return () => window.removeEventListener('gather:reset-filters', reset)
+  }, [])
+
   // Serialise selectedTags for use as a dependency key (Sets aren't comparable)
   const selectedTagsKey = [...selectedTags].sort().join(',')
 
