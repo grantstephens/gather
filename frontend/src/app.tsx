@@ -197,10 +197,10 @@ export function App() {
           <div id="primary-nav" class={`nav-links${mobileMenuOpen ? ' nav-links--open' : ''}`}>
             <a href="/submit" class="nav-link nav-link--cta" onClick={handleNavClick} data-umami-event="nav-submit-event">Submit Event</a>
             {navPages.map(p => (
-              <a key={p.id} href={`/${p.slug}`} class="nav-link" onClick={handleNavClick}>{p.title}</a>
+              <a key={p.id} href={`/${p.slug}`} class="nav-link" onClick={handleNavClick} data-umami-event={`nav-page-${p.slug}`}>{p.title}</a>
             ))}
             {isModeratorOrAdmin && (
-              <a href="/admin" class="nav-link" onClick={handleNavClick}>Admin</a>
+              <a href="/admin" class="nav-link" onClick={handleNavClick} data-umami-event="nav-admin">Admin</a>
             )}
             {user ? (
               <>
@@ -242,7 +242,7 @@ export function App() {
           </button>
           <div class="footer-links">
             {footerPages.map(page => (
-              <a key={page.id} href={`/${page.slug}`} class="footer-link">{page.title}</a>
+              <a key={page.id} href={`/${page.slug}`} class="footer-link" data-umami-event={`footer-page-${page.slug}`}>{page.title}</a>
             ))}
             <a href="/feed.rss" class="footer-link" data-umami-event="feed-rss">RSS</a>
             <a href="/feed.ics" class="footer-link" data-umami-event="feed-ical">iCal</a>
@@ -251,7 +251,7 @@ export function App() {
             </button>
           </div>
           <div class="footer-powered">
-            Powered by <a href="https://github.com/grantstephens/gather" class="footer-link footer-powered-link" target="_blank" rel="noopener noreferrer">gather<span class="brand-dot">.</span></a>
+            Powered by <a href="https://grantstephens.github.io/gather/" class="footer-link footer-powered-link" target="_blank" rel="noopener noreferrer" data-umami-event="powered-by-gather">gather<span class="brand-dot">.</span></a>
           </div>
         </div>
       </footer>

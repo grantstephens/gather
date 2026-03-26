@@ -626,6 +626,16 @@
           <p>Set your site name, favicon, SEO description, and custom CSS.</p>
         </div>
         <div class="feature-card">
+          <span class="feature-icon">🏷️</span>
+          <h3>Tags &amp; location filters</h3>
+          <p>Filter events by tag or town. Visitors find what's relevant without scrolling.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🌗</span>
+          <h3>Dark / light theme</h3>
+          <p>Automatic theme switching based on system preference, with a manual toggle.</p>
+        </div>
+        <div class="feature-card">
           <span class="feature-icon">📦</span>
           <h3>Single binary</h3>
           <p>One binary, no external database, no external dependencies. Runs anywhere.</p>
@@ -710,7 +720,15 @@ volumes:
               <li><strong>PocketBase superuser</strong> — manages the database at <code>/_/</code>, created automatically from your env vars.</li>
               <li><strong>App user</strong> — logs into the frontend at <code>/login</code>. Register separately, then promote to admin via <code>/_/</code> &gt; Collections &gt; users &gt; set role to <code>admin</code>.</li>
             </ul>
-            <p style="margin-top: var(--space-3)">Once you have a frontend admin account, go to <strong style="color:var(--color-text)">Admin &gt; Settings</strong> to configure your site name, moderation workflow, ActivityPub federation, and custom branding.</p>
+            <p style="margin-top: var(--space-3)">Once you have a frontend admin account, go to <strong style="color:var(--color-text)">Admin &gt; Settings</strong> to configure:</p>
+            <ul class="prose" style="margin-top: var(--space-2)">
+              <li><strong>Site name</strong> and <strong>subtitle</strong></li>
+              <li><strong>Favicon</strong> (auto-converted to WebP)</li>
+              <li><strong>SEO description</strong> for search engines and social previews</li>
+              <li><strong>Moderation</strong> settings (anonymous submissions, require approval)</li>
+              <li><strong>ActivityPub</strong> federation toggle</li>
+              <li><strong>Custom CSS</strong> and <strong>tracking/head code</strong></li>
+            </ul>
           </div>
         </div>
 
@@ -777,6 +795,14 @@ make build
       <div class="note" style="margin-top: var(--space-5)">
         <strong>Feeds:</strong> Your instance automatically exposes RSS at <code>/feed/events.rss</code>, iCal at <code>/ical/events.ics</code>, and (when enabled) an ActivityPub actor at <code>/ap/actor</code>.
       </div>
+
+      <hr class="divider" />
+
+      <h3>Custom Pages</h3>
+      <p>Create static pages (About, FAQ, Code of Conduct, etc.) from the <strong style="color:var(--color-text)">Admin &gt; Pages</strong> tab. Pages can appear in the navigation bar, footer, or both, and support Markdown content.</p>
+
+      <h3 style="margin-top: var(--space-6)">PocketBase Admin</h3>
+      <p>The PocketBase admin dashboard is available at <code>/_/</code> for direct database access, collection management, and log viewing.</p>
     </section>
 
     <!-- Updates & Backups -->
