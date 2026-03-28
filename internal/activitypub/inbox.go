@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -70,7 +71,18 @@ func handleFollow(app core.App, baseURL string, activity IncomingActivity) error
 		Object:  activity,
 	}
 
-	go DeliverActivity(app, accept, actorInfo.Inbox)
+	go func() {
+		var lastErr error
+		for attempt, delay := range []time.Duration{0, 5 * time.Second, 30 * time.Second} {
+			if delay > 0 {
+				time.Sleep(delay)
+			}
+			if lastErr = DeliverActivity(app, accept, actorInfo.Inbox); lastErr == nil {
+				return
+			}
+			app.Logger().Error("failed to deliver Accept", "attempt", attempt+1, "inbox", actorInfo.Inbox, "error", lastErr)
+		}
+	}()
 
 	return nil
 }
@@ -106,7 +118,7 @@ func fetchActor(actorURL string) (*ActorInfo, error) {
 	}
 	req.Header.Set("Accept", "application/activity+json")
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
