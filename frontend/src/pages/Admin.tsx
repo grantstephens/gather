@@ -5,6 +5,8 @@ import { tagStyle } from '../lib/color'
 import type { PageRecord } from '../lib/pocketbase'
 import { MarkdownEditor } from '../components/MarkdownEditor'
 import { EventCard } from '../components/EventCard'
+import { PlaceSearch } from '../components/PlaceSearch'
+import type { NominatimPlaceData } from '../components/PlaceSearch'
 import { SettingsForm } from '../components/SettingsForm'
 import { SkeletonBlock } from '../components/Skeleton'
 import './Admin.css'
@@ -13,7 +15,7 @@ interface Props {
   path?: string
 }
 
-type TabType = 'pending-events' | 'pending-places' | 'pending-tags' | 'all-events' | 'settings' | 'pages'
+type TabType = 'events' | 'places' | 'tags' | 'settings' | 'pages'
 
 const RESERVED_SLUGS = ['submit', 'login', 'admin', 'event', 'tag', 'place', 'edit']
 
@@ -22,12 +24,11 @@ function slugify(title: string): string {
 }
 
 export function Admin(_props: Props) {
-  const [pendingEvents, setPendingEvents] = useState<Event[]>([])
   const [allEvents, setAllEvents] = useState<Event[]>([])
-  const [pendingPlaces, setPendingPlaces] = useState<Place[]>([])
-  const [pendingTags, setPendingTags] = useState<Tag[]>([])
+  const [allPlaces, setAllPlaces] = useState<Place[]>([])
+  const [allTags, setAllTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<TabType>('pending-events')
+  const [activeTab, setActiveTab] = useState<TabType>('events')
   const [pages, setPages] = useState<PageRecord[]>([])
   const [pagesLoaded, setPagesLoaded] = useState(false)
   const [showPageForm, setShowPageForm] = useState(false)
@@ -41,6 +42,9 @@ export function Admin(_props: Props) {
   })
   const [pageFormError, setPageFormError] = useState<string | null>(null)
   const [pageSaving, setPageSaving] = useState(false)
+  const [editingPlaceId, setEditingPlaceId] = useState<string | null>(null)
+  const [editingTagId, setEditingTagId] = useState<string | null>(null)
+  const [tagForm, setTagForm] = useState({ name: '', color: '' })
 
   useEffect(() => {
     if (!canModerate()) {
@@ -53,33 +57,25 @@ export function Admin(_props: Props) {
     async function load() {
       try {
         // Fetch sequentially to avoid race conditions
-        const pending = await pb.collection('events').getList<Event>(1, 50, {
-          filter: 'status = "pending"',
+        const events = await pb.collection('events').getFullList<Event>({
           sort: '-start_datetime',
           expand: 'place,tags',
         })
         if (cancelled) return
 
-        const all = await pb.collection('events').getList<Event>(1, 50, {
-          sort: '-start_datetime',
-          expand: 'place,tags',
+        const places = await pb.collection('places').getFullList<Place>({
+          sort: 'status,name',
         })
         if (cancelled) return
 
-        const places = await pb.collection('places').getList<Place>(1, 50, {
-          filter: 'status = "pending"',
+        const tags = await pb.collection('tags').getFullList<Tag>({
+          sort: 'status,name',
         })
         if (cancelled) return
 
-        const tags = await pb.collection('tags').getList<Tag>(1, 50, {
-          filter: 'status = "pending"',
-        })
-        if (cancelled) return
-
-        setPendingEvents(pending.items)
-        setAllEvents(all.items)
-        setPendingPlaces(places.items)
-        setPendingTags(tags.items)
+        setAllEvents(events)
+        setAllPlaces(places)
+        setAllTags(tags)
       } catch (err) {
         if (!cancelled) {
           console.error('Failed to load data:', err)
@@ -144,7 +140,7 @@ export function Admin(_props: Props) {
   }
 
   const handleApproveEvent = async (eventId: string) => {
-    const event = pendingEvents.find(e => e.id === eventId)
+    const event = allEvents.find(e => e.id === eventId)
     if (!event) return
 
     // Check dependencies first
@@ -156,7 +152,6 @@ export function Admin(_props: Props) {
 
     try {
       await pb.collection('events').update(eventId, { status: 'published' })
-      setPendingEvents(prev => prev.filter(e => e.id !== eventId))
       setAllEvents(prev => prev.map(e => e.id === eventId ? { ...e, status: 'published' } : e))
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to approve event'
@@ -168,7 +163,6 @@ export function Admin(_props: Props) {
     if (!confirm('Are you sure you want to delete this event?')) return
     try {
       await pb.collection('events').delete(eventId)
-      setPendingEvents(prev => prev.filter(e => e.id !== eventId))
       setAllEvents(prev => prev.filter(e => e.id !== eventId))
     } catch (err) {
       alert('Failed to delete event')
@@ -178,7 +172,7 @@ export function Admin(_props: Props) {
   const handleApprovePlace = async (placeId: string) => {
     try {
       await pb.collection('places').update(placeId, { status: 'approved' })
-      setPendingPlaces(prev => prev.filter(p => p.id !== placeId))
+      setAllPlaces(prev => prev.map(p => p.id === placeId ? { ...p, status: 'approved' } : p))
     } catch (err) {
       alert('Failed to approve place')
     }
@@ -188,7 +182,7 @@ export function Admin(_props: Props) {
     if (!confirm('Are you sure you want to delete this place? Events using it will need to be updated.')) return
     try {
       await pb.collection('places').delete(placeId)
-      setPendingPlaces(prev => prev.filter(p => p.id !== placeId))
+      setAllPlaces(prev => prev.filter(p => p.id !== placeId))
     } catch (err) {
       alert('Failed to delete place')
     }
@@ -197,7 +191,7 @@ export function Admin(_props: Props) {
   const handleApproveTag = async (tagId: string) => {
     try {
       await pb.collection('tags').update(tagId, { status: 'approved' })
-      setPendingTags(prev => prev.filter(t => t.id !== tagId))
+      setAllTags(prev => prev.map(t => t.id === tagId ? { ...t, status: 'approved' } : t))
     } catch (err) {
       alert('Failed to approve tag')
     }
@@ -207,9 +201,41 @@ export function Admin(_props: Props) {
     if (!confirm('Are you sure you want to delete this tag? Events using it will need to be updated.')) return
     try {
       await pb.collection('tags').delete(tagId)
-      setPendingTags(prev => prev.filter(t => t.id !== tagId))
+      setAllTags(prev => prev.filter(t => t.id !== tagId))
     } catch (err) {
       alert('Failed to delete tag')
+    }
+  }
+
+  const handleReplacePlaceWithOSM = async (data: NominatimPlaceData, placeId: string) => {
+    try {
+      await pb.collection('places').update(placeId, data)
+      setAllPlaces(prev => prev.map(p => p.id === placeId ? { ...p, ...data } as Place : p))
+      setEditingPlaceId(null)
+    } catch {
+      alert('Failed to update place')
+    }
+  }
+
+  const handleAddPlace = (place: Place | null) => {
+    if (place) {
+      setAllPlaces(prev => [place, ...prev])
+    }
+  }
+
+  const handleEditTag = (tag: Tag) => {
+    setEditingTagId(tag.id)
+    setTagForm({ name: tag.name, color: tag.color || '' })
+  }
+
+  const handleSaveTag = async (tagId: string) => {
+    if (!tagForm.name.trim()) return
+    try {
+      await pb.collection('tags').update(tagId, tagForm)
+      setAllTags(prev => prev.map(t => t.id === tagId ? { ...t, ...tagForm } : t))
+      setEditingTagId(null)
+    } catch {
+      alert('Failed to update tag')
     }
   }
 
@@ -303,7 +329,10 @@ export function Admin(_props: Props) {
     )
   }
 
-  const totalPending = pendingEvents.length + pendingPlaces.length + pendingTags.length
+  const pendingEventsCount = allEvents.filter(e => e.status === 'pending').length
+  const pendingPlacesCount = allPlaces.filter(p => p.status === 'pending').length
+  const pendingTagsCount = allTags.filter(t => t.status === 'pending').length
+  const totalPending = pendingEventsCount + pendingPlacesCount + pendingTagsCount
 
   return (
     <div class="admin-page">
@@ -311,28 +340,22 @@ export function Admin(_props: Props) {
 
       <div class="admin-tabs">
         <button
-          class={`tab ${activeTab === 'pending-events' ? 'active' : ''}`}
-          onClick={() => setActiveTab('pending-events')}
+          class={`tab ${activeTab === 'events' ? 'active' : ''}`}
+          onClick={() => setActiveTab('events')}
         >
-          Events ({pendingEvents.length})
+          Events {pendingEventsCount > 0 && `(${pendingEventsCount})`}
         </button>
         <button
-          class={`tab ${activeTab === 'pending-places' ? 'active' : ''}`}
-          onClick={() => setActiveTab('pending-places')}
+          class={`tab ${activeTab === 'places' ? 'active' : ''}`}
+          onClick={() => setActiveTab('places')}
         >
-          Places ({pendingPlaces.length})
+          Places {pendingPlacesCount > 0 && `(${pendingPlacesCount})`}
         </button>
         <button
-          class={`tab ${activeTab === 'pending-tags' ? 'active' : ''}`}
-          onClick={() => setActiveTab('pending-tags')}
+          class={`tab ${activeTab === 'tags' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tags')}
         >
-          Tags ({pendingTags.length})
-        </button>
-        <button
-          class={`tab ${activeTab === 'all-events' ? 'active' : ''}`}
-          onClick={() => setActiveTab('all-events')}
-        >
-          All Events ({allEvents.length})
+          Tags {pendingTagsCount > 0 && `(${pendingTagsCount})`}
         </button>
         <button
           class={`tab ${activeTab === 'settings' ? 'active' : ''}`}
@@ -350,111 +373,166 @@ export function Admin(_props: Props) {
         )}
       </div>
 
-      {totalPending > 0 && activeTab.startsWith('pending') && (
+      {totalPending > 0 && (activeTab === 'events' || activeTab === 'places' || activeTab === 'tags') && (
         <p class="moderation-tip">
           Approve places and tags before approving events that use them.
         </p>
       )}
 
-      {activeTab === 'pending-events' && (
-        <div class="events-list">
-          {pendingEvents.length === 0 ? (
-            <p class="no-events">No pending events to review.</p>
-          ) : (
-            pendingEvents.map(event => (
-              <div key={event.id} class="admin-event-card">
-                <EventCard event={event} />
-                <div class="admin-event-actions">
-                  <button class="btn btn-primary" onClick={() => handleApproveEvent(event.id)}>
-                    Approve
-                  </button>
-                  <a href={eventPath(event)} class="btn btn-secondary">
-                    View
-                  </a>
-                  <button class="btn btn-danger" onClick={() => handleRejectEvent(event.id)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {activeTab === 'pending-places' && (
-        <div class="items-list">
-          {pendingPlaces.length === 0 ? (
-            <p class="no-events">No pending places to review.</p>
-          ) : (
-            pendingPlaces.map(place => (
-              <div key={place.id} class="admin-item-card">
-                <div class="item-info">
-                  <h3>{place.name}</h3>
-                  {place.address && <p class="item-detail">{place.address}</p>}
-                  {place.city && <p class="item-detail">{place.city}</p>}
-                </div>
-                <div class="admin-event-actions">
-                  <button class="btn btn-primary" onClick={() => handleApprovePlace(place.id)}>
-                    Approve
-                  </button>
-                  <button class="btn btn-danger" onClick={() => handleRejectPlace(place.id)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {activeTab === 'pending-tags' && (
-        <div class="items-list">
-          {pendingTags.length === 0 ? (
-            <p class="no-events">No pending tags to review.</p>
-          ) : (
-            pendingTags.map(tag => (
-              <div key={tag.id} class="admin-item-card">
-                <div class="item-info">
-                  <span
-                    class="tag-preview"
-                    style={tagStyle(tag.color)}
-                  >
-                    {tag.name}
-                  </span>
-                </div>
-                <div class="admin-event-actions">
-                  <button class="btn btn-primary" onClick={() => handleApproveTag(tag.id)}>
-                    Approve
-                  </button>
-                  <button class="btn btn-danger" onClick={() => handleRejectTag(tag.id)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {activeTab === 'all-events' && (
+      {activeTab === 'events' && (
         <div class="events-list">
           {allEvents.length === 0 ? (
             <p class="no-events">No events found.</p>
           ) : (
-            allEvents.map(event => (
+            [...allEvents].sort((a, b) => {
+              if (a.status === 'pending' && b.status !== 'pending') return -1
+              if (a.status !== 'pending' && b.status === 'pending') return 1
+              return 0
+            }).map(event => (
               <div key={event.id} class="admin-event-card">
                 <div class="event-status-row">
                   <span class={`status-badge status-${event.status}`}>{event.status}</span>
                 </div>
                 <EventCard event={event} />
                 <div class="admin-event-actions">
+                  {event.status === 'pending' && (
+                    <button class="btn btn-primary" onClick={() => handleApproveEvent(event.id)}>
+                      Approve
+                    </button>
+                  )}
                   <a href={eventPath(event)} class="btn btn-secondary">
                     View
                   </a>
                   <a href={`/edit/${event.id}`} class="btn btn-secondary">
                     Edit
                   </a>
+                  {event.status === 'pending' && (
+                    <button class="btn btn-danger" onClick={() => handleRejectEvent(event.id)}>
+                      Delete
+                    </button>
+                  )}
                 </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {activeTab === 'places' && (
+        <div>
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 500 }}>Add a place</label>
+            <PlaceSearch value={null} onChange={handleAddPlace} />
+          </div>
+          <div class="items-list">
+            {allPlaces.map(place => (
+              <div key={place.id} class="admin-item-card">
+                {editingPlaceId === place.id ? (
+                  <div style={{ flex: 1 }}>
+                    <p class="item-detail" style={{ marginBottom: 'var(--space-2)' }}>
+                      Search for a new location to replace <strong>{place.name}</strong>:
+                    </p>
+                    <PlaceSearch
+                      value={null}
+                      onChange={() => {}}
+                      onRawSelect={(data) => handleReplacePlaceWithOSM(data, place.id)}
+                    />
+                    <div class="admin-event-actions" style={{ marginTop: 'var(--space-3)' }}>
+                      <button class="btn btn-secondary" onClick={() => setEditingPlaceId(null)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div class="item-info">
+                      <h3>
+                        {place.status === 'pending' && <span class="status-badge status-pending">pending</span>}
+                        {place.name}
+                      </h3>
+                      {place.address && <p class="item-detail">{place.address}</p>}
+                      {place.city && <p class="item-detail">{place.city}</p>}
+                    </div>
+                    <div class="admin-event-actions">
+                      {place.status === 'pending' && (
+                        <button class="btn btn-primary" onClick={() => handleApprovePlace(place.id)}>
+                          Approve
+                        </button>
+                      )}
+                      <button class="btn btn-secondary" onClick={() => setEditingPlaceId(place.id)}>
+                        Edit
+                      </button>
+                      <button class="btn btn-danger" onClick={() => handleRejectPlace(place.id)}>
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'tags' && (
+        <div class="items-list">
+          {allTags.length === 0 ? (
+            <p class="no-events">No tags found.</p>
+          ) : (
+            allTags.map(tag => (
+              <div key={tag.id} class="admin-item-card">
+                {editingTagId === tag.id ? (
+                  <>
+                    <div class="item-info" style={{ flex: 1 }}>
+                      <div class="inline-edit-fields">
+                        <input
+                          type="text"
+                          value={tagForm.name}
+                          onInput={(e) => setTagForm(f => ({ ...f, name: (e.target as HTMLInputElement).value }))}
+                          placeholder="Name"
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                          <input
+                            type="color"
+                            value={tagForm.color || '#808080'}
+                            onInput={(e) => setTagForm(f => ({ ...f, color: (e.target as HTMLInputElement).value }))}
+                            style={{ width: '40px', height: '32px', padding: '2px', cursor: 'pointer' }}
+                          />
+                          <span class="tag-preview" style={tagStyle(tagForm.color)}>{tagForm.name || 'preview'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="admin-event-actions">
+                      <button class="btn btn-primary" onClick={() => handleSaveTag(tag.id)}>Save</button>
+                      <button class="btn btn-secondary" onClick={() => setEditingTagId(null)}>Cancel</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div class="item-info">
+                      {tag.status === 'pending' && <span class="status-badge status-pending">pending</span>}
+                      <span
+                        class="tag-preview"
+                        style={tagStyle(tag.color)}
+                      >
+                        {tag.name}
+                      </span>
+                    </div>
+                    <div class="admin-event-actions">
+                      {tag.status === 'pending' && (
+                        <button class="btn btn-primary" onClick={() => handleApproveTag(tag.id)}>
+                          Approve
+                        </button>
+                      )}
+                      <button class="btn btn-secondary" onClick={() => handleEditTag(tag)}>
+                        Edit
+                      </button>
+                      <button class="btn btn-danger" onClick={() => handleRejectTag(tag.id)}>
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))
           )}

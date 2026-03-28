@@ -23,12 +23,26 @@ interface NominatimResult {
   }
 }
 
+export interface NominatimPlaceData {
+  osm_id: number
+  osm_type: 'node' | 'way' | 'relation'
+  name: string
+  address: string
+  latitude: number
+  longitude: number
+  city?: string
+  country_code?: string
+  osm_data: Record<string, unknown>
+}
+
 interface Props {
   value: Place | null
   onChange: (place: Place | null) => void
+  /** If set, fires with parsed Nominatim data instead of creating a DB record */
+  onRawSelect?: (data: NominatimPlaceData) => void
 }
 
-export function PlaceSearch({ value, onChange }: Props) {
+export function PlaceSearch({ value, onChange, onRawSelect }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<NominatimResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -72,11 +86,45 @@ export function PlaceSearch({ value, onChange }: Props) {
     debounceRef.current = setTimeout(() => search(val), 300)
   }
 
+  const parseNominatimResult = (result: NominatimResult): NominatimPlaceData => {
+    const addr = result.address
+    const addressParts: string[] = []
+    if (addr?.house_number && addr?.road) {
+      addressParts.push(`${addr.house_number} ${addr.road}`)
+    } else if (addr?.road) {
+      addressParts.push(addr.road)
+    }
+    const city = addr?.city || addr?.town || addr?.village
+    if (city) addressParts.push(city)
+    if (addr?.state) addressParts.push(addr.state)
+    if (addr?.postcode) addressParts.push(addr.postcode)
+
+    return {
+      osm_id: result.osm_id,
+      osm_type: result.osm_type as 'node' | 'way' | 'relation',
+      name: result.name || result.display_name.split(',')[0],
+      address: addressParts.join(', '),
+      latitude: parseFloat(result.lat),
+      longitude: parseFloat(result.lon),
+      city: city,
+      country_code: addr?.country_code?.toUpperCase(),
+      osm_data: result as unknown as Record<string, unknown>,
+    }
+  }
+
   const selectResult = async (result: NominatimResult) => {
     setShowResults(false)
     setLoading(true)
 
     try {
+      const parsed = parseNominatimResult(result)
+
+      if (onRawSelect) {
+        onRawSelect(parsed)
+        setQuery(parsed.name)
+        return
+      }
+
       // Check if place exists in our DB by osm_id
       const existing = await pb.collection('places').getList<Place>(1, 1, {
         filter: `osm_id = ${result.osm_id}`,
@@ -86,29 +134,8 @@ export function PlaceSearch({ value, onChange }: Props) {
         onChange(existing.items[0])
         setQuery(existing.items[0].name)
       } else {
-        // Create new place from OSM data
-        const address = result.address
-        const addressParts: string[] = []
-        if (address?.house_number && address?.road) {
-          addressParts.push(`${address.house_number} ${address.road}`)
-        } else if (address?.road) {
-          addressParts.push(address.road)
-        }
-        const city = address?.city || address?.town || address?.village
-        if (city) addressParts.push(city)
-        if (address?.state) addressParts.push(address.state)
-        if (address?.postcode) addressParts.push(address.postcode)
-
         const newPlace = await pb.collection('places').create<Place>({
-          osm_id: result.osm_id,
-          osm_type: result.osm_type,
-          name: result.name || result.display_name.split(',')[0],
-          address: addressParts.join(', '),
-          latitude: parseFloat(result.lat),
-          longitude: parseFloat(result.lon),
-          city: city,
-          country_code: address?.country_code?.toUpperCase(),
-          osm_data: result,
+          ...parsed,
         })
 
         onChange(newPlace)
