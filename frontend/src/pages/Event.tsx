@@ -6,7 +6,7 @@ import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { pb, Event as EventType, getImageUrl, canModerate } from '../lib/pocketbase'
 import { SkeletonEventDetailPage } from '../components/Skeleton'
-import 'leaflet/dist/leaflet.css'
+import leafletCss from 'leaflet/dist/leaflet.css?inline'
 import './Event.css'
 
 interface Props {
@@ -81,7 +81,12 @@ export function Event({ id }: Props) {
 
     const place = event.expand.place
 
-    // Dynamically import Leaflet only when needed (CSS imported at module level)
+    if (!document.querySelector('style[data-leaflet-css]')) {
+      const style = document.createElement('style')
+      style.setAttribute('data-leaflet-css', '')
+      style.textContent = leafletCss
+      document.head.appendChild(style)
+    }
     import('leaflet').then((L) => {
       if (!mapRef.current || mapInstance.current) return
 

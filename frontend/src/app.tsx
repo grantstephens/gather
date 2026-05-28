@@ -70,67 +70,60 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    async function loadSettings() {
-      try {
-        const record = await pb.collection('settings').getFirstListItem<Settings>('')
-        setSettings(record)
+    // Defer settings + pages fetches so they don't block the initial render.
+    // Both run in parallel; the UI renders immediately with defaults and updates
+    // once the data arrives.
+    const timer = setTimeout(() => {
+      Promise.all([
+        pb.collection('settings').getFirstListItem<Settings>('').catch(() => null),
+        pb.collection('pages').getFullList<PageRecord>({ sort: 'sort_order,title' }).catch(() => [] as PageRecord[]),
+      ]).then(([record, pageRecords]) => {
+        if (record) {
+          setSettings(record)
 
-        if (record.instance_name) {
-          document.title = record.instance_name
-        }
-
-        if (record.custom_css) {
-          const style = document.createElement('style')
-          style.textContent = record.custom_css
-          document.head.appendChild(style)
-        }
-
-        if (record.umami_src && record.umami_website_id) {
-          const script = document.createElement('script')
-          script.defer = true
-          script.src = record.umami_src
-          script.setAttribute('data-website-id', record.umami_website_id)
-          if (record.umami_host_url) {
-            script.setAttribute('data-host-url', record.umami_host_url)
+          if (record.instance_name) {
+            document.title = record.instance_name
           }
-          document.head.appendChild(script)
-        }
 
-        if (record.custom_head) {
-          const tpl = document.createElement('template')
-          tpl.innerHTML = record.custom_head
-          tpl.content.querySelectorAll<HTMLElement>('*').forEach(el => {
-            if (el.tagName === 'SCRIPT') {
-              const script = document.createElement('script')
-              Array.from(el.attributes).forEach(a => script.setAttribute(a.name, a.value))
-              script.textContent = el.textContent ?? ''
-              document.head.appendChild(script)
-            } else {
-              document.head.appendChild(el.cloneNode(true))
+          if (record.custom_css) {
+            const style = document.createElement('style')
+            style.textContent = record.custom_css
+            document.head.appendChild(style)
+          }
+
+          if (record.umami_src && record.umami_website_id) {
+            const script = document.createElement('script')
+            script.defer = true
+            script.src = record.umami_src
+            script.setAttribute('data-website-id', record.umami_website_id)
+            if (record.umami_host_url) {
+              script.setAttribute('data-host-url', record.umami_host_url)
             }
-          })
-        }
-      } catch (err) {
-        // Use defaults if settings don't exist
-        setSettings(null)
-      }
-    }
-    loadSettings()
-  }, [])
+            document.head.appendChild(script)
+          }
 
-  useEffect(() => {
-    async function loadPages() {
-      try {
-        const records = await pb.collection('pages').getFullList<PageRecord>({
-          sort: 'sort_order,title',
-        })
-        setNavPages(records.filter(p => p.show_in_nav))
-        setFooterPages(records.filter(p => p.show_in_footer))
-      } catch {
-        // Graceful degradation: no page links rendered
-      }
-    }
-    loadPages()
+          if (record.custom_head) {
+            const tpl = document.createElement('template')
+            tpl.innerHTML = record.custom_head
+            tpl.content.querySelectorAll<HTMLElement>('*').forEach(el => {
+              if (el.tagName === 'SCRIPT') {
+                const script = document.createElement('script')
+                Array.from(el.attributes).forEach(a => script.setAttribute(a.name, a.value))
+                script.textContent = el.textContent ?? ''
+                document.head.appendChild(script)
+              } else {
+                document.head.appendChild(el.cloneNode(true))
+              }
+            })
+          }
+        }
+
+        setNavPages(pageRecords.filter(p => p.show_in_nav))
+        setFooterPages(pageRecords.filter(p => p.show_in_footer))
+      })
+    }, 0)
+
+    return () => clearTimeout(timer)
   }, [])
 
   // Close mobile menu on escape key or click outside
