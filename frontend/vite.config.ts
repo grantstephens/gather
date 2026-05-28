@@ -6,6 +6,15 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/leaflet')) return 'vendor-leaflet'
+          if (id.includes('node_modules/marked') || id.includes('node_modules/dompurify')) return 'vendor-markdown'
+          if (id.includes('node_modules/date-fns')) return 'vendor-date-fns'
+        },
+      },
+    },
   },
   server: {
     proxy: {
