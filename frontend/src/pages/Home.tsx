@@ -79,30 +79,20 @@ export function Home(_props: Props) {
     }).catch(() => {})
   }, [selectedTagsKey])
 
-  // Fetch tag counts from backend
+  // Fetch sidebar metadata in parallel: tags, tag counts, town counts
   useEffect(() => {
     const controller = new AbortController()
-    fetch('/api/tags/counts', { signal: controller.signal })
-      .then(r => r.json())
-      .then((rows: { id: string; count: number }[]) => {
-        const counts: Record<string, number> = {}
-        rows.forEach(r => { counts[r.id] = r.count })
-        setTagCounts(counts)
-      })
-      .catch(() => {})
-    return () => controller.abort()
-  }, [])
-
-  useEffect(() => {
-    pb.collection('tags').getFullList<Tag>().then(setTags).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    fetch('/api/towns/counts', { signal: controller.signal })
-      .then(r => r.json())
-      .then((rows: { name: string; count: number }[]) => setTowns(rows))
-      .catch(() => {})
+    Promise.all([
+      pb.collection('tags').getFullList<Tag>(),
+      fetch('/api/tags/counts', { signal: controller.signal }).then(r => r.json()) as Promise<{ id: string; count: number }[]>,
+      fetch('/api/towns/counts', { signal: controller.signal }).then(r => r.json()) as Promise<{ name: string; count: number }[]>,
+    ]).then(([tagList, tagCountRows, townRows]) => {
+      setTags(tagList)
+      const counts: Record<string, number> = {}
+      tagCountRows.forEach(r => { counts[r.id] = r.count })
+      setTagCounts(counts)
+      setTowns(townRows)
+    }).catch(() => {})
     return () => controller.abort()
   }, [])
 
