@@ -6,6 +6,7 @@ import (
 	"html"
 	"time"
 
+	"gather/internal/recurrence"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -80,10 +81,16 @@ func eventToNote(event *core.Record, baseURL string) Note {
 	title := html.EscapeString(event.GetString("title"))
 	desc := event.GetString("description")
 
+	recurrenceInfo := ""
+	if rule := event.GetString("recurrence_rule"); rule != "" {
+		recurrenceInfo = fmt.Sprintf("<p><em>%s</em></p>", html.EscapeString(recurrence.HumanLabel(rule)))
+	}
+
 	content := fmt.Sprintf(
-		"<p><strong>%s</strong></p><p>%s</p><p>%s</p>",
+		"<p><strong>%s</strong></p><p>%s</p>%s<p>%s</p>",
 		title,
 		startTime.Format("Monday, January 2, 2006 at 3:04 PM"),
+		recurrenceInfo,
 		desc,
 	)
 
