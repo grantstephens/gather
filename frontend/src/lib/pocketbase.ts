@@ -18,6 +18,7 @@ export interface Event {
   author_email?: string
   status: 'draft' | 'pending' | 'published' | 'cancelled'
   recurrence_rule?: string
+  recurrence_exceptions?: string
   parent_event?: string
   ap_id?: string
   edit_token?: string
@@ -110,4 +111,59 @@ export function isEditor(): boolean {
 
 export function canModerate(): boolean {
   return isEditor()
+}
+
+export function recurrenceLabel(rule: string): string {
+  const parts: Record<string, string> = {}
+  rule.split(';').forEach(p => {
+    const [k, v] = p.split('=')
+    if (k && v) parts[k.toUpperCase()] = v.toUpperCase()
+  })
+
+  const dayNames: Record<string, string> = {
+    MO: 'Monday', TU: 'Tuesday', WE: 'Wednesday', TH: 'Thursday',
+    FR: 'Friday', SA: 'Saturday', SU: 'Sunday',
+  }
+  const ordinals: Record<string, string> = {
+    '1': '1st', '2': '2nd', '3': '3rd', '4': '4th', '5': '5th', '-1': 'last',
+  }
+
+  switch (parts.FREQ) {
+    case 'DAILY': return 'Repeats daily'
+    case 'WEEKLY':
+      return parts.INTERVAL === '2' ? 'Repeats fortnightly' : 'Repeats weekly'
+    case 'MONTHLY':
+      if (parts.BYDAY && parts.BYSETPOS) {
+        return `Repeats monthly on the ${ordinals[parts.BYSETPOS] || parts.BYSETPOS + 'th'} ${dayNames[parts.BYDAY] || parts.BYDAY}`
+      }
+      return 'Repeats monthly'
+    case 'YEARLY': return 'Repeats yearly'
+    default: return 'Repeats'
+  }
+}
+
+export function buildRecurrenceRule(opts: {
+  freq: string
+  interval?: number
+  byDay?: string
+  bySetPos?: number
+  until?: string
+  count?: number
+}): string {
+  const parts = [`FREQ=${opts.freq.toUpperCase()}`]
+  if (opts.interval && opts.interval > 1) parts.push(`INTERVAL=${opts.interval}`)
+  if (opts.byDay) parts.push(`BYDAY=${opts.byDay.toUpperCase()}`)
+  if (opts.bySetPos) parts.push(`BYSETPOS=${opts.bySetPos}`)
+  if (opts.until) {
+    const d = new Date(opts.until)
+    parts.push(`UNTIL=${d.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`)
+  }
+  if (opts.count && opts.count > 0) parts.push(`COUNT=${opts.count}`)
+  return parts.join(';')
+}
+
+export function parseVirtualId(id: string): { baseId: string; date: string } | null {
+  const idx = id.indexOf('__')
+  if (idx === -1) return null
+  return { baseId: id.substring(0, idx), date: id.substring(idx + 2) }
 }
