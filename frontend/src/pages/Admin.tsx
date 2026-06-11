@@ -375,6 +375,10 @@ export function Admin(_props: Props) {
       setPicksFormError('Title and slug are required.')
       return
     }
+    if (RESERVED_SLUGS.includes(picksForm.slug)) {
+      setPicksFormError(`"${picksForm.slug}" is a reserved slug and cannot be used.`)
+      return
+    }
     setPicksSaving(true)
     setPicksFormError(null)
     try {
