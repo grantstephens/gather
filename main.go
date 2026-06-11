@@ -486,7 +486,12 @@ func main() {
 		se.Router.GET("/api/events/expanded", func(re *core.RequestEvent) error {
 			rangeStartStr := re.Request.URL.Query().Get("start")
 			rangeEndStr := re.Request.URL.Query().Get("end")
-			extraFilter := re.Request.URL.Query().Get("filter")
+			town := re.Request.URL.Query().Get("town")
+			tagIDsStr := re.Request.URL.Query().Get("tags")
+			var tagIDs []string
+			if tagIDsStr != "" {
+				tagIDs = strings.Split(tagIDsStr, ",")
+			}
 			pageStr := re.Request.URL.Query().Get("page")
 			pageSizeStr := re.Request.URL.Query().Get("pageSize")
 
@@ -513,7 +518,7 @@ func main() {
 				}
 			}
 
-			events, total, err := recurrence.ListExpandedEvents(se.App, rangeStart, rangeEnd, extraFilter, page, pageSize)
+			events, total, err := recurrence.ListExpandedEvents(se.App, rangeStart, rangeEnd, town, tagIDs, page, pageSize)
 			if err != nil {
 				return re.InternalServerError("Failed to list events", err)
 			}

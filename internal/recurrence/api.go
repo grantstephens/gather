@@ -60,7 +60,37 @@ type ExpandedEvent struct {
 }
 
 // ListExpandedEvents fetches published events in a date range, expanding recurring events.
-func ListExpandedEvents(app core.App, rangeStart, rangeEnd time.Time, extraFilter string, page, pageSize int) ([]ExpandedEvent, int, error) {
+func ListExpandedEvents(app core.App, rangeStart, rangeEnd time.Time, town string, tagIDs []string, page, pageSize int) ([]ExpandedEvent, int, error) {
+	// Build safe extra filters from discrete params
+	var extraFilters []string
+	if town != "" {
+		// Sanitize: only allow alphanumeric, spaces, hyphens, apostrophes
+		safe := true
+		for _, r := range town {
+			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == ' ' || r == '-' || r == '\'' || r == '.') {
+				safe = false
+				break
+			}
+		}
+		if safe && town != "" {
+			extraFilters = append(extraFilters, fmt.Sprintf("place.city = '%s'", town))
+		}
+	}
+	for _, tagID := range tagIDs {
+		// Tag IDs are PocketBase record IDs - only allow alphanumeric
+		safe := true
+		for _, r := range tagID {
+			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')) {
+				safe = false
+				break
+			}
+		}
+		if safe {
+			extraFilters = append(extraFilters, fmt.Sprintf("tags.id ?= '%s'", tagID))
+		}
+	}
+	extraFilter := strings.Join(extraFilters, " && ")
+
 	filters := []string{
 		"status = 'published'",
 		"recurrence_rule = ''",
@@ -115,7 +145,9 @@ func ListExpandedEvents(app core.App, rangeStart, rangeEnd time.Time, extraFilte
 	}
 
 	sort.Slice(allEvents, func(i, j int) bool {
-		return allEvents[i].StartDatetime < allEvents[j].StartDatetime
+		ti, _ := time.Parse("2006-01-02 15:04:05.000Z", allEvents[i].StartDatetime)
+		tj, _ := time.Parse("2006-01-02 15:04:05.000Z", allEvents[j].StartDatetime)
+		return ti.Before(tj)
 	})
 
 	total := len(allEvents)
