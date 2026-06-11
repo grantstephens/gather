@@ -64,6 +64,17 @@ func GenerateFeed(app core.App, baseURL string, filter string) ([]byte, error) {
 		sb.WriteString(fmt.Sprintf("DTSTAMP:%s\r\n", formatICSTime(event.GetDateTime("created").Time())))
 		sb.WriteString(fmt.Sprintf("DTSTART:%s\r\n", formatICSTime(startTime)))
 		sb.WriteString(fmt.Sprintf("DTEND:%s\r\n", formatICSTime(endTime)))
+		if rrule := event.GetString("recurrence_rule"); rrule != "" {
+			sb.WriteString(fmt.Sprintf("RRULE:%s\r\n", rrule))
+			if exceptions := event.GetString("recurrence_exceptions"); exceptions != "" {
+				for _, ex := range strings.Split(exceptions, ",") {
+					ex = strings.TrimSpace(ex)
+					if t, err := time.Parse("2006-01-02", ex); err == nil {
+						sb.WriteString(fmt.Sprintf("EXDATE:%s\r\n", formatICSTime(t)))
+					}
+				}
+			}
+		}
 		sb.WriteString(fmt.Sprintf("SUMMARY:%s\r\n", escapeICS(event.GetString("title"))))
 
 		if desc := event.GetString("description"); desc != "" {
@@ -108,6 +119,17 @@ func GenerateSingleEvent(app core.App, baseURL string, eventID string) ([]byte, 
 	sb.WriteString(fmt.Sprintf("DTSTAMP:%s\r\n", formatICSTime(event.GetDateTime("created").Time())))
 	sb.WriteString(fmt.Sprintf("DTSTART:%s\r\n", formatICSTime(startTime)))
 	sb.WriteString(fmt.Sprintf("DTEND:%s\r\n", formatICSTime(endTime)))
+	if rrule := event.GetString("recurrence_rule"); rrule != "" {
+		sb.WriteString(fmt.Sprintf("RRULE:%s\r\n", rrule))
+		if exceptions := event.GetString("recurrence_exceptions"); exceptions != "" {
+			for _, ex := range strings.Split(exceptions, ",") {
+				ex = strings.TrimSpace(ex)
+				if t, err := time.Parse("2006-01-02", ex); err == nil {
+					sb.WriteString(fmt.Sprintf("EXDATE:%s\r\n", formatICSTime(t)))
+				}
+			}
+		}
+	}
 	sb.WriteString(fmt.Sprintf("SUMMARY:%s\r\n", escapeICS(event.GetString("title"))))
 
 	if desc := event.GetString("description"); desc != "" {
