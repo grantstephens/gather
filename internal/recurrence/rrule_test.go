@@ -153,3 +153,47 @@ func TestHumanLabel(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterExceptions_RemovesDates(t *testing.T) {
+	times := []time.Time{
+		time.Date(2026, 4, 6, 18, 0, 0, 0, time.UTC),
+		time.Date(2026, 4, 13, 18, 0, 0, 0, time.UTC),
+		time.Date(2026, 4, 20, 18, 0, 0, 0, time.UTC),
+	}
+
+	result := FilterExceptions(times, "2026-04-13")
+	if len(result) != 2 {
+		t.Fatalf("Expected 2 times after filtering, got %d", len(result))
+	}
+	if result[0].Day() != 6 || result[1].Day() != 20 {
+		t.Errorf("Wrong dates after filtering: %v", result)
+	}
+}
+
+func TestFilterExceptions_MultipleExceptions(t *testing.T) {
+	times := []time.Time{
+		time.Date(2026, 4, 6, 18, 0, 0, 0, time.UTC),
+		time.Date(2026, 4, 13, 18, 0, 0, 0, time.UTC),
+		time.Date(2026, 4, 20, 18, 0, 0, 0, time.UTC),
+	}
+
+	result := FilterExceptions(times, "2026-04-06, 2026-04-20")
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 time after filtering, got %d", len(result))
+	}
+	if result[0].Day() != 13 {
+		t.Errorf("Expected day 13, got %d", result[0].Day())
+	}
+}
+
+func TestFilterExceptions_EmptyExceptions(t *testing.T) {
+	times := []time.Time{
+		time.Date(2026, 4, 6, 18, 0, 0, 0, time.UTC),
+		time.Date(2026, 4, 13, 18, 0, 0, 0, time.UTC),
+	}
+
+	result := FilterExceptions(times, "")
+	if len(result) != 2 {
+		t.Errorf("Expected 2 times with no exceptions, got %d", len(result))
+	}
+}
