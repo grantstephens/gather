@@ -32,13 +32,13 @@ export function PicksPost({ slug }: Props) {
     async function load() {
       try {
         const record = await pb.collection('picks').getFirstListItem<PicksRecord>(
-          pb.filter('slug = {:slug}', { slug }),
+          pb.filter('slug = {:slug} && hidden = false', { slug }),
           { expand: 'events,events.place,events.tags' }
         )
         setPost(record)
 
         document.title = record.title
-        const plainBlurb = record.blurb.replace(/<[^>]*>/g, '').slice(0, 160)
+        const plainBlurb = (marked.parse(record.blurb) as string).replace(/<[^>]*>/g, '').slice(0, 160)
         setMetaTag('name', 'description', plainBlurb)
         setMetaTag('property', 'og:title', record.title)
         setMetaTag('property', 'og:description', plainBlurb)

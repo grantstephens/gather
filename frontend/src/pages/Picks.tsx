@@ -27,6 +27,7 @@ export function Picks(_props: Props) {
     async function load() {
       try {
         const records = await pb.collection('picks').getFullList<PicksRecord>({
+          filter: 'hidden = false',
           sort: '-created',
           expand: 'events,events.place,events.tags',
         })

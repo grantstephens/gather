@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
+import { marked } from 'marked'
 import { pb, Event, Tag, PicksRecord } from '../lib/pocketbase'
 import { MiniCalendar } from '../components/MiniCalendar'
 import { tagStyle } from '../lib/color'
@@ -304,7 +305,7 @@ export function Home(_props: Props) {
             </h2>
             {currentPicks.blurb && (
               <p class="picks-teaser-blurb">
-                {currentPicks.blurb.replace(/<[^>]*>/g, '').slice(0, 200)}
+                {(marked.parse(currentPicks.blurb) as string).replace(/<[^>]*>/g, '').slice(0, 200)}
               </p>
             )}
             <a href="/picks" class="picks-teaser-link">See all picks →</a>
