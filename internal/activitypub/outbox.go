@@ -55,10 +55,11 @@ func GetOutbox(app core.App, baseURL string) ([]byte, error) {
 	for _, event := range events {
 		note := eventToNote(event, baseURL)
 		activity := Activity{
-			Type:   "Create",
-			ID:     fmt.Sprintf("%s/ap/activities/%s", baseURL, event.Id),
-			Actor:  baseURL + "/ap/actor",
-			Object: note,
+			Context: "https://www.w3.org/ns/activitystreams",
+			Type:    "Create",
+			ID:      fmt.Sprintf("%s/ap/activities/%s", baseURL, event.Id),
+			Actor:   baseURL + "/ap/actor",
+			Object:  note,
 		}
 		items = append(items, activity)
 	}
