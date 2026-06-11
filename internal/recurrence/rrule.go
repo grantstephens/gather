@@ -22,10 +22,18 @@ func Expand(rule string, dtstart time.Time, rangeStart time.Time, rangeEnd time.
 	}
 
 	// Cap range for open-ended rules
-	hasEnd := strings.Contains(strings.ToUpper(rule), "UNTIL") || strings.Contains(strings.ToUpper(rule), "COUNT")
+	// Parse rule parts to check for UNTIL/COUNT
+	ruleParts := make(map[string]string)
+	for _, part := range strings.Split(strings.ToUpper(rule), ";") {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) == 2 {
+			ruleParts[kv[0]] = kv[1]
+		}
+	}
+	hasEnd := ruleParts["UNTIL"] != "" || ruleParts["COUNT"] != ""
 	effectiveEnd := rangeEnd
 	if !hasEnd {
-		maxEnd := dtstart.Add(MaxHorizon)
+		maxEnd := rangeStart.Add(MaxHorizon)
 		if effectiveEnd.After(maxEnd) {
 			effectiveEnd = maxEnd
 		}
