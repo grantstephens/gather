@@ -1,0 +1,31 @@
+.picks-post {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+}
+
+.picks-post-header {
+  margin-bottom: var(--space-8);
+}
+
+.picks-post-header h1 {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  letter-spacing: -0.025em;
+  color: var(--color-text);
+  margin: 0 0 var(--space-4);
+}
+
+.picks-post-blurb {
+  font-size: var(--text-lg);
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+.picks-post-blurb p { margin: 0; }
+
+.picks-post-events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
