@@ -61,6 +61,10 @@ export function Submit(_props: Props) {
       setError('Email is required for anonymous submissions')
       return
     }
+    if (!place) {
+      setError('Location is required')
+      return
+    }
 
     setSubmitting(true)
 

@@ -540,11 +540,9 @@ export function Admin(_props: Props) {
                   <a href={`/edit/${event.id}`} class="btn btn-secondary">
                     Edit
                   </a>
-                  {event.status === 'pending' && (
-                    <button class="btn btn-danger" onClick={() => handleRejectEvent(event.id)}>
-                      Delete
-                    </button>
-                  )}
+                  <button class="btn btn-danger" onClick={() => handleRejectEvent(event.id)}>
+                    Delete
+                  </button>
                 </div>
               </div>
             ))
