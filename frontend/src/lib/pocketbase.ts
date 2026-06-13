@@ -96,6 +96,7 @@ export interface PicksRecord extends BaseModel {
   blurb: string
   events?: string[]
   hidden: boolean
+  start_date?: string
   expand?: {
     events?: Event[]
   }

@@ -33,6 +33,18 @@ func init() {
 		picks.Fields.Add(&core.BoolField{
 			Name: "hidden",
 		})
+		picks.Fields.Add(&core.DateField{
+			Name: "start_date",
+		})
+		picks.Fields.Add(&core.AutodateField{
+			Name:     "created",
+			OnCreate: true,
+		})
+		picks.Fields.Add(&core.AutodateField{
+			Name:     "updated",
+			OnCreate: true,
+			OnUpdate: true,
+		})
 
 		picks.Indexes = []string{
 			"CREATE UNIQUE INDEX idx_picks_slug ON picks (slug)",

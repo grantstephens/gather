@@ -264,15 +264,18 @@ def main():
         },
     ]
 
+    created_event_ids = []
     for event in events:
         result = api_request("POST", "/api/collections/events/records", event["data"], auth_headers, {"image": event["image"]})
         if result:
             print(f"  Created: {event['data']['title']}")
+            created_event_ids.append(result["id"])
         else:
             # Fallback: create without image
             result = api_request("POST", "/api/collections/events/records", event["data"], auth_headers)
             if result:
                 print(f"  Created: {event['data']['title']} (without image)")
+                created_event_ids.append(result["id"])
             else:
                 print(f"  Failed: {event['data']['title']}")
 
@@ -280,8 +283,45 @@ def main():
     import shutil
     shutil.rmtree(img_dir, ignore_errors=True)
 
+    # Create editorial picks posts featuring upcoming events
+    print("Creating editorial picks posts...")
+    picks_posts = [
+        {
+            "title": "This Week's Picks",
+            "slug": "picks-" + tomorrow.replace("-", ""),
+            "blurb": "Our editors have hand-picked a couple of events you won't want to miss this week. From live music to community gatherings, there's something for everyone.",
+            "events": created_event_ids[:2],
+            "hidden": False,
+            "start_date": tomorrow,
+        },
+        {
+            "title": "Coming Up: Two Weeks of Good Stuff",
+            "slug": "picks-" + in_two_weeks.replace("-", ""),
+            "blurb": "Looking further ahead — here are the events we're most excited about over the next fortnight. Block your calendar now.",
+            "events": created_event_ids[2:4],
+            "hidden": False,
+            "start_date": in_two_weeks,
+        },
+        {
+            "title": "Last Month's Highlights",
+            "slug": "picks-archive-may",
+            "blurb": "A look back at some of the best events from last month. Archived for posterity.",
+            "events": created_event_ids[4:] if len(created_event_ids) > 4 else [],
+            "hidden": True,
+            "start_date": (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
+        },
+    ]
+    picks_count = 0
+    for post in picks_posts:
+        result = api_request("POST", "/api/collections/picks/records", post, auth_headers)
+        if result:
+            print(f"  Created picks post: {result['title']}")
+            picks_count += 1
+        else:
+            print(f"  Failed to create picks post: {post['title']} (collection may not exist yet)")
+
     print()
-    print("Seed complete! Created 3 users, 5 tags, 3 places, and 6 events.")
+    print(f"Seed complete! Created 3 users, 5 tags, 3 places, 6 events, and {picks_count} picks posts.")
     print()
     print("Frontend login (/login):")
     print("  admin@example.com  / adminpassword123  (admin)")

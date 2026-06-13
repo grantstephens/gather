@@ -99,13 +99,9 @@ export function Home(_props: Props) {
   }, [])
 
   useEffect(() => {
-    const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
     pb.collection('picks').getList<PicksRecord>(1, 1, {
-      filter: pb.filter(
-        'hidden = false && (events.end_datetime >= {:now} || events.start_datetime >= {:now})',
-        { now }
-      ),
-      sort: '-created',
+      filter: 'hidden = false',
+      sort: '-start_date',
       fields: 'id,title,slug,blurb',
     }).then(result => {
       setCurrentPicks(result.items[0] ?? null)

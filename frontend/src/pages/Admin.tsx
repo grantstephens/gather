@@ -52,6 +52,7 @@ export function Admin(_props: Props) {
     blurb: '',
     events: [] as string[],
     hidden: false,
+    start_date: '',
   })
   const [picksFormError, setPicksFormError] = useState<string | null>(null)
   const [picksSaving, setPicksSaving] = useState(false)
@@ -128,7 +129,7 @@ export function Admin(_props: Props) {
     async function loadPicks() {
       try {
         const records = await pb.collection('picks').getFullList<PicksRecord>({
-          sort: '-created',
+          sort: '-start_date',
           expand: 'events',
         })
         setPicks(records)
@@ -350,7 +351,7 @@ export function Admin(_props: Props) {
 
   const handlePicksNew = () => {
     setEditingPicksId(null)
-    setPicksForm({ title: '', slug: '', blurb: '', events: [], hidden: false })
+    setPicksForm({ title: '', slug: '', blurb: '', events: [], hidden: false, start_date: '' })
     setPicksFormError(null)
     setPicksEventSearch('')
     setShowPicksForm(true)
@@ -364,6 +365,7 @@ export function Admin(_props: Props) {
       blurb: post.blurb,
       events: post.events ?? [],
       hidden: post.hidden,
+      start_date: post.start_date ?? '',
     })
     setPicksFormError(null)
     setPicksEventSearch('')
@@ -424,12 +426,17 @@ export function Admin(_props: Props) {
   }
 
   const handlePicksEventToggle = (eventId: string) => {
-    setPicksForm(f => ({
-      ...f,
-      events: f.events.includes(eventId)
+    setPicksForm(f => {
+      const updated = f.events.includes(eventId)
         ? f.events.filter(id => id !== eventId)
-        : [...f.events, eventId],
-    }))
+        : [...f.events, eventId]
+      const earliest = allEvents
+        .filter(e => updated.includes(e.id))
+        .map(e => e.start_datetime)
+        .sort()[0]
+      const start_date = earliest ? earliest.slice(0, 10) : f.start_date
+      return { ...f, events: updated, start_date }
+    })
   }
 
   if (loading) {
@@ -774,6 +781,17 @@ export function Admin(_props: Props) {
                   }
                 </div>
                 <small>{picksForm.events.length} event{picksForm.events.length !== 1 ? 's' : ''} selected</small>
+              </div>
+              <div class="form-group">
+                <label for="picksStartDate">Start date</label>
+                <input
+                  type="date"
+                  id="picksStartDate"
+                  value={picksForm.start_date}
+                  onInput={(e) => setPicksForm(f => ({ ...f, start_date: (e.target as HTMLInputElement).value }))}
+                  disabled={picksSaving}
+                />
+                <small>Auto-set from earliest selected event. Used for ordering.</small>
               </div>
               <div class="form-group">
                 <label>

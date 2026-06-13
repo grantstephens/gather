@@ -28,7 +28,7 @@ export function Picks(_props: Props) {
       try {
         const records = await pb.collection('picks').getFullList<PicksRecord>({
           filter: 'hidden = false',
-          sort: '-created',
+          sort: '-start_date',
           expand: 'events,events.place,events.tags',
         })
         setPosts(records)
