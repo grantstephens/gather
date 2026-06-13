@@ -301,7 +301,12 @@ export function Home(_props: Props) {
             </h2>
             {currentPicks.blurb && (
               <p class="picks-teaser-blurb">
-                {(marked.parse(currentPicks.blurb) as string).replace(/<[^>]*>/g, '').slice(0, 200)}
+                {(() => {
+                  const html = (marked.parse(currentPicks.blurb) as string).replace(/<[^>]*>/g, '');
+                  const txt = document.createElement('textarea');
+                  txt.innerHTML = html;
+                  return txt.value.slice(0, 200);
+                })()}
               </p>
             )}
             <a href="/picks" class="picks-teaser-link">See all picks →</a>
