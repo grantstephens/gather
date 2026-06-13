@@ -92,7 +92,10 @@ func main() {
 		})
 
 		// Compression middleware (zstd, gzip, deflate via klauspost/compress)
-		se.Router.BindFunc(middleware.Compress)
+		// Skip in dev: compressWriter doesn't implement http.Hijacker, breaking Vite HMR WebSocket upgrades
+		if os.Getenv("DEV") == "" {
+			se.Router.BindFunc(middleware.Compress)
+		}
 
 		// Initialize AP keypair on first run
 		if err := activitypub.EnsureKeypair(se.App); err != nil {

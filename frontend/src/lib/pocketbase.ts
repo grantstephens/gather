@@ -14,6 +14,8 @@ export interface Event {
   online_locations?: string[]
   tags?: string[]
   image?: string
+  collectionId?: string
+  base_event_id?: string
   author?: string
   author_email?: string
   status: 'draft' | 'pending' | 'published' | 'cancelled'
@@ -91,7 +93,10 @@ export interface PageRecord extends BaseModel {
 // Helper to get image URL
 export function getImageUrl(record: Event, thumb?: string): string | undefined {
   if (!record.image) return undefined
-  return pb.files.getUrl(record, record.image, { thumb })
+  // Virtual/recurring events have synthetic IDs; use base_event_id for the real PocketBase record ID
+  const realId = record.base_event_id || record.id
+  const rec = { ...record, id: realId }
+  return pb.files.getUrl(rec as unknown as BaseModel, record.image, { thumb })
 }
 
 // Auth helpers

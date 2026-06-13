@@ -51,6 +51,7 @@ type ExpandedEvent struct {
 	Place                string `json:"place,omitempty"`
 	Tags                 any    `json:"tags,omitempty"`
 	Image                string `json:"image,omitempty"`
+	CollectionID         string `json:"collectionId,omitempty"`
 	Author               string `json:"author,omitempty"`
 	Status               string `json:"status"`
 	RecurrenceRule       string `json:"recurrence_rule,omitempty"`
@@ -175,6 +176,7 @@ func RecordToExpandedPublic(app core.App, rec *core.Record, virtualID string, ve
 		Place:                rec.GetString("place"),
 		Tags:                 rec.Get("tags"),
 		Image:                rec.GetString("image"),
+		CollectionID:         rec.Collection().Id,
 		Author:               rec.GetString("author"),
 		Status:               rec.GetString("status"),
 		RecurrenceRule:       rec.GetString("recurrence_rule"),
