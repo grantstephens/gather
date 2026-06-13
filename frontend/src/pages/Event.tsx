@@ -26,11 +26,13 @@ export function Event({ id }: Props) {
   const handleDelete = async () => {
     if (!event || !confirm('Are you sure you want to delete this event?')) return
     setActionLoading(true)
+    const id = parseVirtualId(event.id)?.baseId || event.id
     try {
-      await pb.collection('events').delete(event.id)
+      await pb.collection('events').delete(id)
       route('/')
     } catch (err) {
-      alert('Failed to delete event')
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(`Failed to delete event: ${msg}`)
       setActionLoading(false)
     }
   }
