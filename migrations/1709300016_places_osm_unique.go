@@ -9,74 +9,41 @@ import (
 
 func init() {
 	m.Register(func(app core.App) error {
-		// Find duplicate (osm_id, osm_type) pairs
-		type dupRow struct {
-			OsmID   string
-			OsmType string
-		}
-		var dups []dupRow
-		err := app.DB().NewQuery(`
-			SELECT osm_id, osm_type
-			FROM places
-			WHERE osm_id IS NOT NULL AND osm_type IS NOT NULL
-			GROUP BY osm_id, osm_type
-			HAVING COUNT(*) > 1
-		`).All(&dups)
+		// Reassign events from duplicate places to the keeper (MIN id per group)
+		_, err := app.DB().NewQuery(`
+			UPDATE events SET place = (
+				SELECT MIN(p.id) FROM places p
+				WHERE p.osm_id = (SELECT osm_id FROM places WHERE id = events.place)
+				  AND p.osm_type = (SELECT osm_type FROM places WHERE id = events.place)
+			)
+			WHERE place IN (
+				SELECT id FROM places
+				WHERE osm_id IS NOT NULL AND osm_type IS NOT NULL
+				  AND id NOT IN (
+					SELECT MIN(id) FROM places
+					WHERE osm_id IS NOT NULL AND osm_type IS NOT NULL
+					GROUP BY osm_id, osm_type
+				  )
+			)
+		`).Execute()
 		if err != nil {
-			return fmt.Errorf("querying duplicate places: %w", err)
+			return fmt.Errorf("reassigning events from duplicate places: %w", err)
 		}
 
-		for _, dup := range dups {
-			// Find all place records with this osm_id+osm_type, ordered so the
-			// one with the most events comes first (ties broken by oldest record).
-			type placeRow struct {
-				ID         string `db:"id"`
-				EventCount int    `db:"event_count"`
-			}
-			var rows []placeRow
-			err := app.DB().NewQuery(`
-				SELECT p.id, COUNT(e.id) AS event_count
-				FROM places p
-				LEFT JOIN events e ON e.place = p.id
-				WHERE p.osm_id = {:osmId} AND p.osm_type = {:osmType}
-				GROUP BY p.id
-				ORDER BY event_count DESC, p.created ASC
-			`).Bind(map[string]any{
-				"osmId":   dup.OsmID,
-				"osmType": dup.OsmType,
-			}).All(&rows)
-			if err != nil {
-				return fmt.Errorf("querying places for osm_id=%s osm_type=%s: %w", dup.OsmID, dup.OsmType, err)
-			}
-			if len(rows) < 2 {
-				continue
-			}
-
-			keepID := rows[0].ID
-			for _, row := range rows[1:] {
-				// Reassign events pointing at the duplicate to the keeper
-				_, err := app.DB().NewQuery(`
-					UPDATE events SET place = {:keepId} WHERE place = {:dropId}
-				`).Bind(map[string]any{
-					"keepId": keepID,
-					"dropId": row.ID,
-				}).Execute()
-				if err != nil {
-					return fmt.Errorf("reassigning events from place %s to %s: %w", row.ID, keepID, err)
-				}
-
-				// Delete the duplicate place record
-				dupe, err := app.FindRecordById("places", row.ID)
-				if err != nil {
-					return fmt.Errorf("finding duplicate place %s: %w", row.ID, err)
-				}
-				if err := app.Delete(dupe); err != nil {
-					return fmt.Errorf("deleting duplicate place %s: %w", row.ID, err)
-				}
-			}
+		// Delete duplicate places, keeping one per (osm_id, osm_type)
+		_, err = app.DB().NewQuery(`
+			DELETE FROM places
+			WHERE osm_id IS NOT NULL AND osm_type IS NOT NULL
+			  AND id NOT IN (
+				SELECT MIN(id) FROM places
+				WHERE osm_id IS NOT NULL AND osm_type IS NOT NULL
+				GROUP BY osm_id, osm_type
+			  )
+		`).Execute()
+		if err != nil {
+			return fmt.Errorf("deleting duplicate places: %w", err)
 		}
 
-		// Now safe to add the unique index
 		places, err := app.FindCollectionByNameOrId("places")
 		if err != nil {
 			return err
