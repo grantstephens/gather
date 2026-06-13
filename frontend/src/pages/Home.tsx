@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
-import { pb, Event, Tag } from '../lib/pocketbase'
+import { marked } from 'marked'
+import { pb, Event, Tag, PicksRecord } from '../lib/pocketbase'
 import { MiniCalendar } from '../components/MiniCalendar'
 import { tagStyle } from '../lib/color'
 import { EventTimeline } from '../components/EventTimeline'
@@ -30,6 +31,7 @@ export function Home(_props: Props) {
   const loadingMoreRef = useRef(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const today = new Date().toISOString().split('T')[0]
+  const [currentPicks, setCurrentPicks] = useState<PicksRecord | null>(null)
 
   // Reset all filters when the brand/logo link is clicked
   useEffect(() => {
@@ -94,6 +96,16 @@ export function Home(_props: Props) {
       setTowns(townRows)
     }).catch(() => {})
     return () => controller.abort()
+  }, [])
+
+  useEffect(() => {
+    pb.collection('picks').getList<PicksRecord>(1, 1, {
+      filter: 'hidden = false',
+      sort: '-start_date',
+      fields: 'id,title,slug,blurb',
+    }).then(result => {
+      setCurrentPicks(result.items[0] ?? null)
+    }).catch(() => {})
   }, [])
 
   const fetchPage = async (page: number, date: string | null, town: string | null, tagIds: Set<string>): Promise<boolean> => {
@@ -281,6 +293,20 @@ export function Home(_props: Props) {
     <div class="home">
       <div class="home-main">
         {mobileFilterBar}
+        {currentPicks && (
+          <div class="picks-teaser">
+            <div class="picks-teaser-label">Editor's Picks</div>
+            <h2 class="picks-teaser-title">
+              <a href={`/picks/${currentPicks.slug}`}>{currentPicks.title}</a>
+            </h2>
+            {currentPicks.blurb && (
+              <p class="picks-teaser-blurb">
+                {(marked.parse(currentPicks.blurb) as string).replace(/<[^>]*>/g, '').slice(0, 200)}
+              </p>
+            )}
+            <a href="/picks" class="picks-teaser-link">See all picks →</a>
+          </div>
+        )}
         <div class="events-header">
           <h2>
             {selectedDate && selectedTown

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import { pb, Event, Place, Tag, canModerate, eventPath, isAdmin } from '../lib/pocketbase'
 import { tagStyle } from '../lib/color'
-import type { PageRecord } from '../lib/pocketbase'
+import type { PageRecord, PicksRecord } from '../lib/pocketbase'
 import { MarkdownEditor } from '../components/MarkdownEditor'
 import { EventCard } from '../components/EventCard'
 import { PlaceSearch } from '../components/PlaceSearch'
@@ -15,9 +15,9 @@ interface Props {
   path?: string
 }
 
-type TabType = 'events' | 'places' | 'tags' | 'settings' | 'pages'
+type TabType = 'events' | 'places' | 'tags' | 'settings' | 'pages' | 'picks'
 
-const RESERVED_SLUGS = ['submit', 'login', 'admin', 'event', 'tag', 'place', 'edit']
+const RESERVED_SLUGS = ['submit', 'login', 'admin', 'event', 'tag', 'place', 'edit', 'picks']
 
 function slugify(title: string): string {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -42,6 +42,21 @@ export function Admin(_props: Props) {
   })
   const [pageFormError, setPageFormError] = useState<string | null>(null)
   const [pageSaving, setPageSaving] = useState(false)
+  const [picks, setPicks] = useState<PicksRecord[]>([])
+  const [picksLoaded, setPicksLoaded] = useState(false)
+  const [showPicksForm, setShowPicksForm] = useState(false)
+  const [editingPicksId, setEditingPicksId] = useState<string | null>(null)
+  const [picksForm, setPicksForm] = useState({
+    title: '',
+    slug: '',
+    blurb: '',
+    events: [] as string[],
+    hidden: false,
+    start_date: '',
+  })
+  const [picksFormError, setPicksFormError] = useState<string | null>(null)
+  const [picksSaving, setPicksSaving] = useState(false)
+  const [picksEventSearch, setPicksEventSearch] = useState('')
   const [editingPlaceId, setEditingPlaceId] = useState<string | null>(null)
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [tagForm, setTagForm] = useState({ name: '', color: '' })
@@ -108,6 +123,24 @@ export function Admin(_props: Props) {
     }
     loadPages()
   }, [activeTab, pagesLoaded])
+
+  useEffect(() => {
+    if (activeTab !== 'picks' || picksLoaded) return
+    async function loadPicks() {
+      try {
+        const records = await pb.collection('picks').getFullList<PicksRecord>({
+          sort: '-start_date',
+          expand: 'events',
+        })
+        setPicks(records)
+      } catch (err) {
+        console.error('Failed to load picks:', err)
+      } finally {
+        setPicksLoaded(true)
+      }
+    }
+    loadPicks()
+  }, [activeTab, picksLoaded])
 
   const checkEventDependencies = async (event: Event): Promise<string | null> => {
     // Check if place is pending
@@ -316,6 +349,96 @@ export function Admin(_props: Props) {
     }
   }
 
+  const handlePicksNew = () => {
+    setEditingPicksId(null)
+    setPicksForm({ title: '', slug: '', blurb: '', events: [], hidden: false, start_date: '' })
+    setPicksFormError(null)
+    setPicksEventSearch('')
+    setShowPicksForm(true)
+  }
+
+  const handlePicksEdit = (post: PicksRecord) => {
+    setEditingPicksId(post.id)
+    setPicksForm({
+      title: post.title,
+      slug: post.slug,
+      blurb: post.blurb,
+      events: post.events ?? [],
+      hidden: post.hidden,
+      start_date: post.start_date ?? '',
+    })
+    setPicksFormError(null)
+    setPicksEventSearch('')
+    setShowPicksForm(true)
+  }
+
+  const handlePicksSave = async () => {
+    if (!picksForm.title.trim() || !picksForm.slug.trim()) {
+      setPicksFormError('Title and slug are required.')
+      return
+    }
+    if (RESERVED_SLUGS.includes(picksForm.slug)) {
+      setPicksFormError(`"${picksForm.slug}" is a reserved slug and cannot be used.`)
+      return
+    }
+    setPicksSaving(true)
+    setPicksFormError(null)
+    try {
+      if (editingPicksId) {
+        const updated = await pb.collection('picks').update<PicksRecord>(
+          editingPicksId,
+          picksForm,
+          { expand: 'events' }
+        )
+        setPicks(prev => prev.map(p => p.id === editingPicksId ? updated : p))
+      } else {
+        const created = await pb.collection('picks').create<PicksRecord>(
+          picksForm,
+          { expand: 'events' }
+        )
+        setPicks(prev => [created, ...prev])
+      }
+      setShowPicksForm(false)
+    } catch (err: any) {
+      setPicksFormError(err?.data?.data?.slug?.message || 'Failed to save post.')
+    } finally {
+      setPicksSaving(false)
+    }
+  }
+
+  const handlePicksDelete = async (postId: string) => {
+    if (!confirm('Delete this picks post? This cannot be undone.')) return
+    try {
+      await pb.collection('picks').delete(postId)
+      setPicks(prev => prev.filter(p => p.id !== postId))
+    } catch {
+      alert('Failed to delete post.')
+    }
+  }
+
+  const handlePicksToggleHidden = async (post: PicksRecord) => {
+    try {
+      const updated = await pb.collection('picks').update<PicksRecord>(post.id, { hidden: !post.hidden })
+      setPicks(prev => prev.map(p => p.id === post.id ? { ...p, hidden: updated.hidden } : p))
+    } catch {
+      alert('Failed to update post.')
+    }
+  }
+
+  const handlePicksEventToggle = (eventId: string) => {
+    setPicksForm(f => {
+      const updated = f.events.includes(eventId)
+        ? f.events.filter(id => id !== eventId)
+        : [...f.events, eventId]
+      const earliest = allEvents
+        .filter(e => updated.includes(e.id))
+        .map(e => e.start_datetime)
+        .sort()[0]
+      const start_date = earliest ? earliest.slice(0, 10) : f.start_date
+      return { ...f, events: updated, start_date }
+    })
+  }
+
   if (loading) {
     return (
       <div class="admin-page">
@@ -369,6 +492,14 @@ export function Admin(_props: Props) {
             onClick={() => setActiveTab('pages')}
           >
             Pages
+          </button>
+        )}
+        {canModerate() && (
+          <button
+            class={`tab ${activeTab === 'picks' ? 'active' : ''}`}
+            onClick={() => setActiveTab('picks')}
+          >
+            Picks
           </button>
         )}
       </div>
@@ -543,6 +674,148 @@ export function Admin(_props: Props) {
       )}
 
       {activeTab === 'settings' && <SettingsForm />}
+
+      {activeTab === 'picks' && (
+        <div class="pages-admin">
+          {!showPicksForm ? (
+            <>
+              <div class="pages-list-header">
+                <button class="btn btn-primary" onClick={handlePicksNew}>New Post</button>
+              </div>
+              {picks.length === 0 ? (
+                <p class="no-events">No picks posts yet.</p>
+              ) : (
+                <div class="items-list">
+                  {picks.map(post => (
+                    <div key={post.id} class="admin-item-card">
+                      <div class="item-info">
+                        <h3>{post.title}</h3>
+                        <p class="item-detail">
+                          /picks/{post.slug}
+                          {' · '}
+                          {post.expand?.events?.length ?? 0} event{(post.expand?.events?.length ?? 0) !== 1 ? 's' : ''}
+                          {post.hidden && ' · hidden'}
+                        </p>
+                      </div>
+                      <div class="admin-event-actions">
+                        <button class="btn btn-secondary" onClick={() => handlePicksToggleHidden(post)}>
+                          {post.hidden ? 'Unhide' : 'Hide'}
+                        </button>
+                        <a href={`/picks/${post.slug}`} target="_blank" class="btn btn-secondary">View</a>
+                        <button class="btn btn-secondary" onClick={() => handlePicksEdit(post)}>Edit</button>
+                        <button class="btn btn-danger" onClick={() => handlePicksDelete(post.id)}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div class="page-form">
+              <h2>{editingPicksId ? 'Edit Post' : 'New Post'}</h2>
+              {picksFormError && <div class="error">{picksFormError}</div>}
+              <div class="form-group">
+                <label for="picks-title">Title</label>
+                <input
+                  type="text"
+                  id="picks-title"
+                  value={picksForm.title}
+                  onInput={(e) => {
+                    const title = (e.target as HTMLInputElement).value
+                    setPicksForm(f => ({
+                      ...f,
+                      title,
+                      slug: editingPicksId ? f.slug : slugify(title),
+                    }))
+                  }}
+                  disabled={picksSaving}
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="picks-slug">Slug (URL path)</label>
+                <input
+                  type="text"
+                  id="picks-slug"
+                  value={picksForm.slug}
+                  onInput={(e) => setPicksForm(f => ({ ...f, slug: (e.target as HTMLInputElement).value }))}
+                  disabled={picksSaving}
+                  required
+                />
+                <small>Post will be at /picks/{picksForm.slug}</small>
+              </div>
+              <div class="form-group">
+                <label>Blurb</label>
+                <MarkdownEditor
+                  value={picksForm.blurb}
+                  onChange={(blurb) => setPicksForm(f => ({ ...f, blurb }))}
+                />
+              </div>
+              <div class="form-group">
+                <label>Featured Events</label>
+                <input
+                  type="text"
+                  placeholder="Search events by title..."
+                  value={picksEventSearch}
+                  onInput={(e) => setPicksEventSearch((e.target as HTMLInputElement).value)}
+                />
+                <div style={{ marginTop: 'var(--space-2)', maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: '4px', padding: 'var(--space-2)' }}>
+                  {allEvents
+                    .filter(e =>
+                      e.status === 'published' &&
+                      e.title.toLowerCase().includes(picksEventSearch.toLowerCase())
+                    )
+                    .map(event => (
+                      <label key={event.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: '4px 0', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={picksForm.events.includes(event.id)}
+                          onChange={() => handlePicksEventToggle(event.id)}
+                        />
+                        <span>{event.title}</span>
+                        <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+                          {new Date(event.start_datetime).toLocaleDateString()}
+                        </span>
+                      </label>
+                    ))
+                  }
+                </div>
+                <small>{picksForm.events.length} event{picksForm.events.length !== 1 ? 's' : ''} selected</small>
+              </div>
+              <div class="form-group">
+                <label for="picksStartDate">Start date</label>
+                <input
+                  type="date"
+                  id="picksStartDate"
+                  value={picksForm.start_date}
+                  onInput={(e) => setPicksForm(f => ({ ...f, start_date: (e.target as HTMLInputElement).value }))}
+                  disabled={picksSaving}
+                />
+                <small>Auto-set from earliest selected event. Used for ordering.</small>
+              </div>
+              <div class="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={picksForm.hidden}
+                    onChange={(e) => setPicksForm(f => ({ ...f, hidden: (e.target as HTMLInputElement).checked }))}
+                    disabled={picksSaving}
+                  />
+                  {' '}Hidden (force-archive this post)
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onClick={() => setShowPicksForm(false)} disabled={picksSaving}>
+                  Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onClick={handlePicksSave} disabled={picksSaving}>
+                  {picksSaving ? 'Saving...' : 'Save Post'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {activeTab === 'pages' && (
         <div class="pages-admin">

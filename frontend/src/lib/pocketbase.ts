@@ -90,6 +90,18 @@ export interface PageRecord extends BaseModel {
   sort_order: number
 }
 
+export interface PicksRecord extends BaseModel {
+  title: string
+  slug: string
+  blurb: string
+  events?: string[]
+  hidden: boolean
+  start_date?: string
+  expand?: {
+    events?: Event[]
+  }
+}
+
 // Helper to get image URL
 export function getImageUrl(record: Event, thumb?: string): string | undefined {
   if (!record.image) return undefined

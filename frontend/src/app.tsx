@@ -25,6 +25,8 @@ const Admin = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin }
 const Edit = lazy(() => import('./pages/Edit').then(m => ({ default: m.Edit })))
 const Search = lazy(() => import('./pages/Search').then(m => ({ default: m.Search })))
 const Page = lazy(() => import('./pages/Page').then(m => ({ default: m.Page })))
+const Picks = lazy(() => import('./pages/Picks').then(m => ({ default: m.Picks })))
+const PicksPost = lazy(() => import('./pages/PicksPost').then(m => ({ default: m.PicksPost })))
 
 export function App() {
   const [user, setUser] = useState<User | null>(pb.authStore.model as User | null)
@@ -225,6 +227,8 @@ export function App() {
             <Admin path="/admin" />
             <Edit path="/edit/:id" />
             <Search path="/search" />
+            <Picks path="/picks" />
+            <PicksPost path="/picks/:slug" />
             <Page path="/:slug" />
           </Router>
         </Suspense>
