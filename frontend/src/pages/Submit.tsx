@@ -4,6 +4,7 @@ import { pb, Place, Tag, eventPath, Event as EventType } from '../lib/pocketbase
 import { PlaceSearch } from '../components/PlaceSearch'
 import { TagPicker } from '../components/TagPicker'
 import { MarkdownEditor } from '../components/MarkdownEditor'
+import { RecurrencePicker } from '../components/RecurrencePicker'
 import './Submit.css'
 
 interface Props {
@@ -22,6 +23,7 @@ export function Submit(_props: Props) {
   const [image, setImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [email, setEmail] = useState('')
+  const [recurrenceRule, setRecurrenceRule] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -80,6 +82,10 @@ export function Submit(_props: Props) {
 
       if (image) {
         formData.append('image', image)
+      }
+
+      if (recurrenceRule) {
+        formData.append('recurrence_rule', recurrenceRule)
       }
 
       if (!isLoggedIn && email) {
@@ -181,6 +187,15 @@ export function Submit(_props: Props) {
               onInput={(e) => setEndTime((e.target as HTMLInputElement).value)}
             />
           </div>
+        </div>
+
+        <div class="form-group">
+          <label>Repeat</label>
+          <RecurrencePicker
+            value={recurrenceRule}
+            onChange={setRecurrenceRule}
+            startDate={startDate && startTime ? `${startDate}T${startTime}` : ''}
+          />
         </div>
 
         <div class="form-group">

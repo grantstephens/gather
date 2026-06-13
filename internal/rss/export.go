@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"gather/internal/recurrence"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -87,10 +88,15 @@ func GenerateFeed(app core.App, baseURL string, filter string) ([]byte, error) {
 			pubDate = event.GetDateTime("created").Time()
 		}
 		url := eventURL(baseURL, event)
+		desc := event.GetString("description")
+		if rule := event.GetString("recurrence_rule"); rule != "" {
+			label := recurrence.HumanLabel(rule)
+			desc = label + "\n\n" + desc
+		}
 		items = append(items, Item{
 			Title:       event.GetString("title"),
 			Link:        url,
-			Description: event.GetString("description"),
+			Description: desc,
 			PubDate:     pubDate.Format(time.RFC1123Z),
 			GUID:        url,
 		})

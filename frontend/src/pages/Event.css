@@ -154,3 +154,9 @@
     width: 100%;
   }
 }
+
+.event-recurrence {
+  font-style: italic;
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}

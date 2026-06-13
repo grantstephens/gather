@@ -97,25 +97,26 @@ export function Home(_props: Props) {
   }, [])
 
   const fetchPage = async (page: number, date: string | null, town: string | null, tagIds: Set<string>): Promise<boolean> => {
-    const filters = [`status = 'published'`]
+    const params = new URLSearchParams()
+    params.set('page', String(page))
+    params.set('pageSize', String(PAGE_SIZE))
     if (date) {
-      filters.push(`start_datetime >= '${date} 00:00:00' && start_datetime <= '${date} 23:59:59'`)
+      params.set('start', date)
+      params.set('end', date)
     } else {
-      filters.push(`start_datetime >= '${today}'`)
+      params.set('start', today)
     }
     if (town) {
-      filters.push(`place.city = '${town}'`)
+      params.set('town', town)
     }
     if (tagIds.size > 0) {
-      filters.push(`(${[...tagIds].map(id => `tags.id ?= '${id}'`).join(' || ')})`)
+      params.set('tags', [...tagIds].join(','))
     }
-    const result = await pb.collection('events').getList<Event>(page, PAGE_SIZE, {
-      filter: filters.join(' && '),
-      sort: 'start_datetime',
-      expand: 'place,tags',
-    })
-    setEvents(prev => page === 1 ? result.items : [...prev, ...result.items])
-    return result.page < result.totalPages
+    const resp = await fetch(`/api/events/expanded?${params}`)
+    if (!resp.ok) throw new Error(`Failed to load events: ${resp.status}`)
+    const data: { items: Event[]; totalItems: number; page: number; perPage: number } = await resp.json()
+    setEvents(prev => page === 1 ? data.items : [...prev, ...data.items])
+    return page * PAGE_SIZE < data.totalItems
   }
 
   // Reset and load page 1 whenever any filter changes

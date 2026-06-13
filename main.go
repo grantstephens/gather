@@ -23,6 +23,7 @@ import (
 	"gather/internal/hooks"
 	"gather/internal/ical"
 	"gather/internal/middleware"
+	"gather/internal/recurrence"
 	"gather/internal/rss"
 	"gather/internal/seo"
 	_ "gather/migrations"
@@ -91,7 +92,10 @@ func main() {
 		})
 
 		// Compression middleware (zstd, gzip, deflate via klauspost/compress)
-		se.Router.BindFunc(middleware.Compress)
+		// Skip in dev: compressWriter doesn't implement http.Hijacker, breaking Vite HMR WebSocket upgrades
+		if os.Getenv("DEV") == "" {
+			se.Router.BindFunc(middleware.Compress)
+		}
 
 		// Initialize AP keypair on first run
 		if err := activitypub.EnsureKeypair(se.App); err != nil {
@@ -479,6 +483,143 @@ func main() {
 				"places": placeResults,
 				"tags":   tagResults,
 			})
+		})
+
+		// Expanded events listing with recurrence support
+		se.Router.GET("/api/events/expanded", func(re *core.RequestEvent) error {
+			rangeStartStr := re.Request.URL.Query().Get("start")
+			rangeEndStr := re.Request.URL.Query().Get("end")
+			town := re.Request.URL.Query().Get("town")
+			tagIDsStr := re.Request.URL.Query().Get("tags")
+			var tagIDs []string
+			if tagIDsStr != "" {
+				tagIDs = strings.Split(tagIDsStr, ",")
+			}
+			pageStr := re.Request.URL.Query().Get("page")
+			pageSizeStr := re.Request.URL.Query().Get("pageSize")
+
+			page := 1
+			if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+				page = p
+			}
+			pageSize := 20
+			if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
+				pageSize = ps
+			}
+
+			now := time.Now().UTC()
+			rangeStart := now
+			if rangeStartStr != "" {
+				if t, err := time.Parse("2006-01-02", rangeStartStr); err == nil {
+					rangeStart = t
+				}
+			}
+			rangeEnd := now.AddDate(0, 3, 0)
+			if rangeEndStr != "" {
+				if t, err := time.Parse("2006-01-02", rangeEndStr); err == nil {
+					rangeEnd = t.Add(24*time.Hour - time.Second)
+				}
+			}
+
+			events, total, err := recurrence.ListExpandedEvents(se.App, rangeStart, rangeEnd, town, tagIDs, page, pageSize)
+			if err != nil {
+				return re.InternalServerError("Failed to list events", err)
+			}
+
+			re.Response.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=30")
+			return re.JSON(200, map[string]any{
+				"items":      events,
+				"totalItems": total,
+				"page":       page,
+				"perPage":    pageSize,
+			})
+		})
+
+		// Single event by virtual or real ID
+		se.Router.GET("/api/events/expanded/{id}", func(re *core.RequestEvent) error {
+			id := re.Request.PathValue("id")
+
+			baseID, dateStr, isVirtual := recurrence.ParseVirtualID(id)
+			if !isVirtual {
+				record, err := se.App.FindRecordById("events", id)
+				if err != nil {
+					return re.NotFoundError("Event not found", err)
+				}
+				return re.JSON(200, recurrence.RecordToExpandedPublic(se.App, record, "", nil))
+			}
+
+			record, err := se.App.FindRecordById("events", baseID)
+			if err != nil {
+				return re.NotFoundError("Event not found", err)
+			}
+
+			occDate, err := time.Parse("20060102", dateStr)
+			if err != nil {
+				return re.BadRequestError("Invalid date in event ID", err)
+			}
+
+			originalStart := record.GetDateTime("start_datetime").Time()
+			occStart := time.Date(occDate.Year(), occDate.Month(), occDate.Day(),
+				originalStart.Hour(), originalStart.Minute(), originalStart.Second(), 0, time.UTC)
+
+			rule := record.GetString("recurrence_rule")
+			exceptions := record.GetString("recurrence_exceptions")
+
+			occurrences, err := recurrence.Expand(rule, originalStart, occStart, occStart.Add(time.Second))
+			if err != nil || len(occurrences) == 0 {
+				return re.NotFoundError("Occurrence not found", nil)
+			}
+
+			if len(recurrence.FilterExceptions(occurrences, exceptions)) == 0 {
+				return re.NotFoundError("This occurrence has been cancelled", nil)
+			}
+
+			originalEnd := record.GetDateTime("end_datetime").Time()
+			ve := recurrence.BuildVirtualEvent(baseID, originalStart, originalEnd, occStart)
+			return re.JSON(200, recurrence.RecordToExpandedPublic(se.App, record, ve.ID, &ve))
+		})
+
+		// Cancel a single occurrence
+		se.Router.POST("/api/events/{id}/cancel-occurrence", func(re *core.RequestEvent) error {
+			info, _ := re.RequestInfo()
+			if info == nil || info.Auth == nil {
+				return re.UnauthorizedError("Authentication required", nil)
+			}
+			role := info.Auth.GetString("role")
+			if role != "admin" && role != "editor" {
+				return re.ForbiddenError("Insufficient permissions", nil)
+			}
+
+			id := re.Request.PathValue("id")
+			var body struct {
+				Date string `json:"date"`
+			}
+			if err := re.BindBody(&body); err != nil || body.Date == "" {
+				return re.BadRequestError("Missing 'date' field", nil)
+			}
+
+			record, err := se.App.FindRecordById("events", id)
+			if err != nil {
+				return re.NotFoundError("Event not found", err)
+			}
+
+			if record.GetString("recurrence_rule") == "" {
+				return re.BadRequestError("Event is not recurring", nil)
+			}
+
+			exceptions := record.GetString("recurrence_exceptions")
+			if exceptions == "" {
+				exceptions = body.Date
+			} else {
+				exceptions = exceptions + "," + body.Date
+			}
+			record.Set("recurrence_exceptions", exceptions)
+
+			if err := se.App.Save(record); err != nil {
+				return re.InternalServerError("Failed to save", err)
+			}
+
+			return re.JSON(200, map[string]string{"status": "ok"})
 		})
 
 		// Register hooks

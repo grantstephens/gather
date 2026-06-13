@@ -4,7 +4,7 @@ import { tagStyle } from '../lib/color'
 import { route } from 'preact-router'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
-import { pb, Event as EventType, getImageUrl, canModerate } from '../lib/pocketbase'
+import { pb, Event as EventType, getImageUrl, canModerate, recurrenceLabel, parseVirtualId } from '../lib/pocketbase'
 import { SkeletonEventDetailPage } from '../components/Skeleton'
 import leafletCss from 'leaflet/dist/leaflet.css?inline'
 import './Event.css'
@@ -150,6 +150,11 @@ export function Event({ id }: Props) {
               {format(startDate, 'EEEE, MMMM d, yyyy · h:mm a')}
               {endDate && ` - ${format(endDate, 'h:mm a')}`}
             </time>
+            {event.recurrence_rule && (
+              <p class="event-recurrence">
+                {recurrenceLabel(event.recurrence_rule)}
+              </p>
+            )}
             {event.expand?.tags && event.expand.tags.length > 0 && (
               <div class="event-tags">
                 {event.expand.tags.map(tag => (
@@ -193,9 +198,31 @@ export function Event({ id }: Props) {
 
           {isModerator && (
             <div class="admin-actions">
-              <a href={`/edit/${event.id}`} class="btn btn-secondary">
+              <a href={`/edit/${parseVirtualId(event.id)?.baseId || event.id}`} class="btn btn-secondary">
                 Edit
               </a>
+              {parseVirtualId(event.id) && (
+                <button
+                  class="btn btn-danger"
+                  onClick={async () => {
+                    const parsed = parseVirtualId(event.id)
+                    if (!parsed || !confirm('Cancel this occurrence?')) return
+                    const dateStr = `${parsed.date.slice(0, 4)}-${parsed.date.slice(4, 6)}-${parsed.date.slice(6, 8)}`
+                    try {
+                      await fetch(`/api/events/${parsed.baseId}/cancel-occurrence`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date: dateStr }),
+                      })
+                      route('/')
+                    } catch {
+                      alert('Failed to cancel occurrence')
+                    }
+                  }}
+                >
+                  Cancel This Occurrence
+                </button>
+              )}
               {event.status === 'pending' && (
                 <button
                   class="btn btn-primary"

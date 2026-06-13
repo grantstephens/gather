@@ -392,6 +392,9 @@ export function Admin(_props: Props) {
               <div key={event.id} class="admin-event-card">
                 <div class="event-status-row">
                   <span class={`status-badge status-${event.status}`}>{event.status}</span>
+                  {event.recurrence_rule && (
+                    <span class="status-badge" style={{ background: 'var(--color-accent)', color: '#fff' }}>recurring</span>
+                  )}
                 </div>
                 <EventCard event={event} />
                 <div class="admin-event-actions">

@@ -4,6 +4,7 @@ import { pb, Place, Tag, Event as EventType, canModerate, getImageUrl, eventPath
 import { PlaceSearch } from '../components/PlaceSearch'
 import { TagPicker } from '../components/TagPicker'
 import { MarkdownEditor } from '../components/MarkdownEditor'
+import { RecurrencePicker } from '../components/RecurrencePicker'
 import './Submit.css'
 
 interface Props {
@@ -25,6 +26,7 @@ export function Edit({ id }: Props) {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [existingImage, setExistingImage] = useState<string | null>(null)
   const [removeExistingImage, setRemoveExistingImage] = useState(false)
+  const [recurrenceRule, setRecurrenceRule] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -68,6 +70,8 @@ export function Edit({ id }: Props) {
         if (loadedEvent.image) {
           setExistingImage(getImageUrl(loadedEvent, '400x300') || null)
         }
+
+        setRecurrenceRule(loadedEvent.recurrence_rule || '')
       } catch (err) {
         setError('Failed to load event')
       } finally {
@@ -122,6 +126,7 @@ export function Edit({ id }: Props) {
         formData.append('end_datetime', endDate && endTime ? new Date(`${endDate}T${endTime}`).toISOString() : '')
         formData.append('place', place?.id || '')
         tags.forEach((t) => formData.append('tags', t.id))
+        formData.append('recurrence_rule', recurrenceRule)
         formData.append('image', image)
         await pb.collection('events').update(eventData.id, formData)
       } else {
@@ -133,6 +138,7 @@ export function Edit({ id }: Props) {
           end_datetime: endDate && endTime ? new Date(`${endDate}T${endTime}`).toISOString() : '',
           place: place?.id || '',
           tags: tags.map(t => t.id),
+          recurrence_rule: recurrenceRule,
         }
         // Clear image if user removed it
         if (removeExistingImage) {
@@ -227,6 +233,15 @@ export function Edit({ id }: Props) {
               onInput={(e) => setEndTime((e.target as HTMLInputElement).value)}
             />
           </div>
+        </div>
+
+        <div class="form-group">
+          <label>Repeat</label>
+          <RecurrencePicker
+            value={recurrenceRule}
+            onChange={setRecurrenceRule}
+            startDate={startDate && startTime ? `${startDate}T${startTime}` : ''}
+          />
         </div>
 
         <div class="form-group">
