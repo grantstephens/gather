@@ -7,6 +7,11 @@ import (
 
 func init() {
 	m.Register(func(app core.App) error {
+		// Skip if picks collection already exists (created by the duplicate 1709300014_picks migration)
+		if _, err := app.FindCollectionByNameOrId("picks"); err == nil {
+			return nil
+		}
+
 		events, err := app.FindCollectionByNameOrId("events")
 		if err != nil {
 			return err
