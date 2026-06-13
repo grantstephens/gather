@@ -44,6 +44,7 @@ export function Admin(_props: Props) {
   const [pageSaving, setPageSaving] = useState(false)
   const [picks, setPicks] = useState<PicksRecord[]>([])
   const [picksLoaded, setPicksLoaded] = useState(false)
+  const [picksUnavailable, setPicksUnavailable] = useState(false)
   const [showPicksForm, setShowPicksForm] = useState(false)
   const [editingPicksId, setEditingPicksId] = useState<string | null>(null)
   const [picksForm, setPicksForm] = useState({
@@ -131,10 +132,12 @@ export function Admin(_props: Props) {
         const records = await pb.collection('picks').getFullList<PicksRecord>({
           sort: '-start_date',
           expand: 'events',
-        })
+        }).catch(() =>
+          pb.collection('picks').getFullList<PicksRecord>({ expand: 'events' })
+        )
         setPicks(records)
-      } catch (err) {
-        console.error('Failed to load picks:', err)
+      } catch {
+        setPicksUnavailable(true)
       } finally {
         setPicksLoaded(true)
       }
@@ -682,7 +685,9 @@ export function Admin(_props: Props) {
               <div class="pages-list-header">
                 <button class="btn btn-primary" onClick={handlePicksNew}>New Post</button>
               </div>
-              {picks.length === 0 ? (
+              {picksUnavailable ? (
+                <p class="no-events">Picks are not available on this instance yet — deploy the latest version to enable them.</p>
+              ) : picks.length === 0 ? (
                 <p class="no-events">No picks posts yet.</p>
               ) : (
                 <div class="items-list">
