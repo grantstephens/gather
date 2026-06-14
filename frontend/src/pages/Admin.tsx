@@ -15,7 +15,15 @@ interface Props {
   path?: string
 }
 
-type TabType = 'events' | 'places' | 'tags' | 'settings' | 'pages' | 'picks'
+type TabType = 'events' | 'places' | 'tags' | 'settings' | 'pages' | 'picks' | 'apikeys'
+
+interface ServiceAccount {
+  id: string
+  name: string
+  email: string
+  role: string
+  created: string
+}
 
 const RESERVED_SLUGS = ['submit', 'login', 'admin', 'event', 'tag', 'place', 'edit', 'picks']
 
@@ -60,6 +68,16 @@ export function Admin(_props: Props) {
   const [editingPlaceId, setEditingPlaceId] = useState<string | null>(null)
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [tagForm, setTagForm] = useState({ name: '', color: '' })
+
+  // API Keys state
+  const [serviceAccounts, setServiceAccounts] = useState<ServiceAccount[]>([])
+  const [apiKeysLoaded, setApiKeysLoaded] = useState(false)
+  const [showCreateBotForm, setShowCreateBotForm] = useState(false)
+  const [botForm, setBotForm] = useState({ name: '[bot] ', email: '', password: '', role: 'user' })
+  const [botFormError, setBotFormError] = useState<string | null>(null)
+  const [botSaving, setBotSaving] = useState(false)
+  const [tokenModal, setTokenModal] = useState<{ token: string; expiry: string; copied: boolean } | null>(null)
+  const [generatingTokenFor, setGeneratingTokenFor] = useState<string | null>(null)
 
   useEffect(() => {
     if (!canModerate()) {
@@ -157,6 +175,89 @@ export function Admin(_props: Props) {
     }
     loadPicks()
   }, [activeTab, picksLoaded])
+
+  useEffect(() => {
+    if (activeTab !== 'apikeys' || !isAdmin() || apiKeysLoaded) return
+    async function loadServiceAccounts() {
+      try {
+        const records = await pb.collection('users').getFullList<ServiceAccount>({
+          filter: "name ~ '[bot]'",
+          sort: 'name',
+        })
+        setServiceAccounts(records)
+      } catch (err) {
+        console.error('Failed to load service accounts:', err)
+      } finally {
+        setApiKeysLoaded(true)
+      }
+    }
+    loadServiceAccounts()
+  }, [activeTab, apiKeysLoaded])
+
+  const handleCreateBot = async () => {
+    if (!botForm.name.trim() || !botForm.email.trim() || !botForm.password.trim()) {
+      setBotFormError('Name, email, and password are required.')
+      return
+    }
+    setBotSaving(true)
+    setBotFormError(null)
+    try {
+      const created = await pb.collection('users').create<ServiceAccount>({
+        name: botForm.name,
+        email: botForm.email,
+        password: botForm.password,
+        passwordConfirm: botForm.password,
+        role: botForm.role,
+      })
+      setServiceAccounts(prev => [...prev, created])
+      setShowCreateBotForm(false)
+      setBotForm({ name: '[bot] ', email: '', password: '', role: 'user' })
+    } catch (err: any) {
+      setBotFormError(err?.data?.data?.email?.message || err?.message || 'Failed to create service account.')
+    } finally {
+      setBotSaving(false)
+    }
+  }
+
+  const handleGenerateToken = async (userId: string) => {
+    setGeneratingTokenFor(userId)
+    try {
+      const result = await pb.send(`/api/collections/users/impersonate/${userId}`, {
+        method: 'POST',
+        body: { duration: 31536000 },
+      }) as { token: string; record?: unknown }
+      const expiry = new Date(Date.now() + 31536000 * 1000).toLocaleDateString(undefined, {
+        year: 'numeric', month: 'long', day: 'numeric',
+      })
+      setTokenModal({ token: result.token, expiry, copied: false })
+    } catch (err: any) {
+      if (err?.status === 403) {
+        alert('Token generation requires superuser access. Use the PocketBase admin UI (/_/) to impersonate users, or authenticate with a superuser token first.')
+      } else {
+        alert(err?.message || 'Failed to generate token.')
+      }
+    } finally {
+      setGeneratingTokenFor(null)
+    }
+  }
+
+  const handleCopyToken = () => {
+    if (!tokenModal) return
+    navigator.clipboard.writeText(tokenModal.token).then(() => {
+      setTokenModal(prev => prev ? { ...prev, copied: true } : null)
+      setTimeout(() => setTokenModal(prev => prev ? { ...prev, copied: false } : null), 2000)
+    })
+  }
+
+  const handleDeleteBot = async (userId: string, name: string) => {
+    if (!confirm(`Delete service account "${name}"? This cannot be undone.`)) return
+    try {
+      await pb.collection('users').delete(userId)
+      setServiceAccounts(prev => prev.filter(a => a.id !== userId))
+    } catch {
+      alert('Failed to delete service account.')
+    }
+  }
 
   const checkEventDependencies = async (event: Event): Promise<string | null> => {
     // Check if place is pending
@@ -516,6 +617,14 @@ export function Admin(_props: Props) {
             onClick={() => setActiveTab('picks')}
           >
             Picks
+          </button>
+        )}
+        {isAdmin() && (
+          <button
+            class={`tab ${activeTab === 'apikeys' ? 'active' : ''}`}
+            onClick={() => setActiveTab('apikeys')}
+          >
+            API Keys
           </button>
         )}
       </div>
@@ -954,6 +1063,144 @@ export function Admin(_props: Props) {
               </div>
             </div>
           )}
+        </div>
+      )}
+      {activeTab === 'apikeys' && isAdmin() && (
+        <div class="api-keys-admin">
+          <div class="pages-list-header">
+            <p class="item-detail" style={{ marginBottom: 'var(--space-4)' }}>
+              Service accounts are users whose name starts with <code>[bot]</code>. Generate long-lived tokens for external integrations.
+            </p>
+            {!showCreateBotForm && (
+              <button class="btn btn-primary" onClick={() => setShowCreateBotForm(true)}>
+                Create service account
+              </button>
+            )}
+          </div>
+
+          {showCreateBotForm && (
+            <div class="page-form" style={{ marginBottom: 'var(--space-6)' }}>
+              <h2>New Service Account</h2>
+              {botFormError && <div class="error">{botFormError}</div>}
+              <div class="form-group">
+                <label for="bot-name">Name</label>
+                <input
+                  type="text"
+                  id="bot-name"
+                  value={botForm.name}
+                  onInput={(e) => setBotForm(f => ({ ...f, name: (e.target as HTMLInputElement).value }))}
+                  disabled={botSaving}
+                  placeholder="[bot] my-integration"
+                />
+                <small>Should start with <code>[bot]</code> so it appears in this list.</small>
+              </div>
+              <div class="form-group">
+                <label for="bot-email">Email</label>
+                <input
+                  type="email"
+                  id="bot-email"
+                  value={botForm.email}
+                  onInput={(e) => setBotForm(f => ({ ...f, email: (e.target as HTMLInputElement).value }))}
+                  disabled={botSaving}
+                  placeholder="bot@example.com"
+                />
+              </div>
+              <div class="form-group">
+                <label for="bot-password">Password</label>
+                <input
+                  type="password"
+                  id="bot-password"
+                  value={botForm.password}
+                  onInput={(e) => setBotForm(f => ({ ...f, password: (e.target as HTMLInputElement).value }))}
+                  disabled={botSaving}
+                  placeholder="Strong random password"
+                />
+              </div>
+              <div class="form-group">
+                <label for="bot-role">Role</label>
+                <select
+                  id="bot-role"
+                  value={botForm.role}
+                  onChange={(e) => setBotForm(f => ({ ...f, role: (e.target as HTMLSelectElement).value }))}
+                  disabled={botSaving}
+                >
+                  <option value="user">user</option>
+                  <option value="editor">editor</option>
+                </select>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onClick={() => { setShowCreateBotForm(false); setBotFormError(null) }} disabled={botSaving}>
+                  Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onClick={handleCreateBot} disabled={botSaving}>
+                  {botSaving ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!apiKeysLoaded ? (
+            <p class="item-detail">Loading...</p>
+          ) : serviceAccounts.length === 0 ? (
+            <p class="no-events">No service accounts found. Create one above.</p>
+          ) : (
+            <div class="items-list">
+              {serviceAccounts.map(account => (
+                <div key={account.id} class="admin-item-card">
+                  <div class="item-info">
+                    <h3>{account.name}</h3>
+                    <p class="item-detail">
+                      {account.email}
+                      {' · '}
+                      <span class="status-badge" style={{ fontSize: 'var(--text-xs)', padding: '2px 6px' }}>{account.role}</span>
+                      {' · '}
+                      Created {new Date(account.created).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div class="admin-event-actions">
+                    <button
+                      class="btn btn-secondary"
+                      onClick={() => handleGenerateToken(account.id)}
+                      disabled={generatingTokenFor === account.id}
+                    >
+                      {generatingTokenFor === account.id ? 'Generating...' : 'Generate token'}
+                    </button>
+                    <button class="btn btn-danger" onClick={() => handleDeleteBot(account.id, account.name)}>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tokenModal && (
+        <div class="token-modal-overlay" onClick={() => setTokenModal(null)}>
+          <div class="token-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>API Token Generated</h2>
+            <div class="token-warning">
+              ⚠️ This token grants API access as this user. It cannot be retrieved again after you close this dialog.
+            </div>
+            <div class="form-group">
+              <label>Token (expires {tokenModal.expiry})</label>
+              <div class="token-display">
+                <code class="token-value">{tokenModal.token}</code>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-primary" onClick={handleCopyToken}>
+                {tokenModal.copied ? 'Copied!' : 'Copy to clipboard'}
+              </button>
+              <button type="button" class="btn btn-secondary" onClick={() => setTokenModal(null)}>
+                Close
+              </button>
+            </div>
+            <p class="item-detail" style={{ marginTop: 'var(--space-4)' }}>
+              Use this token in the <code>Authorization: Bearer &lt;token&gt;</code> header when calling the API.
+            </p>
+          </div>
         </div>
       )}
     </div>
