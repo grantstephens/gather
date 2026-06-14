@@ -109,6 +109,22 @@ export function Admin(_props: Props) {
     }
   }, [])
 
+  // Realtime SSE subscription — refresh events list when pending events change
+  useEffect(() => {
+    if (!canModerate()) return
+    pb.collection('events').subscribe('*', () => {
+      pb.collection('events').getFullList<Event>({
+        sort: '-start_datetime',
+        expand: 'place,tags',
+      }).then(events => {
+        setAllEvents(events)
+      }).catch(() => {})
+    }, { filter: "status = 'pending'" })
+    return () => {
+      pb.collection('events').unsubscribe()
+    }
+  }, [])
+
   useEffect(() => {
     if (activeTab !== 'pages' || !isAdmin() || pagesLoaded) return
     async function loadPages() {
