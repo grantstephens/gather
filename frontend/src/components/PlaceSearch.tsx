@@ -28,8 +28,7 @@ export interface NominatimPlaceData {
   osm_type: 'node' | 'way' | 'relation'
   name: string
   address: string
-  latitude: number
-  longitude: number
+  location: { lat: number; lon: number }
   city?: string
   country_code?: string
   osm_data: Record<string, unknown>
@@ -104,8 +103,7 @@ export function PlaceSearch({ value, onChange, onRawSelect }: Props) {
       osm_type: result.osm_type as 'node' | 'way' | 'relation',
       name: result.name || result.display_name.split(',')[0],
       address: addressParts.join(', '),
-      latitude: parseFloat(result.lat),
-      longitude: parseFloat(result.lon),
+      location: { lat: parseFloat(result.lat), lon: parseFloat(result.lon) },
       city: city,
       country_code: addr?.country_code?.toUpperCase(),
       osm_data: result as unknown as Record<string, unknown>,
@@ -157,8 +155,7 @@ export function PlaceSearch({ value, onChange, onRawSelect }: Props) {
       const newPlace = await pb.collection('places').create<Place>({
         name: manualName,
         address: manualAddress || undefined,
-        latitude: parseFloat(manualLat),
-        longitude: parseFloat(manualLon),
+        location: { lat: parseFloat(manualLat), lon: parseFloat(manualLon) },
       })
 
       onChange(newPlace)

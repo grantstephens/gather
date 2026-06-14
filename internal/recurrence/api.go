@@ -204,14 +204,14 @@ func RecordToExpandedPublic(app core.App, rec *core.Record, virtualID string, ve
 	expand := make(map[string]any)
 	if placeID := rec.GetString("place"); placeID != "" {
 		if place, err := app.FindRecordById("places", placeID); err == nil {
+			loc := place.GetGeoPoint("location")
 			expand["place"] = map[string]any{
-				"id":        place.Id,
-				"name":      place.GetString("name"),
-				"address":   place.GetString("address"),
-				"city":      place.GetString("city"),
-				"latitude":  place.GetFloat("latitude"),
-				"longitude": place.GetFloat("longitude"),
-				"status":    place.GetString("status"),
+				"id":       place.Id,
+				"name":     place.GetString("name"),
+				"address":  place.GetString("address"),
+				"city":     place.GetString("city"),
+				"location": map[string]any{"lat": loc.Lat, "lon": loc.Lon},
+				"status":   place.GetString("status"),
 			}
 		}
 	}

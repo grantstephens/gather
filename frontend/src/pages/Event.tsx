@@ -82,6 +82,7 @@ export function Event({ id }: Props) {
     if (!event?.expand?.place || !mapRef.current || mapInstance.current) return
 
     const place = event.expand.place
+    if (!place.location) return
 
     if (!document.querySelector('style[data-leaflet-css]')) {
       const style = document.createElement('style')
@@ -102,11 +103,13 @@ export function Event({ id }: Props) {
         popupAnchor: [1, -34],
       })
 
-      const map = L.default.map(mapRef.current).setView([place.latitude, place.longitude], 15)
+      const lat = place.location?.lat ?? 0
+      const lon = place.location?.lon ?? 0
+      const map = L.default.map(mapRef.current).setView([lat, lon], 15)
       L.default.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map)
-      L.default.marker([place.latitude, place.longitude], { icon: markerIcon }).addTo(map)
+      L.default.marker([lat, lon], { icon: markerIcon }).addTo(map)
       mapInstance.current = map
     }).catch(err => {
       console.error('Failed to load Leaflet:', err)
