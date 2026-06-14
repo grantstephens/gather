@@ -20,6 +20,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"gather/internal/activitypub"
+	"gather/internal/cron"
 	"gather/internal/hooks"
 	"gather/internal/ical"
 	"gather/internal/middleware"
@@ -621,6 +622,9 @@ func main() {
 
 			return re.JSON(200, map[string]string{"status": "ok"})
 		})
+
+		// Register cron jobs
+		cron.Register(se.App)
 
 		// Register hooks
 		hooks.RegisterUserHooks(se.App)
