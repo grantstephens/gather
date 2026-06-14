@@ -35,6 +35,26 @@ func main() {
 	app := pocketbase.New()
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		// Configure rate limits (skip for superusers — PocketBase handles that automatically)
+		appSettings := se.App.Settings()
+		appSettings.RateLimits.Enabled = true
+		appSettings.RateLimits.Rules = []core.RateLimitRule{
+			// Auth endpoints — tight limit to prevent brute force
+			{Label: "*:auth", MaxRequests: 10, Duration: 60},
+			// Record creation — covers event/place/tag submissions
+			{Label: "*:create", MaxRequests: 20, Duration: 60},
+			// Custom search endpoint
+			{Label: "/api/search", MaxRequests: 60, Duration: 60},
+			// Feed endpoints — prevent scraping abuse
+			{Label: "/feed.rss", MaxRequests: 30, Duration: 60},
+			{Label: "/feed.ics", MaxRequests: 30, Duration: 60},
+			{Label: "/feed/tag/{tagname}", MaxRequests: 30, Duration: 60},
+			{Label: "/ics/tag/{tagname}", MaxRequests: 30, Duration: 60},
+		}
+		if err := se.App.Save(appSettings); err != nil {
+			log.Println("Warning: failed to configure rate limits:", err)
+		}
+
 		// Build initial CSP from custom_head setting
 		var cachedCSP atomic.Value
 		if s, err := se.App.FindFirstRecordByFilter("settings", ""); err == nil {
