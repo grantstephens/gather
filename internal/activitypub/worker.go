@@ -31,6 +31,9 @@ func ProcessDeliveryQueue(app core.App) {
 		var activity Activity
 		if err := json.Unmarshal([]byte(r.GetString("activity")), &activity); err != nil {
 			log.Println("ap-delivery: unmarshal error for", inboxURL, ":", err)
+			r.Set("attempts", maxAttempts) // exhaust retries so cleanup cron prunes it
+			r.Set("last_error", "unmarshal error: "+err.Error())
+			app.Save(r)
 			continue
 		}
 

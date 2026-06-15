@@ -651,6 +651,12 @@ func main() {
 				return re.BadRequestError("Missing target_inbox", nil)
 			}
 
+			// Validate URL to prevent SSRF — must be http or https
+			parsed, parseErr := url.Parse(body.TargetInbox)
+			if parseErr != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+				return re.BadRequestError("target_inbox must be a valid http or https URL", nil)
+			}
+
 			actor, err := activitypub.GetActor(se.App, baseURL)
 			if err != nil {
 				return re.InternalServerError("Failed to get actor", err)
@@ -661,6 +667,7 @@ func main() {
 				Type:    "Create",
 				ID:      baseURL + "/ap/test/" + time.Now().Format("20060102150405"),
 				Actor:   actor.ID,
+				To:      []string{"https://www.w3.org/ns/activitystreams#Public"},
 				Object: map[string]any{
 					"type":    "Note",
 					"content": "Test delivery from Gather instance",
@@ -669,7 +676,7 @@ func main() {
 
 			err = activitypub.DeliverActivity(se.App, testActivity, body.TargetInbox)
 			if err != nil {
-				return re.JSON(200, map[string]any{"success": false, "error": err.Error()})
+				return re.InternalServerError("Delivery failed: "+err.Error(), err)
 			}
 			return re.JSON(200, map[string]any{"success": true})
 		})
@@ -686,8 +693,8 @@ func main() {
 					return re.ForbiddenError("Superuser or admin required", nil)
 				}
 			}
-			activitypub.ProcessDeliveryQueue(se.App)
-			return re.JSON(200, map[string]any{"status": "ok"})
+			go activitypub.ProcessDeliveryQueue(se.App)
+			return re.JSON(200, map[string]any{"status": "processing"})
 		})
 
 		// Register hooks
