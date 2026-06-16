@@ -11,11 +11,10 @@ func init() {
 		if err != nil {
 			return err
 		}
-		if f := col.Fields.GetByName("ap_private_key"); f != nil {
-			f.(*core.TextField).Hidden = true
-		}
-		if f := col.Fields.GetByName("ap_public_key"); f != nil {
-			f.(*core.TextField).Hidden = true
+		// Only the private key must be hidden — it must never be exposed via API.
+		// The public key is intentionally public (served at /ap/actor) so we leave it visible.
+		if f, ok := col.Fields.GetByName("ap_private_key").(*core.TextField); ok {
+			f.Hidden = true
 		}
 		return app.Save(col)
 	}, func(app core.App) error {
@@ -23,11 +22,8 @@ func init() {
 		if err != nil {
 			return err
 		}
-		if f := col.Fields.GetByName("ap_private_key"); f != nil {
-			f.(*core.TextField).Hidden = false
-		}
-		if f := col.Fields.GetByName("ap_public_key"); f != nil {
-			f.(*core.TextField).Hidden = false
+		if f, ok := col.Fields.GetByName("ap_private_key").(*core.TextField); ok {
+			f.Hidden = false
 		}
 		return app.Save(col)
 	})
