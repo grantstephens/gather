@@ -626,6 +626,77 @@ func main() {
 		// Register cron jobs
 		cron.Register(se.App)
 
+		// ActivityPub delivery worker — every 5 minutes
+		se.App.Cron().Add("ap-delivery", "*/5 * * * *", func() {
+			activitypub.ProcessDeliveryQueue(se.App)
+		})
+
+		// POST /api/ap/test-delivery — send a test Note to a given inbox (superuser/admin only)
+		se.Router.POST("/api/ap/test-delivery", func(re *core.RequestEvent) error {
+			info, _ := re.RequestInfo()
+			if info == nil || info.Auth == nil {
+				return re.UnauthorizedError("Authentication required", nil)
+			}
+			if info.Auth.Collection().Name != "_superusers" {
+				role := info.Auth.GetString("role")
+				if role != "admin" {
+					return re.ForbiddenError("Superuser or admin required", nil)
+				}
+			}
+
+			var body struct {
+				TargetInbox string `json:"target_inbox"`
+			}
+			if err := re.BindBody(&body); err != nil || body.TargetInbox == "" {
+				return re.BadRequestError("Missing target_inbox", nil)
+			}
+
+			// Validate URL to prevent SSRF — must be http or https
+			parsed, parseErr := url.Parse(body.TargetInbox)
+			if parseErr != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+				return re.BadRequestError("target_inbox must be a valid http or https URL", nil)
+			}
+
+			actor, err := activitypub.GetActor(se.App, baseURL)
+			if err != nil {
+				return re.InternalServerError("Failed to get actor", err)
+			}
+
+			testActivity := activitypub.Activity{
+				Context: "https://www.w3.org/ns/activitystreams",
+				Type:    "Create",
+				ID:      baseURL + "/ap/test/" + time.Now().Format("20060102150405"),
+				Actor:   actor.ID,
+				To:      []string{"https://www.w3.org/ns/activitystreams#Public"},
+				Object: map[string]any{
+					"type":    "Note",
+					"content": "Test delivery from Gather instance",
+				},
+			}
+
+			err = activitypub.DeliverActivity(se.App, testActivity, body.TargetInbox)
+			if err != nil {
+				return re.InternalServerError("Delivery failed: "+err.Error(), err)
+			}
+			return re.JSON(200, map[string]any{"success": true})
+		})
+
+		// POST /api/ap/retry-queue — immediately process all pending queue records (superuser/admin only)
+		se.Router.POST("/api/ap/retry-queue", func(re *core.RequestEvent) error {
+			info, _ := re.RequestInfo()
+			if info == nil || info.Auth == nil {
+				return re.UnauthorizedError("Authentication required", nil)
+			}
+			if info.Auth.Collection().Name != "_superusers" {
+				role := info.Auth.GetString("role")
+				if role != "admin" {
+					return re.ForbiddenError("Superuser or admin required", nil)
+				}
+			}
+			go activitypub.ProcessDeliveryQueue(se.App)
+			return re.JSON(200, map[string]any{"status": "processing"})
+		})
+
 		// Register hooks
 		hooks.RegisterUserHooks(se.App)
 		hooks.RegisterEventHooks(se.App, baseURL)

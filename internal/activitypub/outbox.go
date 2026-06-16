@@ -19,11 +19,12 @@ type OrderedCollection struct {
 }
 
 type Activity struct {
-	Context any    `json:"@context"`
-	Type    string `json:"type"`
-	ID      string `json:"id"`
-	Actor   string `json:"actor"`
-	Object  any    `json:"object"`
+	Context any      `json:"@context"`
+	Type    string   `json:"type"`
+	ID      string   `json:"id"`
+	Actor   string   `json:"actor"`
+	To      []string `json:"to,omitempty"`
+	Object  any      `json:"object"`
 }
 
 type Note struct {
