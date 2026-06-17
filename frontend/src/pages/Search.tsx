@@ -93,7 +93,7 @@ export function Search(_props: Props) {
           <h2 class="search-section-title">Tags ({tags.length})</h2>
           <div class="search-tags">
             {tags.map(tag => (
-              <a key={tag.id} href={`/tag/${tag.name}`} class="tag" style={tagStyle(tag.color)}>
+              <a key={tag.id} href={`/tag/${tag.name}`} class="tag" style={tagStyle(tag.color)} data-umami-event="search-tag-click" data-umami-event-tag={tag.name}>
                 {tag.name}
               </a>
             ))}
@@ -106,7 +106,7 @@ export function Search(_props: Props) {
           <h2 class="search-section-title">Places ({places.length})</h2>
           <div class="search-places">
             {places.map(place => (
-              <a key={place.id} href={`/place/${place.id}`} class="search-place-link">
+              <a key={place.id} href={`/place/${place.id}`} class="search-place-link" data-umami-event="search-place-click" data-umami-event-place={place.name}>
                 <span class="search-place-name">{place.name}</span>
                 {place.city && <span class="search-place-city">{place.city}</span>}
               </a>
