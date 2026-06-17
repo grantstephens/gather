@@ -36,6 +36,34 @@ func main() {
 	app := pocketbase.New()
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		// Configure rate limits (skip for superusers — PocketBase handles that automatically)
+		appSettings := se.App.Settings()
+		appSettings.RateLimits.Enabled = true
+		appSettings.RateLimits.Rules = []core.RateLimitRule{
+			// Guests: tight limits to prevent brute force / spam
+			{Label: "*:auth", MaxRequests: 10, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "*:create", MaxRequests: 20, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "/api/search", MaxRequests: 60, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "/feed.rss", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "/feed.ics", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			// trailing-slash prefix matches any /feed/tag/<name> or /ics/tag/<name>
+			{Label: "/feed/tag/", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "/ics/tag/", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			// Authenticated users: very high limits — effectively no restriction
+			{Label: "*:auth", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "*:create", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/api/search", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/feed.rss", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/feed.ics", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/feed/tag/", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/ics/tag/", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+		}
+		// Note: these rules are written to the DB on every startup, so any changes
+		// made via the admin dashboard will be reverted on restart.
+		if err := se.App.Save(appSettings); err != nil {
+			log.Println("Warning: failed to configure rate limits:", err)
+		}
+
 		// Build initial CSP from custom_head setting
 		var cachedCSP atomic.Value
 		if s, err := se.App.FindFirstRecordByFilter("settings", ""); err == nil {
