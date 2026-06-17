@@ -18,6 +18,7 @@ export function Event({ id }: Props) {
   const [event, setEvent] = useState<EventType | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [cancelled, setCancelled] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<any>(null)
@@ -78,6 +79,24 @@ export function Event({ id }: Props) {
     load()
   }, [id])
 
+  // Realtime SSE subscription for the specific event record
+  useEffect(() => {
+    if (!event?.id) return
+    // Virtual/recurring events have synthetic IDs — subscribe to the base record
+    const baseId = parseVirtualId(event.id)?.baseId ?? event.id
+    pb.collection('events').subscribe(baseId, ({ action, record }) => {
+      if (action === 'delete') {
+        setCancelled(true)
+      } else if (action === 'update') {
+        // Preserve expand — SSE payloads don't include relation data
+        setEvent(prev => prev ? { ...prev, ...record, expand: prev.expand } : prev)
+      }
+    }).catch(console.error)
+    return () => {
+      pb.collection('events').unsubscribe(baseId)
+    }
+  }, [event?.id])
+
   useEffect(() => {
     if (!event?.expand?.place || !mapRef.current || mapInstance.current) return
 
@@ -122,6 +141,15 @@ export function Event({ id }: Props) {
 
   if (loading) {
     return <SkeletonEventDetailPage />
+  }
+
+  if (cancelled) {
+    return (
+      <div class="error">
+        This event has been cancelled or deleted.{' '}
+        <a href="/">Return to calendar</a>
+      </div>
+    )
   }
 
   if (error || !event) {
