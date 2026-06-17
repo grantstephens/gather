@@ -27,13 +27,14 @@ export function Login(_props: Props) {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
   const [oauthProviders, setOauthProviders] = useState<OAuthProvider[]>([])
 
   useEffect(() => {
     pb.collection('users').listAuthMethods().then((methods) => {
       setOauthProviders((methods.oauth2?.providers ?? []).map((p) => ({
         name: p.name,
-        displayName: p.displayName,
+        displayName: p.displayName || p.name,
       })))
     }).catch(() => {
       // If we can't fetch auth methods, just show no OAuth providers
@@ -64,14 +65,14 @@ export function Login(_props: Props) {
 
   const handleOAuth = async (providerName: string) => {
     setError(null)
-    setLoading(true)
+    setOauthLoading(true)
     try {
       await pb.collection('users').authWithOAuth2({ provider: providerName })
       route('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'OAuth authentication failed')
     } finally {
-      setLoading(false)
+      setOauthLoading(false)
     }
   }
 
@@ -135,10 +136,10 @@ export function Login(_props: Props) {
                 key={provider.name}
                 type="button"
                 class="btn btn-oauth"
-                disabled={loading}
+                disabled={oauthLoading}
                 onClick={() => handleOAuth(provider.name)}
               >
-                Continue with {provider.displayName}
+                {oauthLoading ? 'Please wait...' : `Continue with ${provider.displayName}`}
               </button>
             ))}
           </div>
