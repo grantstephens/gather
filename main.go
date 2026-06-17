@@ -672,7 +672,7 @@ func main() {
 		})
 
 		// Register cron jobs
-		cron.Register(se.App)
+		cron.Register(se.App, baseURL)
 
 		// ActivityPub delivery worker — every 5 minutes
 		se.App.Cron().Add("ap-delivery", "*/5 * * * *", func() {
