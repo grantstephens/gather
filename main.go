@@ -17,6 +17,7 @@ import (
 	dbx "github.com/pocketbase/dbx"
 
 	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 
 	"gather/internal/activitypub"
@@ -39,10 +40,12 @@ func main() {
 		appSettings := se.App.Settings()
 		appSettings.RateLimits.Enabled = true
 		appSettings.RateLimits.Rules = []core.RateLimitRule{
-			// Auth endpoints — tight limit to prevent brute force
-			{Label: "*:auth", MaxRequests: 10, Duration: 60},
-			// Record creation — covers event/place/tag submissions
-			{Label: "*:create", MaxRequests: 20, Duration: 60},
+			// Auth endpoints — guest-only: brute force comes from unauthenticated requests
+			{Label: "*:auth", MaxRequests: 10, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			// Record creation — guest-only: spam submissions come from unauthenticated or
+			// newly-created accounts; authenticated users (and especially admins/editors)
+			// should not be throttled for bulk work
+			{Label: "*:create", MaxRequests: 20, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
 			// Custom search endpoint
 			{Label: "/api/search", MaxRequests: 60, Duration: 60},
 			// Feed endpoints — prevent scraping abuse
@@ -54,6 +57,11 @@ func main() {
 		if err := se.App.Save(appSettings); err != nil {
 			log.Println("Warning: failed to configure rate limits:", err)
 		}
+
+		// Replace PocketBase's default rate limit middleware with one that also
+		// exempts app admins and editors (superusers are already exempt by default).
+		se.Router.Unbind(apis.DefaultRateLimitMiddlewareId)
+		se.Router.Bind(middleware.RateLimitWithRoleExemption())
 
 		// Build initial CSP from custom_head setting
 		var cachedCSP atomic.Value
