@@ -20,7 +20,9 @@ func init() {
 		if err != nil {
 			return err
 		}
-		col.Fields.RemoveById(col.Fields.GetByName("ap_announced").GetId())
+		if f := col.Fields.GetByName("ap_announced"); f != nil {
+			col.Fields.RemoveById(f.GetId())
+		}
 		return app.Save(col)
 	})
 }

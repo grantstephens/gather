@@ -34,6 +34,14 @@ func Register(app core.App, baseURL string) {
 
 	// Announce this weekend's picks to ActivityPub on Monday and Tuesday mornings
 	app.Cron().Add("picks-ap-announcement", "0 9 * * 1,2", func() {
+		if baseURL == "" {
+			return
+		}
+		settings, err := app.FindFirstRecordByFilter("settings", "id != ''")
+		if err != nil || !settings.GetBool("ap_enabled") {
+			return
+		}
+
 		now := time.Now()
 		// Upcoming Saturday (days until Saturday from Mon=5, Tue=4)
 		daysUntilSat := (6 - int(now.Weekday()) + 7) % 7
@@ -51,14 +59,6 @@ func Register(app core.App, baseURL string) {
 		)
 		if err != nil {
 			log.Println("picks-ap-announcement: query error:", err)
-			return
-		}
-
-		if baseURL == "" {
-			return
-		}
-		settings, err := app.FindFirstRecordByFilter("settings", "id != ''")
-		if err != nil || !settings.GetBool("ap_enabled") {
 			return
 		}
 

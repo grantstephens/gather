@@ -10,14 +10,14 @@ import (
 
 func picksToNote(picks *core.Record, baseURL string) Note {
 	title := html.EscapeString(picks.GetString("title"))
-	blurb := picks.GetString("blurb")
+	blurb := html.EscapeString(picks.GetString("blurb"))
+	picksURL := fmt.Sprintf("%s/picks/%s", baseURL, picks.GetString("slug"))
 
 	content := fmt.Sprintf(
-		"<p><strong>%s</strong></p><p>%s</p><p>%s/picks/%s</p>",
+		"<p><strong>%s</strong></p><p>%s</p><p><a href=%q>Read more</a></p>",
 		title,
 		blurb,
-		baseURL,
-		html.EscapeString(picks.GetString("slug")),
+		picksURL,
 	)
 
 	return Note{
@@ -26,7 +26,7 @@ func picksToNote(picks *core.Record, baseURL string) Note {
 		AttributedTo: baseURL + "/ap/actor",
 		Content:      content,
 		Published:    time.Now(),
-		URL:          fmt.Sprintf("%s/picks/%s", baseURL, picks.GetString("slug")),
+		URL:          picksURL,
 		To:           []string{"https://www.w3.org/ns/activitystreams#Public"},
 		Cc:           []string{baseURL + "/ap/actor/followers"},
 	}
