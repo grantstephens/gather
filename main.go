@@ -44,17 +44,13 @@ func main() {
 			{Label: "*:auth", MaxRequests: 10, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
 			{Label: "*:create", MaxRequests: 20, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
 			{Label: "/api/search", MaxRequests: 60, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
-			{Label: "/feed.rss", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
-			{Label: "/feed.ics", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
-			// trailing-slash prefix matches any /feed/tag/<name> or /ics/tag/<name>
+			// trailing-slash prefix matches /feed/tag/<name> and /ics/tag/<name>
 			{Label: "/feed/tag/", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
 			{Label: "/ics/tag/", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
 			// Authenticated users: very high limits — effectively no restriction
 			{Label: "*:auth", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "*:create", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "/api/search", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
-			{Label: "/feed.rss", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
-			{Label: "/feed.ics", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "/feed/tag/", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "/ics/tag/", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 		}
