@@ -118,10 +118,10 @@ export function Admin(_props: Props) {
         expand: 'place,tags',
       }).then(events => {
         setAllEvents(events)
-      }).catch(() => {})
-    }, { filter: "status = 'pending'" })
+      }).catch(console.error)
+    }, { filter: "status = 'pending'" }).catch(console.error)
     return () => {
-      pb.collection('events').unsubscribe()
+      pb.collection('events').unsubscribe('*')
     }
   }, [])
 

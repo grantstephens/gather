@@ -88,9 +88,10 @@ export function Event({ id }: Props) {
       if (action === 'delete') {
         setCancelled(true)
       } else if (action === 'update') {
-        setEvent(prev => prev ? { ...prev, ...record } : prev)
+        // Preserve expand — SSE payloads don't include relation data
+        setEvent(prev => prev ? { ...prev, ...record, expand: prev.expand } : prev)
       }
-    })
+    }).catch(console.error)
     return () => {
       pb.collection('events').unsubscribe(baseId)
     }
