@@ -17,7 +17,6 @@ import (
 	dbx "github.com/pocketbase/dbx"
 
 	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 
 	"gather/internal/activitypub"
@@ -40,28 +39,26 @@ func main() {
 		appSettings := se.App.Settings()
 		appSettings.RateLimits.Enabled = true
 		appSettings.RateLimits.Rules = []core.RateLimitRule{
-			// Auth endpoints — guest-only: brute force comes from unauthenticated requests
+			// Guests: tight limits to prevent brute force / spam
 			{Label: "*:auth", MaxRequests: 10, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
-			// Record creation — guest-only: spam submissions come from unauthenticated or
-			// newly-created accounts; authenticated users (and especially admins/editors)
-			// should not be throttled for bulk work
 			{Label: "*:create", MaxRequests: 20, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
-			// Custom search endpoint
-			{Label: "/api/search", MaxRequests: 60, Duration: 60},
-			// Feed endpoints — prevent scraping abuse
-			{Label: "/feed.rss", MaxRequests: 30, Duration: 60},
-			{Label: "/feed.ics", MaxRequests: 30, Duration: 60},
-			{Label: "/feed/tag/{tagname}", MaxRequests: 30, Duration: 60},
-			{Label: "/ics/tag/{tagname}", MaxRequests: 30, Duration: 60},
+			{Label: "/api/search", MaxRequests: 60, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "/feed.rss", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "/feed.ics", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "/feed/tag/{tagname}", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "/ics/tag/{tagname}", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			// Authenticated users: very high limits — effectively no restriction
+			{Label: "*:auth", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "*:create", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/api/search", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/feed.rss", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/feed.ics", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/feed/tag/{tagname}", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/ics/tag/{tagname}", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 		}
 		if err := se.App.Save(appSettings); err != nil {
 			log.Println("Warning: failed to configure rate limits:", err)
 		}
-
-		// Replace PocketBase's default rate limit middleware with one that also
-		// exempts app admins and editors (superusers are already exempt by default).
-		se.Router.Unbind(apis.DefaultRateLimitMiddlewareId)
-		se.Router.Bind(middleware.RateLimitWithRoleExemption())
 
 		// Build initial CSP from custom_head setting
 		var cachedCSP atomic.Value
