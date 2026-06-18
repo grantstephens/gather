@@ -2,6 +2,7 @@ package activitypub
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -15,7 +16,14 @@ type Actor struct {
 	Summary           string     `json:"summary,omitempty"`
 	Inbox             string     `json:"inbox"`
 	Outbox            string     `json:"outbox"`
+	Icon              *APImage   `json:"icon,omitempty"`
 	PublicKey         *PublicKey `json:"publicKey,omitempty"`
+}
+
+type APImage struct {
+	Type      string `json:"type"`
+	MediaType string `json:"mediaType,omitempty"`
+	URL       string `json:"url"`
 }
 
 type PublicKey struct {
@@ -39,6 +47,23 @@ func GetActor(app core.App, baseURL string) (*Actor, error) {
 
 	actorID := baseURL + "/ap/actor"
 
+	// Build icon URL: use the custom favicon if set, else the default SVG at /favicon.ico
+	iconURL := baseURL + "/favicon.ico"
+	iconMediaType := "image/svg+xml"
+	if favicon := settings.GetString("favicon"); favicon != "" {
+		iconURL = baseURL + "/api/files/" + settings.BaseFilesPath() + "/" + favicon
+		switch {
+		case strings.HasSuffix(favicon, ".png"):
+			iconMediaType = "image/png"
+		case strings.HasSuffix(favicon, ".webp"):
+			iconMediaType = "image/webp"
+		case strings.HasSuffix(favicon, ".jpg"), strings.HasSuffix(favicon, ".jpeg"):
+			iconMediaType = "image/jpeg"
+		case strings.HasSuffix(favicon, ".ico"):
+			iconMediaType = "image/x-icon"
+		}
+	}
+
 	actor := &Actor{
 		Context: []any{
 			"https://www.w3.org/ns/activitystreams",
@@ -51,6 +76,11 @@ func GetActor(app core.App, baseURL string) (*Actor, error) {
 		Summary:           summary,
 		Inbox:             baseURL + "/ap/inbox",
 		Outbox:            baseURL + "/ap/outbox",
+		Icon: &APImage{
+			Type:      "Image",
+			MediaType: iconMediaType,
+			URL:       iconURL,
+		},
 	}
 
 	if publicKey != "" {

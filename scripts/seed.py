@@ -147,9 +147,9 @@ def main():
     # Create places
     print("Creating places...")
     places_data = [
-        {"name": "Community Center", "address": "123 Main St", "city": "Portland", "latitude": 45.5152, "longitude": -122.6784, "status": "approved"},
-        {"name": "The Art Space", "address": "456 Gallery Ave", "city": "Portland", "latitude": 45.5231, "longitude": -122.6765, "status": "approved"},
-        {"name": "Riverside Park", "address": "789 River Rd", "city": "Portland", "latitude": 45.5289, "longitude": -122.6951, "status": "approved"},
+        {"name": "Community Center", "address": "123 Main St", "city": "Portland", "location": {"lat": 45.5152, "lon": -122.6784}, "status": "approved"},
+        {"name": "The Art Space", "address": "456 Gallery Ave", "city": "Portland", "location": {"lat": 45.5231, "lon": -122.6765}, "status": "approved"},
+        {"name": "Riverside Park", "address": "789 River Rd", "city": "Portland", "location": {"lat": 45.5289, "lon": -122.6951}, "status": "approved"},
     ]
     places = []
     for place_data in places_data:

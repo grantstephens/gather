@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"strings"
 	"time"
 
 	"gather/internal/recurrence"
@@ -19,11 +20,12 @@ type OrderedCollection struct {
 }
 
 type Activity struct {
-	Context any    `json:"@context"`
-	Type    string `json:"type"`
-	ID      string `json:"id"`
-	Actor   string `json:"actor"`
-	Object  any    `json:"object"`
+	Context any      `json:"@context"`
+	Type    string   `json:"type"`
+	ID      string   `json:"id"`
+	Actor   string   `json:"actor"`
+	To      []string `json:"to,omitempty"`
+	Object  any      `json:"object"`
 }
 
 type Note struct {
@@ -104,6 +106,25 @@ func eventToNote(event *core.Record, baseURL string) Note {
 		URL:          fmt.Sprintf("%s/event/%s", baseURL, event.Id),
 		To:           []string{"https://www.w3.org/ns/activitystreams#Public"},
 		Cc:           []string{baseURL + "/ap/actor/followers"},
+	}
+
+	// Attach event image if present
+	if image := event.GetString("image"); image != "" {
+		imageURL := fmt.Sprintf("%s/api/files/%s/%s", baseURL, event.BaseFilesPath(), image)
+		mediaType := "image/webp"
+		switch {
+		case strings.HasSuffix(image, ".png"):
+			mediaType = "image/png"
+		case strings.HasSuffix(image, ".jpg"), strings.HasSuffix(image, ".jpeg"):
+			mediaType = "image/jpeg"
+		case strings.HasSuffix(image, ".gif"):
+			mediaType = "image/gif"
+		}
+		note.Attachment = []any{APImage{
+			Type:      "Document",
+			MediaType: mediaType,
+			URL:       imageURL,
+		}}
 	}
 
 	return note

@@ -42,8 +42,8 @@ export interface Place {
   osm_type?: 'node' | 'way' | 'relation'
   name: string
   address?: string
-  latitude: number
-  longitude: number
+  /** GeoPoint field — replaces the old latitude/longitude number fields */
+  location?: { lat: number; lon: number }
   city?: string
   country_code?: string
   osm_data?: Record<string, unknown>

@@ -18,6 +18,7 @@ export function Event({ id }: Props) {
   const [event, setEvent] = useState<EventType | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [cancelled, setCancelled] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<any>(null)
@@ -78,10 +79,29 @@ export function Event({ id }: Props) {
     load()
   }, [id])
 
+  // Realtime SSE subscription for the specific event record
+  useEffect(() => {
+    if (!event?.id) return
+    // Virtual/recurring events have synthetic IDs — subscribe to the base record
+    const baseId = parseVirtualId(event.id)?.baseId ?? event.id
+    pb.collection('events').subscribe(baseId, ({ action, record }) => {
+      if (action === 'delete') {
+        setCancelled(true)
+      } else if (action === 'update') {
+        // Preserve expand — SSE payloads don't include relation data
+        setEvent(prev => prev ? { ...prev, ...record, expand: prev.expand } : prev)
+      }
+    }).catch(console.error)
+    return () => {
+      pb.collection('events').unsubscribe(baseId)
+    }
+  }, [event?.id])
+
   useEffect(() => {
     if (!event?.expand?.place || !mapRef.current || mapInstance.current) return
 
     const place = event.expand.place
+    if (!place.location) return
 
     if (!document.querySelector('style[data-leaflet-css]')) {
       const style = document.createElement('style')
@@ -102,11 +122,13 @@ export function Event({ id }: Props) {
         popupAnchor: [1, -34],
       })
 
-      const map = L.default.map(mapRef.current).setView([place.latitude, place.longitude], 15)
+      const lat = place.location.lat
+      const lon = place.location.lon
+      const map = L.default.map(mapRef.current).setView([lat, lon], 15)
       L.default.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map)
-      L.default.marker([place.latitude, place.longitude], { icon: markerIcon }).addTo(map)
+      L.default.marker([lat, lon], { icon: markerIcon }).addTo(map)
       mapInstance.current = map
     }).catch(err => {
       console.error('Failed to load Leaflet:', err)
@@ -122,6 +144,15 @@ export function Event({ id }: Props) {
 
   if (loading) {
     return <SkeletonEventDetailPage />
+  }
+
+  if (cancelled) {
+    return (
+      <div class="error">
+        This event has been cancelled or deleted.{' '}
+        <a href="/">Return to calendar</a>
+      </div>
+    )
   }
 
   if (error || !event) {
@@ -200,12 +231,13 @@ export function Event({ id }: Props) {
 
           {isModerator && (
             <div class="admin-actions">
-              <a href={`/edit/${parseVirtualId(event.id)?.baseId || event.id}`} class="btn btn-secondary">
+              <a href={`/edit/${parseVirtualId(event.id)?.baseId || event.id}`} class="btn btn-secondary" data-umami-event="event-edit-click">
                 Edit
               </a>
               {parseVirtualId(event.id) && (
                 <button
                   class="btn btn-danger"
+                  data-umami-event="event-cancel-occurrence"
                   onClick={async () => {
                     const parsed = parseVirtualId(event.id)
                     if (!parsed || !confirm('Cancel this occurrence?')) return
@@ -230,6 +262,7 @@ export function Event({ id }: Props) {
                   class="btn btn-primary"
                   onClick={() => handleStatusChange('published')}
                   disabled={actionLoading}
+                  data-umami-event="event-approve"
                 >
                   Approve
                 </button>
@@ -239,6 +272,7 @@ export function Event({ id }: Props) {
                   class="btn btn-secondary"
                   onClick={() => handleStatusChange('cancelled')}
                   disabled={actionLoading}
+                  data-umami-event="event-cancel"
                 >
                   Cancel Event
                 </button>
@@ -248,6 +282,7 @@ export function Event({ id }: Props) {
                   class="btn btn-primary"
                   onClick={() => handleStatusChange('published')}
                   disabled={actionLoading}
+                  data-umami-event="event-republish"
                 >
                   Republish
                 </button>
@@ -256,6 +291,7 @@ export function Event({ id }: Props) {
                 class="btn btn-danger"
                 onClick={handleDelete}
                 disabled={actionLoading}
+                data-umami-event="event-delete"
               >
                 Delete
               </button>

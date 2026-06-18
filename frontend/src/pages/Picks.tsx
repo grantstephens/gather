@@ -56,7 +56,7 @@ export function Picks(_props: Props) {
               <article key={post.id} class={`picks-item${current ? ' picks-item--current' : ''}`}>
                 <header class="picks-item-header">
                   {current && <span class="picks-badge">This Weekend</span>}
-                  <h2><a href={`/picks/${post.slug}`}>{post.title}</a></h2>
+                  <h2><a href={`/picks/${post.slug}`} data-umami-event="picks-post-click" data-umami-event-slug={post.slug}>{post.title}</a></h2>
                   {post.blurb && (
                     <div
                       class="picks-item-blurb"

@@ -81,13 +81,14 @@ func GenerateEventJSONLD(app core.App, event *core.Record, baseURL string) ([]by
 	if placeID := event.GetString("place"); placeID != "" {
 		place, err := app.FindRecordById("places", placeID)
 		if err == nil {
+			loc := place.GetGeoPoint("location")
 			jsonLD.Location = &EventLocation{
 				Type: "Place",
 				Name: place.GetString("name"),
 				Geo: &EventGeo{
 					Type:      "GeoCoordinates",
-					Latitude:  place.GetFloat("latitude"),
-					Longitude: place.GetFloat("longitude"),
+					Latitude:  loc.Lat,
+					Longitude: loc.Lon,
 				},
 			}
 

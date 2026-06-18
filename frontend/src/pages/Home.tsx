@@ -142,6 +142,23 @@ export function Home(_props: Props) {
       .finally(() => setLoading(false))
   }, [selectedDate, selectedTown, selectedTagsKey])
 
+  // Realtime SSE subscription — refetch page 1 on any published-events change
+  useEffect(() => {
+    let active = true
+    pb.collection('events').subscribe('*', () => {
+      if (!active) return
+      // Refetches page 1 only — users who have scrolled deep will be reset to
+      // the first page on the next realtime event. Acceptable for a calendar.
+      fetchPage(1, selectedDate, selectedTown, selectedTags)
+        .then(more => { if (active) { pageRef.current = 1; setHasMore(more) } })
+        .catch(() => {})
+    }, { filter: "status = 'published'" }).catch(console.error)
+    return () => {
+      active = false
+      pb.collection('events').unsubscribe('*')
+    }
+  }, [selectedDate, selectedTown, selectedTagsKey])
+
   // Infinite scroll — only when no date/tag filter active
   useEffect(() => {
     const sentinel = sentinelRef.current

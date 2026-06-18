@@ -20,6 +20,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"gather/internal/activitypub"
+	"gather/internal/cron"
 	"gather/internal/hooks"
 	"gather/internal/ical"
 	"gather/internal/middleware"
@@ -42,6 +43,30 @@ func main() {
 			if err := se.App.Save(se.App.Settings()); err != nil {
 				log.Println("Warning: failed to configure default backup schedule:", err)
 			}
+		}
+
+		// Configure rate limits (skip for superusers — PocketBase handles that automatically)
+		appSettings := se.App.Settings()
+		appSettings.RateLimits.Enabled = true
+		appSettings.RateLimits.Rules = []core.RateLimitRule{
+			// Guests: tight limits to prevent brute force / spam
+			{Label: "*:auth", MaxRequests: 10, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "*:create", MaxRequests: 20, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "/api/search", MaxRequests: 60, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			// trailing-slash prefix matches /feed/tag/<name> and /ics/tag/<name>
+			{Label: "/feed/tag/", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			{Label: "/ics/tag/", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			// Authenticated users: very high limits — effectively no restriction
+			{Label: "*:auth", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "*:create", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/api/search", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/feed/tag/", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/ics/tag/", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+		}
+		// Note: these rules are written to the DB on every startup, so any changes
+		// made via the admin dashboard will be reverted on restart.
+		if err := se.App.Save(appSettings); err != nil {
+			log.Println("Warning: failed to configure rate limits:", err)
 		}
 
 		// Build initial CSP from custom_head setting
@@ -380,6 +405,75 @@ func main() {
 			return re.JSON(200, rows)
 		})
 
+		// Nearby places — GET /api/places/nearby?lat=X&lon=Y&radius=km
+		se.Router.GET("/api/places/nearby", func(re *core.RequestEvent) error {
+			latStr := re.Request.URL.Query().Get("lat")
+			lonStr := re.Request.URL.Query().Get("lon")
+			radiusStr := re.Request.URL.Query().Get("radius")
+
+			if latStr == "" || lonStr == "" {
+				return re.BadRequestError("lat and lon are required", nil)
+			}
+
+			lat, err := strconv.ParseFloat(latStr, 64)
+			if err != nil || lat < -90 || lat > 90 {
+				return re.BadRequestError("invalid lat", nil)
+			}
+			lon, err := strconv.ParseFloat(lonStr, 64)
+			if err != nil || lon < -180 || lon > 180 {
+				return re.BadRequestError("invalid lon", nil)
+			}
+
+			radius := 10.0 // default 10 km
+			if radiusStr != "" {
+				if r, err := strconv.ParseFloat(radiusStr, 64); err == nil && r > 0 && r <= 500 {
+					radius = r
+				}
+			}
+
+			// Use PocketBase filter with geoDistance function
+			filter := "status = 'approved' && geoDistance(location.lon, location.lat, {:lon}, {:lat}) <= {:radius}"
+			nearby, err := se.App.FindRecordsByFilter(
+				"places",
+				filter,
+				"",
+				50,
+				0,
+				dbx.Params{"lat": lat, "lon": lon, "radius": radius},
+			)
+			if err != nil {
+				return re.InternalServerError("Failed to query nearby places", err)
+			}
+
+			type placeResult struct {
+				ID          string  `json:"id"`
+				Name        string  `json:"name"`
+				Address     string  `json:"address,omitempty"`
+				City        string  `json:"city,omitempty"`
+				CountryCode string  `json:"country_code,omitempty"`
+				Lat         float64 `json:"lat"`
+				Lon         float64 `json:"lon"`
+				Status      string  `json:"status"`
+			}
+			results := make([]placeResult, 0, len(nearby))
+			for _, p := range nearby {
+				loc := p.GetGeoPoint("location")
+				results = append(results, placeResult{
+					ID:          p.Id,
+					Name:        p.GetString("name"),
+					Address:     p.GetString("address"),
+					City:        p.GetString("city"),
+					CountryCode: p.GetString("country_code"),
+					Lat:         loc.Lat,
+					Lon:         loc.Lon,
+					Status:      p.GetString("status"),
+				})
+			}
+
+			re.Response.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=30")
+			return re.JSON(200, results)
+		})
+
 		// Unified search endpoint
 		se.Router.GET("/api/search", func(re *core.RequestEvent) error {
 			q := strings.TrimSpace(re.Request.URL.Query().Get("q"))
@@ -629,6 +723,80 @@ func main() {
 			}
 
 			return re.JSON(200, map[string]string{"status": "ok"})
+		})
+
+		// Register cron jobs
+		cron.Register(se.App)
+
+		// ActivityPub delivery worker — every 5 minutes
+		se.App.Cron().Add("ap-delivery", "*/5 * * * *", func() {
+			activitypub.ProcessDeliveryQueue(se.App)
+		})
+
+		// POST /api/ap/test-delivery — send a test Note to a given inbox (superuser/admin only)
+		se.Router.POST("/api/ap/test-delivery", func(re *core.RequestEvent) error {
+			info, _ := re.RequestInfo()
+			if info == nil || info.Auth == nil {
+				return re.UnauthorizedError("Authentication required", nil)
+			}
+			if info.Auth.Collection().Name != "_superusers" {
+				role := info.Auth.GetString("role")
+				if role != "admin" {
+					return re.ForbiddenError("Superuser or admin required", nil)
+				}
+			}
+
+			var body struct {
+				TargetInbox string `json:"target_inbox"`
+			}
+			if err := re.BindBody(&body); err != nil || body.TargetInbox == "" {
+				return re.BadRequestError("Missing target_inbox", nil)
+			}
+
+			// Validate URL to prevent SSRF — must be http or https
+			parsed, parseErr := url.Parse(body.TargetInbox)
+			if parseErr != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+				return re.BadRequestError("target_inbox must be a valid http or https URL", nil)
+			}
+
+			actor, err := activitypub.GetActor(se.App, baseURL)
+			if err != nil {
+				return re.InternalServerError("Failed to get actor", err)
+			}
+
+			testActivity := activitypub.Activity{
+				Context: "https://www.w3.org/ns/activitystreams",
+				Type:    "Create",
+				ID:      baseURL + "/ap/test/" + time.Now().Format("20060102150405"),
+				Actor:   actor.ID,
+				To:      []string{"https://www.w3.org/ns/activitystreams#Public"},
+				Object: map[string]any{
+					"type":    "Note",
+					"content": "Test delivery from Gather instance",
+				},
+			}
+
+			err = activitypub.DeliverActivity(se.App, testActivity, body.TargetInbox)
+			if err != nil {
+				return re.InternalServerError("Delivery failed: "+err.Error(), err)
+			}
+			return re.JSON(200, map[string]any{"success": true})
+		})
+
+		// POST /api/ap/retry-queue — immediately process all pending queue records (superuser/admin only)
+		se.Router.POST("/api/ap/retry-queue", func(re *core.RequestEvent) error {
+			info, _ := re.RequestInfo()
+			if info == nil || info.Auth == nil {
+				return re.UnauthorizedError("Authentication required", nil)
+			}
+			if info.Auth.Collection().Name != "_superusers" {
+				role := info.Auth.GetString("role")
+				if role != "admin" {
+					return re.ForbiddenError("Superuser or admin required", nil)
+				}
+			}
+			go activitypub.ProcessDeliveryQueue(se.App)
+			return re.JSON(200, map[string]any{"status": "processing"})
 		})
 
 		// Register hooks
