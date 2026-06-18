@@ -32,8 +32,8 @@ func Register(app core.App, baseURL string) {
 		app.Logger().Info("ap-queue-cleanup: pruned exhausted records", "count", len(records))
 	})
 
-	// Announce this weekend's picks to ActivityPub on Monday and Tuesday mornings
-	app.Cron().Add("picks-ap-announcement", "0 9 * * 1,2", func() {
+	// Announce this weekend's picks to ActivityPub on Tuesday mornings
+	app.Cron().Add("picks-ap-announcement", "0 9 * * 2", func() {
 		if baseURL == "" {
 			return
 		}
