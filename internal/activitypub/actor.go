@@ -16,6 +16,7 @@ type Actor struct {
 	Summary           string     `json:"summary,omitempty"`
 	Inbox             string     `json:"inbox"`
 	Outbox            string     `json:"outbox"`
+	Followers         string     `json:"followers"`
 	Icon              *APImage   `json:"icon,omitempty"`
 	PublicKey         *PublicKey `json:"publicKey,omitempty"`
 }
@@ -76,6 +77,7 @@ func GetActor(app core.App, baseURL string) (*Actor, error) {
 		Summary:           summary,
 		Inbox:             baseURL + "/ap/inbox",
 		Outbox:            baseURL + "/ap/outbox",
+		Followers:         baseURL + "/ap/actor/followers",
 		Icon: &APImage{
 			Type:      "Image",
 			MediaType: iconMediaType,

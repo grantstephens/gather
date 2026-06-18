@@ -25,6 +25,7 @@ type Activity struct {
 	ID      string   `json:"id"`
 	Actor   string   `json:"actor"`
 	To      []string `json:"to,omitempty"`
+	Cc      []string `json:"cc,omitempty"`
 	Object  any      `json:"object"`
 }
 
@@ -153,6 +154,8 @@ func CreateActivityForEvent(event *core.Record, baseURL string, activityType str
 		Type:    activityType,
 		ID:      fmt.Sprintf("%s/ap/activities/%s/%d", baseURL, event.Id, time.Now().Unix()),
 		Actor:   baseURL + "/ap/actor",
+		To:      []string{"https://www.w3.org/ns/activitystreams#Public"},
+		Cc:      []string{baseURL + "/ap/actor/followers"},
 		Object:  note,
 	}
 }
