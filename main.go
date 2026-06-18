@@ -351,60 +351,6 @@ func main() {
 			return err
 		})
 
-		// Tag event counts — single SQL query using json_each to unnest relation arrays
-		se.Router.GET("/api/tags/counts", func(re *core.RequestEvent) error {
-			today := time.Now().UTC().Format("2006-01-02")
-			type row struct {
-				ID    string `db:"id"    json:"id"`
-				Count int    `db:"count" json:"count"`
-			}
-			var rows []row
-			err := se.App.DB().NewQuery(`
-				SELECT t.id, COALESCE(cnt.count, 0) AS count
-				FROM tags t
-				LEFT JOIN (
-					SELECT je.value AS tag_id, COUNT(*) AS count
-					FROM events e, json_each(e.tags) je
-					WHERE e.status = 'published'
-					  AND e.start_datetime >= {:today}
-					  AND json_valid(e.tags)
-					GROUP BY je.value
-				) cnt ON cnt.tag_id = t.id
-				WHERE t.status = 'approved'
-			`).Bind(dbx.Params{"today": today}).All(&rows)
-			if err != nil {
-				return re.InternalServerError("Failed to query tag counts", err)
-			}
-			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
-			return re.JSON(200, rows)
-		})
-
-		// Town event counts — distinct cities from places linked to upcoming published events
-		se.Router.GET("/api/towns/counts", func(re *core.RequestEvent) error {
-			today := time.Now().UTC().Format("2006-01-02")
-			type row struct {
-				Name  string `db:"name"  json:"name"`
-				Count int    `db:"count" json:"count"`
-			}
-			var rows []row
-			err := se.App.DB().NewQuery(`
-				SELECT p.city AS name, COUNT(*) AS count
-				FROM events e
-				JOIN places p ON p.id = e.place
-				WHERE e.status = 'published'
-				  AND e.start_datetime >= {:today}
-				  AND p.status = 'approved'
-				  AND p.city != ''
-				GROUP BY p.city
-				ORDER BY count DESC
-			`).Bind(dbx.Params{"today": today}).All(&rows)
-			if err != nil {
-				return re.InternalServerError("Failed to query town counts", err)
-			}
-			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
-			return re.JSON(200, rows)
-		})
-
 		// Nearby places — GET /api/places/nearby?lat=X&lon=Y&radius=km
 		se.Router.GET("/api/places/nearby", func(re *core.RequestEvent) error {
 			latStr := re.Request.URL.Query().Get("lat")
