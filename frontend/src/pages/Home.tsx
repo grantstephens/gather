@@ -25,7 +25,7 @@ export function Home(_props: Props) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
   const [mobilePanel, setMobilePanel] = useState<'calendar' | 'tags' | 'towns' | null>(null)
-  const [towns, setTowns] = useState<{ name: string; count: number }[]>([])
+  const [towns, setTowns] = useState<{ city: string; event_count: number }[]>([])
   const [selectedTown, setSelectedTown] = useState<string | null>(null)
   const pageRef = useRef(1)
   const loadingMoreRef = useRef(false)
@@ -83,19 +83,17 @@ export function Home(_props: Props) {
 
   // Fetch sidebar metadata in parallel: tags, tag counts, town counts
   useEffect(() => {
-    const controller = new AbortController()
     Promise.all([
       pb.collection('tags').getFullList<Tag>(),
-      fetch('/api/tags/counts', { signal: controller.signal }).then(r => r.json()) as Promise<{ id: string; count: number }[]>,
-      fetch('/api/towns/counts', { signal: controller.signal }).then(r => r.json()) as Promise<{ name: string; count: number }[]>,
+      pb.collection('tag_counts').getFullList<{ tag_id: string; event_count: number }>(),
+      pb.collection('town_counts').getFullList<{ city: string; event_count: number }>(),
     ]).then(([tagList, tagCountRows, townRows]) => {
       setTags(tagList)
       const counts: Record<string, number> = {}
-      tagCountRows.forEach(r => { counts[r.id] = r.count })
+      tagCountRows.forEach(r => { counts[r.tag_id] = r.event_count })
       setTagCounts(counts)
       setTowns(townRows)
     }).catch(() => {})
-    return () => controller.abort()
   }, [])
 
   useEffect(() => {
@@ -245,11 +243,11 @@ export function Home(_props: Props) {
           <div class="town-cloud">
             {towns.map(town => (
               <button
-                key={town.name}
-                class={`town ${selectedTown === town.name ? 'active' : ''}`}
-                onClick={() => handleTownSelect(town.name)}
+                key={town.city}
+                class={`town ${selectedTown === town.city ? 'active' : ''}`}
+                onClick={() => handleTownSelect(town.city)}
               >
-                {town.name} ({town.count})
+                {town.city} ({town.event_count})
               </button>
             ))}
           </div>
@@ -418,11 +416,11 @@ export function Home(_props: Props) {
         <div class="town-cloud">
           {towns.map(town => (
             <button
-              key={town.name}
-              class={`town ${selectedTown === town.name ? 'active' : ''}`}
-              onClick={() => { handleTownSelect(town.name); setMobilePanel(null) }}
+              key={town.city}
+              class={`town ${selectedTown === town.city ? 'active' : ''}`}
+              onClick={() => { handleTownSelect(town.city); setMobilePanel(null) }}
             >
-              {town.name} ({town.count})
+              {town.city} ({town.event_count})
             </button>
           ))}
         </div>
