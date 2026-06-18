@@ -34,7 +34,10 @@ import (
 const defaultFavicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#6366f1"/><rect x="6" y="4" width="20" height="24" rx="3" fill="#fff"/><rect x="10" y="3" width="2" height="4" rx="1" fill="#6366f1"/><rect x="20" y="3" width="2" height="4" rx="1" fill="#6366f1"/><line x1="6" y1="12" x2="26" y2="12" stroke="#e0e0e0" stroke-width="1"/><circle cx="12" cy="17" r="1.5" fill="#6366f1"/><circle cx="16" cy="17" r="1.5" fill="#6366f1"/><circle cx="20" cy="17" r="1.5" fill="#6366f1"/><circle cx="12" cy="22" r="1.5" fill="#6366f1"/><circle cx="16" cy="22" r="1.5" fill="#6366f1"/></svg>`
 
 func main() {
-	app := pocketbase.New()
+	app := pocketbase.NewWithConfig(pocketbase.Config{
+		// LOG_STDOUT=1 enables dev-mode pretty printing of all logs to stdout
+		DefaultDev: os.Getenv("LOG_STDOUT") != "",
+	})
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		// Enable daily backups by default if not already configured
