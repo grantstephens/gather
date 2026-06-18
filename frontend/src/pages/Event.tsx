@@ -103,8 +103,8 @@ export function Event({ id }: Props) {
         popupAnchor: [1, -34],
       })
 
-      const lat = place.location?.lat ?? 0
-      const lon = place.location?.lon ?? 0
+      const lat = place.location.lat
+      const lon = place.location.lon
       const map = L.default.map(mapRef.current).setView([lat, lon], 15)
       L.default.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
