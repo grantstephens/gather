@@ -48,3 +48,43 @@
 .toggle-mode button:hover {
   color: var(--color-accent-hover);
 }
+
+.oauth-section {
+  margin-top: var(--space-6);
+}
+
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.oauth-divider::before,
+.oauth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.oauth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.btn-oauth {
+  width: 100%;
+  justify-content: center;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.btn-oauth:hover:not(:disabled) {
+  background: var(--color-surface-hover, var(--color-surface));
+  border-color: var(--color-accent);
+}
