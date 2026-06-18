@@ -1,8 +1,6 @@
 package hooks
 
 import (
-	"log"
-
 	"gather/internal/activitypub"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -10,7 +8,6 @@ import (
 
 func RegisterEventHooks(app core.App, baseURL string) {
 	app.OnRecordAfterCreateSuccess("events").BindFunc(func(e *core.RecordEvent) error {
-		// Send moderator alert for pending events
 		sendModeratorAlert(app, *e.Record, baseURL)
 		return e.Next()
 	})
@@ -19,12 +16,10 @@ func RegisterEventHooks(app core.App, baseURL string) {
 		oldStatus := e.Record.Original().GetString("status")
 		newStatus := e.Record.GetString("status")
 
-		// Send approval notification
 		if oldStatus == "pending" && newStatus == "published" {
 			sendApprovalNotification(app, *e.Record, baseURL)
 		}
 
-		// Send rejection notification
 		if oldStatus == "pending" && newStatus == "cancelled" {
 			sendRejectionNotification(app, *e.Record, baseURL)
 		}
@@ -33,14 +28,14 @@ func RegisterEventHooks(app core.App, baseURL string) {
 			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Create")
 			go func() {
 				if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
-					log.Println("ap: failed to queue Create activity for event", e.Record.Id, ":", err)
+					app.Logger().Error("ap: failed to queue Create activity", "event_id", e.Record.Id, "error", err)
 				}
 			}()
 		} else if oldStatus == "published" && newStatus == "published" {
 			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Update")
 			go func() {
 				if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
-					log.Println("ap: failed to queue Update activity for event", e.Record.Id, ":", err)
+					app.Logger().Error("ap: failed to queue Update activity", "event_id", e.Record.Id, "error", err)
 				}
 			}()
 		}
@@ -53,7 +48,7 @@ func RegisterEventHooks(app core.App, baseURL string) {
 			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Delete")
 			go func() {
 				if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
-					log.Println("ap: failed to queue Delete activity for event", e.Record.Id, ":", err)
+					app.Logger().Error("ap: failed to queue Delete activity", "event_id", e.Record.Id, "error", err)
 				}
 			}()
 		}

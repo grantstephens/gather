@@ -2,7 +2,6 @@ package activitypub
 
 import (
 	"encoding/json"
-	"log"
 	"math"
 	"time"
 
@@ -22,7 +21,7 @@ func ProcessDeliveryQueue(app core.App) {
 		dbx.Params{"max": maxAttempts, "now": nowStr},
 	)
 	if err != nil {
-		log.Println("ap-delivery: queue query error:", err)
+		app.Logger().Error("ap-delivery: queue query error", "error", err)
 		return
 	}
 
@@ -30,7 +29,7 @@ func ProcessDeliveryQueue(app core.App) {
 		inboxURL := r.GetString("inbox_url")
 		var activity Activity
 		if err := json.Unmarshal([]byte(r.GetString("activity")), &activity); err != nil {
-			log.Println("ap-delivery: unmarshal error for", inboxURL, ":", err)
+			app.Logger().Error("ap-delivery: unmarshal error", "inbox", inboxURL, "error", err)
 			r.Set("attempts", maxAttempts) // exhaust retries so cleanup cron prunes it
 			r.Set("last_error", "unmarshal error: "+err.Error())
 			app.Save(r)
@@ -41,7 +40,7 @@ func ProcessDeliveryQueue(app core.App) {
 		if err == nil {
 			app.Logger().Info("ap-delivery: delivered", "inbox", inboxURL)
 			if delErr := app.Delete(r); delErr != nil {
-				log.Println("ap-delivery: delete error:", delErr)
+				app.Logger().Error("ap-delivery: delete error", "inbox", inboxURL, "error", delErr)
 			}
 		} else {
 			attempts := r.GetInt("attempts") + 1
@@ -50,7 +49,7 @@ func ProcessDeliveryQueue(app core.App) {
 			r.Set("last_error", err.Error())
 			r.Set("next_retry", time.Now().Add(backoff).UTC().Format("2006-01-02 15:04:05"))
 			if saveErr := app.Save(r); saveErr != nil {
-				log.Println("ap-delivery: save error:", saveErr)
+				app.Logger().Error("ap-delivery: save error", "inbox", inboxURL, "error", saveErr)
 			}
 			app.Logger().Error("ap-delivery: failed", "inbox", inboxURL, "attempts", attempts, "error", err.Error())
 		}

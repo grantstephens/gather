@@ -1,7 +1,6 @@
 package cron
 
 import (
-	"log"
 	"time"
 
 	dbx "github.com/pocketbase/dbx"
@@ -21,12 +20,12 @@ func Register(app core.App, baseURL string) {
 			dbx.Params{"cutoff": cutoff.UTC().Format("2006-01-02 15:04:05")},
 		)
 		if err != nil {
-			log.Println("ap-queue-cleanup: query error:", err)
+			app.Logger().Error("ap-queue-cleanup: query error", "error", err)
 			return
 		}
 		for _, r := range records {
 			if err := app.Delete(r); err != nil {
-				log.Println("ap-queue-cleanup: delete error:", err)
+				app.Logger().Error("ap-queue-cleanup: delete error", "id", r.Id, "error", err)
 			}
 		}
 		app.Logger().Info("ap-queue-cleanup: pruned exhausted records", "count", len(records))
@@ -58,19 +57,19 @@ func Register(app core.App, baseURL string) {
 			dbx.Params{"sat": satStr, "sun": sunStr},
 		)
 		if err != nil {
-			log.Println("picks-ap-announcement: query error:", err)
+			app.Logger().Error("picks-ap-announcement: query error", "error", err)
 			return
 		}
 
 		for _, p := range picks {
 			activity := activitypub.CreateActivityForPicks(p, baseURL)
 			if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
-				log.Println("picks-ap-announcement: queue error:", err)
+				app.Logger().Error("picks-ap-announcement: queue error", "picks_id", p.Id, "error", err)
 				continue
 			}
 			p.Set("ap_announced", true)
 			if err := app.Save(p); err != nil {
-				log.Println("picks-ap-announcement: save error:", err)
+				app.Logger().Error("picks-ap-announcement: save error", "picks_id", p.Id, "error", err)
 			}
 		}
 		if len(picks) > 0 {
@@ -80,7 +79,6 @@ func Register(app core.App, baseURL string) {
 
 	// Cancel events stuck in pending for more than 90 days (if require_moderation is enabled)
 	app.Cron().Add("stale-pending-cleanup", "0 4 * * *", func() {
-		// Check if moderation is enabled
 		settings, err := app.FindFirstRecordByFilter("settings", "id != ''")
 		if err != nil || !settings.GetBool("require_moderation") {
 			return
@@ -93,13 +91,13 @@ func Register(app core.App, baseURL string) {
 			dbx.Params{"cutoff": cutoff.UTC().Format("2006-01-02 15:04:05")},
 		)
 		if err != nil {
-			log.Println("stale-pending-cleanup: query error:", err)
+			app.Logger().Error("stale-pending-cleanup: query error", "error", err)
 			return
 		}
 		for _, r := range records {
 			r.Set("status", "cancelled")
 			if err := app.Save(r); err != nil {
-				log.Println("stale-pending-cleanup: save error:", err)
+				app.Logger().Error("stale-pending-cleanup: save error", "event_id", r.Id, "error", err)
 			}
 		}
 		if len(records) > 0 {
