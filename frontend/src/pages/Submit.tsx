@@ -101,7 +101,7 @@ export function Submit(_props: Props) {
 
       // If logged in, set author
       if (isLoggedIn) {
-        formData.append('author', pb.authStore.model?.id)
+        formData.append('author', pb.authStore.model?.id ?? '')
       }
 
       const created = await pb.collection('events').create(formData)
