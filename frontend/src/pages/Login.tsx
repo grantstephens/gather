@@ -88,7 +88,7 @@ export function Login(_props: Props) {
           </div>
         )}
 
-        <button type="submit" class="btn btn-primary" disabled={loading}>
+        <button type="submit" class="btn btn-primary" disabled={loading} data-umami-event={isRegister ? 'register-submit' : 'login-submit'}>
           {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Login'}
         </button>
       </form>

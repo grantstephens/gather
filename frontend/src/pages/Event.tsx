@@ -228,12 +228,13 @@ export function Event({ id }: Props) {
 
           {isModerator && (
             <div class="admin-actions">
-              <a href={`/edit/${parseVirtualId(event.id)?.baseId || event.id}`} class="btn btn-secondary">
+              <a href={`/edit/${parseVirtualId(event.id)?.baseId || event.id}`} class="btn btn-secondary" data-umami-event="event-edit-click">
                 Edit
               </a>
               {parseVirtualId(event.id) && (
                 <button
                   class="btn btn-danger"
+                  data-umami-event="event-cancel-occurrence"
                   onClick={async () => {
                     const parsed = parseVirtualId(event.id)
                     if (!parsed || !confirm('Cancel this occurrence?')) return
@@ -258,6 +259,7 @@ export function Event({ id }: Props) {
                   class="btn btn-primary"
                   onClick={() => handleStatusChange('published')}
                   disabled={actionLoading}
+                  data-umami-event="event-approve"
                 >
                   Approve
                 </button>
@@ -267,6 +269,7 @@ export function Event({ id }: Props) {
                   class="btn btn-secondary"
                   onClick={() => handleStatusChange('cancelled')}
                   disabled={actionLoading}
+                  data-umami-event="event-cancel"
                 >
                   Cancel Event
                 </button>
@@ -276,6 +279,7 @@ export function Event({ id }: Props) {
                   class="btn btn-primary"
                   onClick={() => handleStatusChange('published')}
                   disabled={actionLoading}
+                  data-umami-event="event-republish"
                 >
                   Republish
                 </button>
@@ -284,6 +288,7 @@ export function Event({ id }: Props) {
                 class="btn btn-danger"
                 onClick={handleDelete}
                 disabled={actionLoading}
+                data-umami-event="event-delete"
               >
                 Delete
               </button>
