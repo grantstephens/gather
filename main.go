@@ -36,6 +36,15 @@ func main() {
 	app := pocketbase.New()
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		// Enable daily backups by default if not already configured
+		if se.App.Settings().Backups.Cron == "" {
+			se.App.Settings().Backups.Cron = "0 3 * * *" // 3 AM daily
+			se.App.Settings().Backups.CronMaxKeep = 7     // keep 7 backups
+			if err := se.App.Save(se.App.Settings()); err != nil {
+				log.Println("Warning: failed to configure default backup schedule:", err)
+			}
+		}
+
 		// Configure rate limits (skip for superusers — PocketBase handles that automatically)
 		appSettings := se.App.Settings()
 		appSettings.RateLimits.Enabled = true
