@@ -89,20 +89,35 @@ func eventToNote(event *core.Record, baseURL string) Note {
 		recurrenceInfo = fmt.Sprintf("<p><em>%s</em></p>", html.EscapeString(recurrence.HumanLabel(rule)))
 	}
 
+	dateStr := ""
+	if !startTime.IsZero() {
+		dateStr = startTime.Format("Monday, January 2, 2006 at 3:04 PM")
+	}
+
 	content := fmt.Sprintf(
 		"<p><strong>%s</strong></p><p>%s</p>%s<p>%s</p>",
 		title,
-		startTime.Format("Monday, January 2, 2006 at 3:04 PM"),
+		dateStr,
 		recurrenceInfo,
 		desc,
 	)
+
+	// Use start_datetime as the published date (matching RSS convention), falling
+	// back to created time, then now — to ensure Published is never zero.
+	published := startTime
+	if published.IsZero() {
+		published = event.GetDateTime("created").Time()
+	}
+	if published.IsZero() {
+		published = time.Now()
+	}
 
 	note := Note{
 		Type:         "Note",
 		ID:           fmt.Sprintf("%s/ap/events/%s", baseURL, event.Id),
 		AttributedTo: baseURL + "/ap/actor",
 		Content:      content,
-		Published:    event.GetDateTime("created").Time(),
+		Published:    published,
 		URL:          fmt.Sprintf("%s/event/%s", baseURL, event.Id),
 		To:           []string{"https://www.w3.org/ns/activitystreams#Public"},
 		Cc:           []string{baseURL + "/ap/actor/followers"},
