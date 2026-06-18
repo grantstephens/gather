@@ -396,6 +396,75 @@ func main() {
 			return re.JSON(200, rows)
 		})
 
+		// Nearby places — GET /api/places/nearby?lat=X&lon=Y&radius=km
+		se.Router.GET("/api/places/nearby", func(re *core.RequestEvent) error {
+			latStr := re.Request.URL.Query().Get("lat")
+			lonStr := re.Request.URL.Query().Get("lon")
+			radiusStr := re.Request.URL.Query().Get("radius")
+
+			if latStr == "" || lonStr == "" {
+				return re.BadRequestError("lat and lon are required", nil)
+			}
+
+			lat, err := strconv.ParseFloat(latStr, 64)
+			if err != nil || lat < -90 || lat > 90 {
+				return re.BadRequestError("invalid lat", nil)
+			}
+			lon, err := strconv.ParseFloat(lonStr, 64)
+			if err != nil || lon < -180 || lon > 180 {
+				return re.BadRequestError("invalid lon", nil)
+			}
+
+			radius := 10.0 // default 10 km
+			if radiusStr != "" {
+				if r, err := strconv.ParseFloat(radiusStr, 64); err == nil && r > 0 && r <= 500 {
+					radius = r
+				}
+			}
+
+			// Use PocketBase filter with geoDistance function
+			filter := "status = 'approved' && geoDistance(location.lon, location.lat, {:lon}, {:lat}) <= {:radius}"
+			nearby, err := se.App.FindRecordsByFilter(
+				"places",
+				filter,
+				"",
+				50,
+				0,
+				dbx.Params{"lat": lat, "lon": lon, "radius": radius},
+			)
+			if err != nil {
+				return re.InternalServerError("Failed to query nearby places", err)
+			}
+
+			type placeResult struct {
+				ID          string  `json:"id"`
+				Name        string  `json:"name"`
+				Address     string  `json:"address,omitempty"`
+				City        string  `json:"city,omitempty"`
+				CountryCode string  `json:"country_code,omitempty"`
+				Lat         float64 `json:"lat"`
+				Lon         float64 `json:"lon"`
+				Status      string  `json:"status"`
+			}
+			results := make([]placeResult, 0, len(nearby))
+			for _, p := range nearby {
+				loc := p.GetGeoPoint("location")
+				results = append(results, placeResult{
+					ID:          p.Id,
+					Name:        p.GetString("name"),
+					Address:     p.GetString("address"),
+					City:        p.GetString("city"),
+					CountryCode: p.GetString("country_code"),
+					Lat:         loc.Lat,
+					Lon:         loc.Lon,
+					Status:      p.GetString("status"),
+				})
+			}
+
+			re.Response.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=30")
+			return re.JSON(200, results)
+		})
+
 		// Unified search endpoint
 		se.Router.GET("/api/search", func(re *core.RequestEvent) error {
 			q := strings.TrimSpace(re.Request.URL.Query().Get("q"))
