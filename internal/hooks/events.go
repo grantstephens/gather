@@ -1,6 +1,8 @@
 package hooks
 
 import (
+	"log"
+
 	"gather/internal/activitypub"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -29,10 +31,18 @@ func RegisterEventHooks(app core.App, baseURL string) {
 
 		if oldStatus != "published" && newStatus == "published" {
 			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Create")
-			go activitypub.QueueDeliveryToFollowers(app, activity)
+			go func() {
+				if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
+					log.Println("ap: failed to queue Create activity for event", e.Record.Id, ":", err)
+				}
+			}()
 		} else if oldStatus == "published" && newStatus == "published" {
 			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Update")
-			go activitypub.QueueDeliveryToFollowers(app, activity)
+			go func() {
+				if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
+					log.Println("ap: failed to queue Update activity for event", e.Record.Id, ":", err)
+				}
+			}()
 		}
 
 		return e.Next()
@@ -41,7 +51,11 @@ func RegisterEventHooks(app core.App, baseURL string) {
 	app.OnRecordAfterDeleteSuccess("events").BindFunc(func(e *core.RecordEvent) error {
 		if e.Record.GetString("status") == "published" {
 			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Delete")
-			go activitypub.QueueDeliveryToFollowers(app, activity)
+			go func() {
+				if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
+					log.Println("ap: failed to queue Delete activity for event", e.Record.Id, ":", err)
+				}
+			}()
 		}
 		return e.Next()
 	})

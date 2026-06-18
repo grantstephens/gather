@@ -39,6 +39,8 @@ func CreateActivityForPicks(picks *core.Record, baseURL string) Activity {
 		Type:    "Create",
 		ID:      fmt.Sprintf("%s/ap/activities/picks/%s/%d", baseURL, picks.Id, time.Now().Unix()),
 		Actor:   baseURL + "/ap/actor",
+		To:      []string{"https://www.w3.org/ns/activitystreams#Public"},
+		Cc:      []string{baseURL + "/ap/actor/followers"},
 		Object:  note,
 	}
 }

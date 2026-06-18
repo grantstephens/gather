@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"html"
 	"io"
 	"io/fs"
@@ -296,6 +297,29 @@ func main() {
 			}
 			re.Response.Header().Set("Content-Type", "application/activity+json")
 			re.Response.Header().Set("Cache-Control", "public, max-age=300")
+			return re.Blob(200, "application/activity+json", data)
+		})
+
+		// ActivityPub followers collection
+		se.Router.GET("/ap/actor/followers", func(re *core.RequestEvent) error {
+			followers, err := se.App.FindRecordsByFilter("ap_followers", "", "", 0, 0)
+			if err != nil {
+				return re.InternalServerError("Failed to get followers", err)
+			}
+			data, _ := json.Marshal(map[string]any{
+				"@context":   "https://www.w3.org/ns/activitystreams",
+				"type":       "OrderedCollection",
+				"id":         baseURL + "/ap/actor/followers",
+				"totalItems": len(followers),
+				"orderedItems": func() []string {
+					ids := make([]string, 0, len(followers))
+					for _, f := range followers {
+						ids = append(ids, f.GetString("actor_url"))
+					}
+					return ids
+				}(),
+			})
+			re.Response.Header().Set("Content-Type", "application/activity+json")
 			return re.Blob(200, "application/activity+json", data)
 		})
 
