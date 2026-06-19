@@ -118,12 +118,12 @@ func main() {
 			// Short cache for public read-only API list/view endpoints (GET only, no auth)
 			if strings.HasPrefix(path, "/api/collections/") && e.Request.Method == "GET" &&
 				e.Request.Header.Get("Authorization") == "" {
-				h.Set("Cache-Control", "public, max-age=60, stale-while-revalidate=30")
+				h.Set("Cache-Control", "public, max-age=60, stale-while-revalidate=30, stale-if-error=3600")
 			}
 
 			// Cache uploaded file downloads (images etc.) — content-addressed by filename
 			if strings.HasPrefix(path, "/api/files/") && e.Request.Method == "GET" {
-				h.Set("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400")
+				h.Set("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400, stale-if-error=2592000")
 			}
 
 			return e.Next()
@@ -173,7 +173,7 @@ func main() {
 		}
 		serveSPA := func(re *core.RequestEvent) error {
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-			re.Response.Header().Set("Cache-Control", "no-cache")
+			re.Response.Header().Set("Cache-Control", "no-cache, stale-if-error=86400")
 			_, err := re.Response.Write(spaHTML)
 			return err
 		}
@@ -185,7 +185,7 @@ func main() {
 				return re.InternalServerError("Failed to generate feed", err)
 			}
 			re.Response.Header().Set("Content-Type", "application/rss+xml")
-			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
+			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60, stale-if-error=3600")
 			return re.Blob(200, "application/rss+xml", data)
 		})
 
@@ -203,7 +203,7 @@ func main() {
 				return re.InternalServerError("Failed to generate feed", err)
 			}
 			re.Response.Header().Set("Content-Type", "application/rss+xml")
-			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
+			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60, stale-if-error=3600")
 			return re.Blob(200, "application/rss+xml", data)
 		})
 
@@ -214,7 +214,7 @@ func main() {
 				return re.InternalServerError("Failed to generate feed", err)
 			}
 			re.Response.Header().Set("Content-Type", "text/calendar")
-			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
+			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60, stale-if-error=3600")
 			return re.Blob(200, "text/calendar", data)
 		})
 
@@ -230,7 +230,7 @@ func main() {
 				return re.InternalServerError("Failed to generate feed", err)
 			}
 			re.Response.Header().Set("Content-Type", "text/calendar")
-			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
+			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60, stale-if-error=3600")
 			return re.Blob(200, "text/calendar", data)
 		})
 
@@ -241,7 +241,7 @@ func main() {
 				return re.NotFoundError("Event not found", err)
 			}
 			re.Response.Header().Set("Content-Type", "text/calendar")
-			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
+			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60, stale-if-error=3600")
 			return re.Blob(200, "text/calendar", data)
 		})
 
@@ -251,14 +251,14 @@ func main() {
 			if err != nil {
 				return re.InternalServerError("Failed to generate sitemap", err)
 			}
-			re.Response.Header().Set("Cache-Control", "public, max-age=3600")
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300, stale-if-error=86400")
 			return re.Blob(200, "application/xml", data)
 		})
 
 		// Robots.txt
 		se.Router.GET("/robots.txt", func(re *core.RequestEvent) error {
 			content := seo.BuildRobotsTxt(baseURL)
-			re.Response.Header().Set("Cache-Control", "public, max-age=86400")
+			re.Response.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=604800")
 			return re.String(200, content)
 		})
 
@@ -273,7 +273,7 @@ func main() {
 				return re.InternalServerError("Failed to serialize actor", err)
 			}
 			re.Response.Header().Set("Content-Type", "application/activity+json")
-			re.Response.Header().Set("Cache-Control", "public, max-age=3600")
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-if-error=86400")
 			return re.Blob(200, "application/activity+json", data)
 		})
 
@@ -288,7 +288,7 @@ func main() {
 				return re.NotFoundError("Resource not found", err)
 			}
 			re.Response.Header().Set("Content-Type", "application/jrd+json")
-			re.Response.Header().Set("Cache-Control", "public, max-age=3600")
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-if-error=86400")
 			return re.Blob(200, "application/jrd+json", data)
 		})
 
@@ -299,7 +299,7 @@ func main() {
 				return re.InternalServerError("Failed to get outbox", err)
 			}
 			re.Response.Header().Set("Content-Type", "application/activity+json")
-			re.Response.Header().Set("Cache-Control", "public, max-age=300")
+			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-if-error=3600")
 			return re.Blob(200, "application/activity+json", data)
 		})
 
@@ -361,7 +361,7 @@ func main() {
 							}
 
 							re.Response.Header().Set("Content-Type", contentType)
-							re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300")
+							re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300, stale-if-error=86400")
 							re.Response.WriteHeader(http.StatusOK)
 							_, err = io.Copy(re.Response, reader)
 							return err
@@ -372,7 +372,7 @@ func main() {
 
 			// Default SVG favicon
 			re.Response.Header().Set("Content-Type", "image/svg+xml")
-			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300")
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300, stale-if-error=86400")
 			re.Response.WriteHeader(http.StatusOK)
 			_, err = re.Response.Write([]byte(defaultFavicon))
 			return err
@@ -443,7 +443,7 @@ func main() {
 				})
 			}
 
-			re.Response.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=30")
+			re.Response.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=30, stale-if-error=3600")
 			return re.JSON(200, results)
 		})
 
@@ -602,7 +602,7 @@ func main() {
 				return re.InternalServerError("Failed to list events", err)
 			}
 
-			re.Response.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=30")
+			re.Response.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=30, stale-if-error=3600")
 			return re.JSON(200, map[string]any{
 				"items":      events,
 				"totalItems": total,
@@ -821,7 +821,7 @@ func main() {
 			}
 
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300")
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300, stale-if-error=86400")
 			return re.Blob(200, "text/html", html)
 		})
 
