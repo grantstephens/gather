@@ -59,7 +59,7 @@ export function Picks(_props: Props) {
         records.sort((a, b) => {
           const aMin = Math.min(...(a.expand?.events ?? []).map(e => new Date(e.start_datetime).getTime()))
           const bMin = Math.min(...(b.expand?.events ?? []).map(e => new Date(e.start_datetime).getTime()))
-          return bMin - aMin
+          return aMin - bMin
         })
         setPosts(records)
       } catch {
