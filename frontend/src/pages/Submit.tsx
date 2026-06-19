@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useState, useEffect, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import { pb, Place, Tag, eventPath, Event as EventType } from '../lib/pocketbase'
 import { PlaceSearch } from '../components/PlaceSearch'
@@ -6,6 +6,8 @@ import { TagPicker } from '../components/TagPicker'
 import { MarkdownEditor } from '../components/MarkdownEditor'
 import { RecurrencePicker } from '../components/RecurrencePicker'
 import './Submit.css'
+
+declare const umami: { track: (event: string, data?: Record<string, unknown>) => void } | undefined
 
 interface Props {
   path?: string
@@ -28,6 +30,18 @@ export function Submit(_props: Props) {
   const [error, setError] = useState<string | null>(null)
 
   const isLoggedIn = pb.authStore.isValid
+  const hasStartedForm = useRef(false)
+
+  useEffect(() => {
+    typeof umami !== 'undefined' && umami.track('submit-page-view', { logged_in: isLoggedIn })
+  }, [])
+
+  const handleTitleFocus = () => {
+    if (!hasStartedForm.current) {
+      hasStartedForm.current = true
+      typeof umami !== 'undefined' && umami.track('submit-form-started', { logged_in: isLoggedIn })
+    }
+  }
 
   const handleImageChange = (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0]
@@ -36,6 +50,7 @@ export function Submit(_props: Props) {
       const reader = new FileReader()
       reader.onload = () => setImagePreview(reader.result as string)
       reader.readAsDataURL(file)
+      typeof umami !== 'undefined' && umami.track('submit-image-added')
     }
   }
 
@@ -48,21 +63,29 @@ export function Submit(_props: Props) {
     e.preventDefault()
     setError(null)
 
+    const trackValidationError = (reason: string) => {
+      typeof umami !== 'undefined' && umami.track('submit-validation-error', { reason, logged_in: isLoggedIn })
+    }
+
     // Validation
     if (!title.trim()) {
       setError('Title is required')
+      trackValidationError('no_title')
       return
     }
     if (!startDate || !startTime) {
       setError('Start date and time are required')
+      trackValidationError('no_start_datetime')
       return
     }
     if (!isLoggedIn && !email.trim()) {
       setError('Email is required for anonymous submissions')
+      trackValidationError('no_email_anon')
       return
     }
     if (!place) {
       setError('Location is required')
+      trackValidationError('no_location')
       return
     }
 
@@ -109,6 +132,7 @@ export function Submit(_props: Props) {
     } catch (err) {
       console.error('Failed to create event:', err)
       setError(err instanceof Error ? err.message : 'Failed to create event')
+      typeof umami !== 'undefined' && umami.track('submit-server-error', { logged_in: isLoggedIn })
     } finally {
       setSubmitting(false)
     }
@@ -121,7 +145,7 @@ export function Submit(_props: Props) {
       {!isLoggedIn && (
         <div class="submit-notice">
           You are submitting anonymously. Your event will be reviewed before being published.{' '}
-          <a href="/login">Log in</a> to publish immediately.
+          <a href="/login" data-umami-event="submit-login-cta">Log in</a> to publish immediately.
         </div>
       )}
 
@@ -135,6 +159,7 @@ export function Submit(_props: Props) {
             id="title"
             value={title}
             onInput={(e) => setTitle((e.target as HTMLInputElement).value)}
+            onFocus={handleTitleFocus}
             placeholder="What's happening?"
             required
           />
