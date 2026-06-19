@@ -25,23 +25,37 @@ func HandleInbox(app core.App, baseURL string, body io.Reader) error {
 
 	var activity IncomingActivity
 	if err := json.Unmarshal(data, &activity); err != nil {
+		app.Logger().Error("ap-inbox: failed to parse activity", "error", err, "body", string(data[:min(len(data), 512)]))
 		return err
 	}
 
+	app.Logger().Info("ap-inbox: received activity", "type", activity.Type, "actor", activity.Actor, "id", activity.ID)
+
 	switch activity.Type {
 	case "Follow":
-		return handleFollow(app, baseURL, activity)
+		// Process asynchronously — accept immediately, handle errors in background
+		go func() {
+			if err := handleFollow(app, baseURL, activity); err != nil {
+				app.Logger().Error("ap-inbox: failed to handle Follow", "actor", activity.Actor, "error", err)
+			}
+		}()
 	case "Undo":
-		return handleUndo(app, activity)
+		go func() {
+			if err := handleUndo(app, activity); err != nil {
+				app.Logger().Error("ap-inbox: failed to handle Undo", "actor", activity.Actor, "error", err)
+			}
+		}()
 	default:
-		return nil
+		app.Logger().Info("ap-inbox: ignoring activity type", "type", activity.Type, "actor", activity.Actor)
 	}
+
+	return nil
 }
 
 func handleFollow(app core.App, baseURL string, activity IncomingActivity) error {
 	actorInfo, err := fetchActor(activity.Actor)
 	if err != nil {
-		return err
+		return fmt.Errorf("fetchActor %s: %w", activity.Actor, err)
 	}
 
 	collection, err := app.FindCollectionByNameOrId("ap_followers")
@@ -51,40 +65,40 @@ func handleFollow(app core.App, baseURL string, activity IncomingActivity) error
 
 	existing, _ := app.FindFirstRecordByFilter("ap_followers", "actor_url = {:url}", map[string]any{"url": activity.Actor})
 	if existing != nil {
-		return nil
-	}
+		app.Logger().Info("ap-inbox: already following, re-sending Accept", "actor", activity.Actor)
+	} else {
+		record := core.NewRecord(collection)
+		record.Set("actor_url", activity.Actor)
+		record.Set("inbox_url", actorInfo.Inbox)
+		record.Set("shared_inbox_url", actorInfo.SharedInbox)
 
-	record := core.NewRecord(collection)
-	record.Set("actor_url", activity.Actor)
-	record.Set("inbox_url", actorInfo.Inbox)
-	record.Set("shared_inbox_url", actorInfo.SharedInbox)
-
-	if err := app.Save(record); err != nil {
-		return err
+		if err := app.Save(record); err != nil {
+			return fmt.Errorf("save follower: %w", err)
+		}
+		app.Logger().Info("ap-inbox: saved new follower", "actor", activity.Actor, "inbox", actorInfo.Inbox)
 	}
 
 	accept := Activity{
 		Context: "https://www.w3.org/ns/activitystreams",
 		Type:    "Accept",
-		ID:      fmt.Sprintf("%s/ap/activities/accept/%s", baseURL, record.Id),
+		ID:      fmt.Sprintf("%s/ap/activities/accept/%d", baseURL, time.Now().UnixNano()),
 		Actor:   baseURL + "/ap/actor",
+		To:      []string{activity.Actor},
 		Object:  activity,
 	}
 
-	go func() {
-		var lastErr error
-		for attempt, delay := range []time.Duration{0, 5 * time.Second, 30 * time.Second} {
-			if delay > 0 {
-				time.Sleep(delay)
-			}
-			if lastErr = DeliverActivity(app, accept, actorInfo.Inbox); lastErr == nil {
-				return
-			}
-			app.Logger().Error("failed to deliver Accept", "attempt", attempt+1, "inbox", actorInfo.Inbox, "error", lastErr)
+	var lastErr error
+	for attempt, delay := range []time.Duration{0, 5 * time.Second, 30 * time.Second} {
+		if delay > 0 {
+			time.Sleep(delay)
 		}
-	}()
-
-	return nil
+		if lastErr = DeliverActivity(app, accept, actorInfo.Inbox); lastErr == nil {
+			app.Logger().Info("ap-inbox: Accept delivered", "actor", activity.Actor, "inbox", actorInfo.Inbox)
+			return nil
+		}
+		app.Logger().Error("ap-inbox: Accept delivery failed", "attempt", attempt+1, "inbox", actorInfo.Inbox, "error", lastErr)
+	}
+	return fmt.Errorf("Accept delivery exhausted retries: %w", lastErr)
 }
 
 func handleUndo(app core.App, activity IncomingActivity) error {
@@ -98,9 +112,12 @@ func handleUndo(app core.App, activity IncomingActivity) error {
 	if undoObject.Type == "Follow" {
 		follower, err := app.FindFirstRecordByFilter("ap_followers", "actor_url = {:url}", map[string]any{"url": activity.Actor})
 		if err != nil {
-			return nil
+			return nil // already gone
 		}
-		return app.Delete(follower)
+		if err := app.Delete(follower); err != nil {
+			return err
+		}
+		app.Logger().Info("ap-inbox: removed follower", "actor", activity.Actor)
 	}
 
 	return nil
@@ -125,6 +142,10 @@ func fetchActor(actorURL string) (*ActorInfo, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("actor fetch returned %d", resp.StatusCode)
+	}
+
 	var actor struct {
 		Inbox     string `json:"inbox"`
 		Endpoints struct {
@@ -133,11 +154,22 @@ func fetchActor(actorURL string) (*ActorInfo, error) {
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&actor); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode actor JSON: %w", err)
+	}
+
+	if actor.Inbox == "" {
+		return nil, fmt.Errorf("actor has no inbox URL")
 	}
 
 	return &ActorInfo{
 		Inbox:       actor.Inbox,
 		SharedInbox: actor.Endpoints.SharedInbox,
 	}, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
