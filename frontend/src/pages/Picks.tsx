@@ -56,11 +56,9 @@ export function Picks(_props: Props) {
           filter: 'hidden = false',
           expand: 'events,events.place,events.tags',
         })
-        records.sort((a, b) => {
-          const aMin = Math.min(...(a.expand?.events ?? []).map(e => new Date(e.start_datetime).getTime()))
-          const bMin = Math.min(...(b.expand?.events ?? []).map(e => new Date(e.start_datetime).getTime()))
-          return aMin - bMin
-        })
+        const eventMin = (events: Event[] | undefined): number =>
+          events?.length ? Math.min(...events.map(e => new Date(e.start_datetime).getTime())) : Infinity
+        records.sort((a, b) => eventMin(a.expand?.events) - eventMin(b.expand?.events))
         setPosts(records)
       } catch {
         // show empty state on failure
