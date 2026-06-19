@@ -775,10 +775,12 @@ func main() {
 		})
 
 		// Register hooks
+		// Image conversion must run before event hooks so that AP activities
+		// get the converted filename (e.g. .webp) not the original .jpg
 		hooks.RegisterUserHooks(se.App)
-		hooks.RegisterEventHooks(se.App, baseURL)
-		hooks.RegisterModerationHooks(se.App)
 		hooks.RegisterImageConversionHooks(se.App)
+		hooks.RegisterModerationHooks(se.App)
+		hooks.RegisterEventHooks(se.App, baseURL)
 		hooks.RegisterSlugHooks(se.App)
 
 		// Dev mode: proxy to Vite dev server
