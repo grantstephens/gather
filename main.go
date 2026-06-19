@@ -119,6 +119,7 @@ func main() {
 			if strings.HasPrefix(path, "/api/collections/") && e.Request.Method == "GET" &&
 				e.Request.Header.Get("Authorization") == "" {
 				h.Set("Cache-Control", "public, max-age=60, stale-while-revalidate=30, stale-if-error=3600")
+				h.Set("Vary", "Authorization")
 			}
 
 			// Cache uploaded file downloads (images etc.) — content-addressed by filename
@@ -323,6 +324,7 @@ func main() {
 				}(),
 			})
 			re.Response.Header().Set("Content-Type", "application/activity+json")
+			re.Response.Header().Set("Cache-Control", "public, max-age=60, stale-if-error=3600")
 			return re.Blob(200, "application/activity+json", data)
 		})
 
@@ -870,7 +872,7 @@ func main() {
 				f.Close()
 				// Vite assets have content hashes — safe to cache for 1 year
 				if strings.HasPrefix(path, "assets/") {
-					re.Response.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+					re.Response.Header().Set("Cache-Control", "public, max-age=31536000, immutable, stale-if-error=2592000")
 				}
 				return re.FileFS(frontend, path)
 			}

@@ -43,7 +43,9 @@ export function PicksPost({ slug }: Props) {
         setMetaTag('property', 'og:title', record.title)
         setMetaTag('property', 'og:description', plainBlurb)
 
-        const firstEvent = record.expand?.events?.[0]
+        const firstEvent = record.expand?.events
+          ?.slice()
+          .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())[0]
         if (firstEvent) {
           const imageUrl = getImageUrl(firstEvent, '800x600')
           if (imageUrl) setMetaTag('property', 'og:image', imageUrl)
