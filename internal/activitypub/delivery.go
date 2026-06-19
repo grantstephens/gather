@@ -97,6 +97,42 @@ func signRequest(req *http.Request, privateKey *rsa.PrivateKey, keyID string, bo
 	return nil
 }
 
+// signGetRequest signs a GET request — used for authorized fetch (actor lookups on strict instances).
+// GET has no body so we only sign (request-target), host, and date.
+func signGetRequest(app core.App, req *http.Request, keyID string) error {
+	settings, err := app.FindFirstRecordByFilter("settings", "id != ''")
+	if err != nil {
+		return err
+	}
+	privateKey, err := ParsePrivateKey(settings.GetString("ap_private_key"))
+	if err != nil {
+		return err
+	}
+
+	date := time.Now().UTC().Format(http.TimeFormat)
+	req.Header.Set("Date", date)
+
+	signedString := fmt.Sprintf(
+		"(request-target): get %s\nhost: %s\ndate: %s",
+		req.URL.Path,
+		req.URL.Host,
+		date,
+	)
+
+	hashed := sha256.Sum256([]byte(signedString))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, hashed[:])
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Signature", fmt.Sprintf(
+		`keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date",signature="%s"`,
+		keyID,
+		base64.StdEncoding.EncodeToString(signature),
+	))
+	return nil
+}
+
 func QueueDeliveryToFollowers(app core.App, activity Activity) error {
 	followers, err := app.FindRecordsByFilter("ap_followers", "", "", 0, 0)
 	if err != nil {

@@ -53,7 +53,7 @@ func HandleInbox(app core.App, baseURL string, body io.Reader) error {
 }
 
 func handleFollow(app core.App, baseURL string, activity IncomingActivity) error {
-	actorInfo, err := fetchActor(activity.Actor)
+	actorInfo, err := fetchActor(app, baseURL, activity.Actor)
 	if err != nil {
 		return fmt.Errorf("fetchActor %s: %w", activity.Actor, err)
 	}
@@ -128,12 +128,18 @@ type ActorInfo struct {
 	SharedInbox string
 }
 
-func fetchActor(actorURL string) (*ActorInfo, error) {
+func fetchActor(app core.App, baseURL, actorURL string) (*ActorInfo, error) {
 	req, err := http.NewRequest("GET", actorURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/activity+json")
+
+	// Sign the GET request — GoToSocial and others with "authorized fetch" enabled
+	// return 401 for unsigned actor lookups.
+	if err := signGetRequest(app, req, baseURL+"/ap/actor#main-key"); err != nil {
+		return nil, fmt.Errorf("sign actor fetch: %w", err)
+	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
