@@ -83,9 +83,11 @@ export function PicksPost({ slug }: Props) {
       </header>
       {post.expand?.events && post.expand.events.length > 0 && (
         <div class="picks-post-events">
-          {post.expand.events.map(event => (
-            <EventCard key={event.id} event={event} variant="featured" />
-          ))}
+          {[...post.expand.events]
+            .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+            .map(event => (
+              <EventCard key={event.id} event={event} variant="featured" />
+            ))}
         </div>
       )}
     </article>
