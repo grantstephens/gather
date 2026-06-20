@@ -103,12 +103,10 @@ func eventToNote(event *core.Record, baseURL string) Note {
 		desc,
 	)
 
-	// Use start_datetime as the published date (matching RSS convention), falling
-	// back to created time, then now — to ensure Published is never zero.
-	published := startTime
-	if published.IsZero() {
-		published = event.GetDateTime("created").Time()
-	}
+	// Published is when the Note was posted to the fediverse, not when the event occurs.
+	// Mastodon sorts by this field, so using start_datetime would push future events
+	// to the wrong position in followers' feeds.
+	published := event.GetDateTime("created").Time()
 	if published.IsZero() {
 		published = time.Now()
 	}
