@@ -18,6 +18,7 @@ services:
     environment:
       # PocketBase admin credentials (change these!)
       - PB_ADMIN_EMAIL=${PB_ADMIN_EMAIL:-admin@example.com}
+      # IMPORTANT: Change this before exposing to the internet!
       - PB_ADMIN_PASSWORD=${PB_ADMIN_PASSWORD:-changeme}
       # Base URL for ActivityPub federation
       - BASE_URL=${BASE_URL:-http://localhost:8090}

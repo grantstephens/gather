@@ -40,6 +40,10 @@ func main() {
 		DefaultDev: os.Getenv("LOG_STDOUT") != "",
 	})
 
+	if os.Getenv("PB_ENCRYPTION_KEY") == "" {
+		log.Println("[WARN] PB_ENCRYPTION_KEY is not set — sensitive fields will be stored unencrypted. Set this in production.")
+	}
+
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		// Enable daily backups by default if not already configured
 		if se.App.Settings().Backups.Cron == "" {
