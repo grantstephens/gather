@@ -6,6 +6,7 @@ import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { pb, Event as EventType, getImageUrl, canModerate, recurrenceLabel, parseVirtualId } from '../lib/pocketbase'
 import { SkeletonEventDetailPage } from '../components/Skeleton'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import leafletCss from 'leaflet/dist/leaflet.css?inline'
 import './Event.css'
 
@@ -20,22 +21,29 @@ export function Event({ id }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [cancelled, setCancelled] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<any>(null)
   const isModerator = canModerate()
 
-  const handleDelete = async () => {
-    if (!event || !confirm('Are you sure you want to delete this event?')) return
-    setActionLoading(true)
-    const id = parseVirtualId(event.id)?.baseId || event.id
-    try {
-      await pb.collection('events').delete(id)
-      route('/')
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      alert(`Failed to delete event: ${msg}`)
-      setActionLoading(false)
-    }
+  const handleDelete = () => {
+    if (!event) return
+    setConfirmDialog({
+      message: 'Are you sure you want to delete this event?',
+      onConfirm: async () => {
+        setConfirmDialog(null)
+        setActionLoading(true)
+        const id = parseVirtualId(event.id)?.baseId || event.id
+        try {
+          await pb.collection('events').delete(id)
+          route('/')
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          alert(`Failed to delete event: ${msg}`)
+          setActionLoading(false)
+        }
+      },
+    })
   }
 
   const handleStatusChange = async (newStatus: 'published' | 'cancelled' | 'pending') => {
@@ -245,20 +253,26 @@ export function Event({ id }: Props) {
                 <button
                   class="btn btn-danger"
                   data-umami-event="event-cancel-occurrence"
-                  onClick={async () => {
+                  onClick={() => {
                     const parsed = parseVirtualId(event.id)
-                    if (!parsed || !confirm('Cancel this occurrence?')) return
-                    const dateStr = `${parsed.date.slice(0, 4)}-${parsed.date.slice(4, 6)}-${parsed.date.slice(6, 8)}`
-                    try {
-                      await fetch(`/api/events/${parsed.baseId}/cancel-occurrence`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ date: dateStr }),
-                      })
-                      route('/')
-                    } catch {
-                      alert('Failed to cancel occurrence')
-                    }
+                    if (!parsed) return
+                    setConfirmDialog({
+                      message: 'Cancel this occurrence?',
+                      onConfirm: async () => {
+                        setConfirmDialog(null)
+                        const dateStr = `${parsed.date.slice(0, 4)}-${parsed.date.slice(4, 6)}-${parsed.date.slice(6, 8)}`
+                        try {
+                          await fetch(`/api/events/${parsed.baseId}/cancel-occurrence`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ date: dateStr }),
+                          })
+                          route('/')
+                        } catch {
+                          alert('Failed to cancel occurrence')
+                        }
+                      },
+                    })
                   }}
                 >
                   Cancel This Occurrence
@@ -306,6 +320,13 @@ export function Event({ id }: Props) {
           )}
         </footer>
       </div>
+      {confirmDialog && (
+        <ConfirmDialog
+          message={confirmDialog.message}
+          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null) }}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
     </article>
   )
 }
