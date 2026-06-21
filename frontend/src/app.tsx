@@ -262,8 +262,14 @@ export function App() {
       </footer>
       {fediverseDialogOpen && (
         <div class="fediverse-dialog-overlay" onClick={() => setFediverseDialogOpen(false)}>
-          <div class="fediverse-dialog" onClick={(e) => e.stopPropagation()}>
-            <p>Enter your Mastodon/Fediverse instance:</p>
+          <div
+            class="fediverse-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fediverse-dialog-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p id="fediverse-dialog-title">Enter your Mastodon/Fediverse instance:</p>
             <form onSubmit={handleFediverseFollow}>
               <input
                 type="text"
