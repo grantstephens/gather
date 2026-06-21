@@ -15,6 +15,14 @@ import (
 	_ "gather/migrations"
 )
 
+// TestMain disables the SSRF guard for the entire test binary so that httptest
+// servers (which bind to 127.0.0.1) are reachable. Individual tests that want
+// to verify SSRF behaviour call defaultSSRFCheck directly.
+func TestMain(m *testing.M) {
+	ssrfCheck = func(string) error { return nil }
+	m.Run()
+}
+
 // ---- test helpers ----
 
 func newTestApp(t *testing.T) *tests.TestApp {
@@ -532,6 +540,9 @@ func TestHandleInbox_Follow(t *testing.T) {
 		t.Fatalf("HandleInbox Follow: %v", err)
 	}
 
+	// Wait for the async goroutine to complete
+	time.Sleep(200 * time.Millisecond)
+
 	follower, err := app.FindFirstRecordByFilter("ap_followers", "actor_url != ''")
 	if err != nil {
 		t.Fatalf("follower record not created: %v", err)
@@ -609,6 +620,9 @@ func TestHandleInbox_UndoFollow(t *testing.T) {
 		t.Fatalf("Follow: %v", err)
 	}
 
+	// Wait for the Follow goroutine to write the follower record before sending Undo
+	time.Sleep(200 * time.Millisecond)
+
 	// Then, undo
 	undoBody := strings.NewReader(fmt.Sprintf(`{
 		"type": "Undo",
@@ -620,8 +634,8 @@ func TestHandleInbox_UndoFollow(t *testing.T) {
 		t.Fatalf("Undo: %v", err)
 	}
 
-	// Wait a moment for goroutines
-	time.Sleep(50 * time.Millisecond)
+	// Wait for the Undo goroutine to delete the follower record
+	time.Sleep(200 * time.Millisecond)
 
 	followers, err := app.FindRecordsByFilter("ap_followers", "id != ''", "", 0, 0)
 	if err != nil {
@@ -646,6 +660,94 @@ func TestHandleInbox_UnknownActivityIgnored(t *testing.T) {
 	if err := HandleInbox(app, "https://example.com", body); err != nil {
 		t.Errorf("unknown activity type should be silently ignored, got error: %v", err)
 	}
+}
+
+// ---- SSRF protection tests ----
+
+func TestCheckSSRF_LoopbackRejected(t *testing.T) {
+	for _, addr := range []string{
+		"http://127.0.0.1/actor",
+		"http://127.0.0.1:8080/actor",
+		"http://localhost/actor",
+	} {
+		if err := defaultSSRFCheck(addr); err == nil {
+			t.Errorf("expected SSRF error for %q, got nil", addr)
+		}
+	}
+}
+
+func TestCheckSSRF_PrivateRangesRejected(t *testing.T) {
+	for _, addr := range []string{
+		"http://10.0.0.1/actor",
+		"http://192.168.1.1/actor",
+		"http://172.16.0.1/actor",
+		"http://169.254.169.254/actor", // AWS metadata
+	} {
+		if err := defaultSSRFCheck(addr); err == nil {
+			t.Errorf("expected SSRF error for %q, got nil", addr)
+		}
+	}
+}
+
+func TestFetchPublicKey_SSRFBlocked(t *testing.T) {
+	// Temporarily restore the real SSRF guard (TestMain disables it globally)
+	orig := ssrfCheck
+	ssrfCheck = defaultSSRFCheck
+	defer func() { ssrfCheck = orig }()
+
+	app := newTestApp(t)
+	defer app.Cleanup()
+	createSettingsWithKeys(t, app)
+
+	_, err := fetchPublicKey(app, "https://example.com", "http://127.0.0.1:9999/actor#main-key")
+	if err == nil {
+		t.Fatal("expected SSRF error, got nil")
+	}
+	if !strings.Contains(err.Error(), "private/loopback") {
+		t.Errorf("error should mention private/loopback, got: %v", err)
+	}
+}
+
+func TestFetchPublicKey_CacheHit(t *testing.T) {
+	app := newTestApp(t)
+	defer app.Cleanup()
+	createSettingsWithKeys(t, app)
+
+	// Pre-generate a public key PEM to serve
+	_, pub, err := GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair: %v", err)
+	}
+
+	requestCount := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		w.Header().Set("Content-Type", "application/activity+json")
+		fmt.Fprintf(w, `{"publicKey": {"publicKeyPem": %q}}`, pub)
+	}))
+	defer srv.Close()
+
+	keyID := srv.URL + "#main-key"
+	// Clear any stale cache entry from prior test runs
+	keyCache.Delete(keyID)
+
+	k1, err := fetchPublicKey(app, "https://example.com", keyID)
+	if err != nil {
+		t.Fatalf("first fetchPublicKey: %v", err)
+	}
+	k2, err := fetchPublicKey(app, "https://example.com", keyID)
+	if err != nil {
+		t.Fatalf("second fetchPublicKey: %v", err)
+	}
+	if k1 != k2 {
+		t.Error("expected same pointer from cache on second call")
+	}
+	if requestCount != 1 {
+		t.Errorf("expected 1 HTTP request (cache hit on second call), got %d", requestCount)
+	}
+
+	// Clean up cache after test
+	keyCache.Delete(keyID)
 }
 
 // ---- delivery queue tests ----

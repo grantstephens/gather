@@ -1,14 +1,29 @@
 package activitypub
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
+	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+type cachedKey struct {
+	key       *rsa.PublicKey
+	fetchedAt time.Time
+}
+
+var keyCache sync.Map // map[string]*cachedKey
+
+const keyCacheTTL = 5 * time.Minute
 
 type IncomingActivity struct {
 	Type   string          `json:"type"`
@@ -128,7 +143,142 @@ type ActorInfo struct {
 	SharedInbox string
 }
 
+// isPrivateOrLoopback returns true if host resolves to a loopback or RFC-1918/link-local address.
+// This is used to block SSRF attacks via ActivityPub actor/key URLs.
+func isPrivateOrLoopback(host string) (bool, error) {
+	// Strip port if present
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+
+	addrs, err := net.LookupHost(host)
+	if err != nil {
+		return false, err
+	}
+
+	privateRanges := []string{
+		"127.0.0.0/8",
+		"::1/128",
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		"169.254.0.0/16",
+		"fc00::/7",
+	}
+
+	var nets []*net.IPNet
+	for _, cidr := range privateRanges {
+		_, network, _ := net.ParseCIDR(cidr)
+		nets = append(nets, network)
+	}
+
+	for _, addr := range addrs {
+		ip := net.ParseIP(addr)
+		if ip == nil {
+			continue
+		}
+		for _, network := range nets {
+			if network.Contains(ip) {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// ssrfCheck is the SSRF guard applied before all outbound AP HTTP requests.
+// It can be replaced in tests to allow loopback httptest servers.
+var ssrfCheck = defaultSSRFCheck
+
+// defaultSSRFCheck parses rawURL and rejects if the host resolves to a private or loopback address.
+func defaultSSRFCheck(rawURL string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL %q: %w", rawURL, err)
+	}
+	private, err := isPrivateOrLoopback(u.Host)
+	if err != nil {
+		return fmt.Errorf("DNS lookup failed for %q: %w", u.Host, err)
+	}
+	if private {
+		return fmt.Errorf("keyId URL resolves to private/loopback address: %s", u.Host)
+	}
+	return nil
+}
+
+// fetchPublicKey retrieves and parses an RSA public key from a remote actor's keyId URL.
+// Results are cached for keyCacheTTL to avoid hammering remote servers on every inbox request.
+// The URL is checked against private/loopback IP ranges before any outbound request is made.
+func fetchPublicKey(app core.App, baseURL, keyID string) (*rsa.PublicKey, error) {
+	// Check cache first
+	if cached, ok := keyCache.Load(keyID); ok {
+		ck := cached.(*cachedKey)
+		if time.Since(ck.fetchedAt) < keyCacheTTL {
+			return ck.key, nil
+		}
+		// Expired — delete and re-fetch
+		keyCache.Delete(keyID)
+	}
+
+	// SSRF protection
+	if err := ssrfCheck(keyID); err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", keyID, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/activity+json")
+
+	if err := signGetRequest(app, req, baseURL+"/ap/actor#main-key"); err != nil {
+		return nil, fmt.Errorf("sign key fetch: %w", err)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("key fetch returned %d", resp.StatusCode)
+	}
+
+	var actor struct {
+		PublicKey struct {
+			PublicKeyPem string `json:"publicKeyPem"`
+		} `json:"publicKey"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&actor); err != nil {
+		return nil, fmt.Errorf("decode key JSON: %w", err)
+	}
+
+	block, _ := pem.Decode([]byte(actor.PublicKey.PublicKeyPem))
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block from %s", keyID)
+	}
+	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse public key from %s: %w", keyID, err)
+	}
+	rsaKey, ok := pubKey.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("public key from %s is not RSA", keyID)
+	}
+
+	keyCache.Store(keyID, &cachedKey{key: rsaKey, fetchedAt: time.Now()})
+	return rsaKey, nil
+}
+
 func fetchActor(app core.App, baseURL, actorURL string) (*ActorInfo, error) {
+	// SSRF protection
+	if err := ssrfCheck(actorURL); err != nil {
+		return nil, err
+	}
+
 	req, err := http.NewRequest("GET", actorURL, nil)
 	if err != nil {
 		return nil, err
