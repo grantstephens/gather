@@ -91,11 +91,37 @@ func RegisterModerationHooks(app core.App) {
 
 	app.OnRecordCreateRequest("events").BindFunc(func(e *core.RecordRequestEvent) error {
 		approveEventDeps(e)
+		// Enforce status on create: regular users can only create as draft or pending
+		if !e.HasSuperuserAuth() {
+			role := ""
+			if e.Auth != nil {
+				role = e.Auth.GetString("role")
+			}
+			if role != "admin" && role != "editor" {
+				status := e.Record.GetString("status")
+				if status == "published" || status == "cancelled" {
+					e.Record.Set("status", "pending")
+				}
+			}
+		}
 		return e.Next()
 	})
 
 	app.OnRecordUpdateRequest("events").BindFunc(func(e *core.RecordRequestEvent) error {
 		approveEventDeps(e)
+		// Enforce status on update: regular users cannot set status to published or cancelled
+		if !e.HasSuperuserAuth() {
+			role := ""
+			if e.Auth != nil {
+				role = e.Auth.GetString("role")
+			}
+			if role != "admin" && role != "editor" {
+				status := e.Record.GetString("status")
+				if status == "published" || status == "cancelled" {
+					return errors.New("you do not have permission to set this event status")
+				}
+			}
+		}
 		return e.Next()
 	})
 
