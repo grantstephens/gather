@@ -24,6 +24,14 @@ export function Search(_props: Props) {
     setQuery(q)
   }, [])
 
+  // Persist query to URL
+  useEffect(() => {
+    const url = query.trim()
+      ? `/search?q=${encodeURIComponent(query.trim())}`
+      : '/search'
+    history.replaceState(null, '', url)
+  }, [query])
+
   // Search when query changes
   useEffect(() => {
     if (!query.trim()) {
