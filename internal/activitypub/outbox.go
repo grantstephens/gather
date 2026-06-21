@@ -78,7 +78,7 @@ func GetOutbox(app core.App, baseURL string, page int) ([]byte, error) {
 	events, err := app.FindRecordsByFilter(
 		"events",
 		"status = 'published'",
-		"-created",
+		"-id",
 		outboxPageSize,
 		offset,
 	)

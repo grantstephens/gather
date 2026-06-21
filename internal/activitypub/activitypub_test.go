@@ -105,8 +105,8 @@ func TestGetActor_Fields(t *testing.T) {
 		t.Fatalf("GetActor: %v", err)
 	}
 
-	if actor.Type != "Application" {
-		t.Errorf("type = %q, want Application", actor.Type)
+	if actor.Type != "Service" {
+		t.Errorf("type = %q, want Service", actor.Type)
 	}
 	if actor.ID != "https://example.com/ap/actor" {
 		t.Errorf("ID = %q", actor.ID)
@@ -302,7 +302,7 @@ func TestGetOutbox_ActivityContext(t *testing.T) {
 	defer app.Cleanup()
 	createPublishedEvent(t, app, "Outbox Event", time.Now().Add(24*time.Hour))
 
-	data, err := GetOutbox(app, "https://example.com", 0)
+	data, err := GetOutbox(app, "https://example.com", 1)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -335,7 +335,7 @@ func TestGetOutbox_ActivityFields(t *testing.T) {
 	start := time.Date(2026, 6, 20, 18, 0, 0, 0, time.UTC)
 	ev := createPublishedEvent(t, app, "Federated Event", start)
 
-	data, err := GetOutbox(app, "https://example.com", 0)
+	data, err := GetOutbox(app, "https://example.com", 1)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -363,7 +363,7 @@ func TestGetOutbox_NoteFields(t *testing.T) {
 	start := time.Date(2026, 6, 20, 18, 0, 0, 0, time.UTC)
 	ev := createPublishedEvent(t, app, "Note Event", start)
 
-	data, err := GetOutbox(app, "https://example.com", 0)
+	data, err := GetOutbox(app, "https://example.com", 1)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
