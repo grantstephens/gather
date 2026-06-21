@@ -797,6 +797,29 @@ func main() {
 		hooks.RegisterEventHooks(se.App, baseURL)
 		hooks.RegisterSlugHooks(se.App)
 
+		// Defense-in-depth: strip ap_private_key from settings API responses for
+		// non-superusers. The field is already marked Hidden in the collection schema
+		// (migration 1709300017), but this hook ensures it can never leak even if the
+		// Hidden flag is inadvertently toggled via the admin UI.
+		stripPrivateKey := func(record *core.Record, requestInfo *core.RequestInfo) {
+			if requestInfo == nil || requestInfo.Auth == nil ||
+				requestInfo.Auth.Collection().Name != "_superusers" {
+				record.Set("ap_private_key", "")
+			}
+		}
+		se.App.OnRecordsListRequest("settings").BindFunc(func(e *core.RecordsListRequestEvent) error {
+			info, _ := e.RequestInfo()
+			for _, r := range e.Records {
+				stripPrivateKey(r, info)
+			}
+			return e.Next()
+		})
+		se.App.OnRecordViewRequest("settings").BindFunc(func(e *core.RecordRequestEvent) error {
+			info, _ := e.RequestInfo()
+			stripPrivateKey(e.Record, info)
+			return e.Next()
+		})
+
 		// Dev mode: proxy to Vite dev server
 		devMode := os.Getenv("DEV") != ""
 		var viteProxy *httputil.ReverseProxy
