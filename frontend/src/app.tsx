@@ -27,6 +27,7 @@ const Search = lazy(() => import('./pages/Search').then(m => ({ default: m.Searc
 const Page = lazy(() => import('./pages/Page').then(m => ({ default: m.Page })))
 const Picks = lazy(() => import('./pages/Picks').then(m => ({ default: m.Picks })))
 const PicksPost = lazy(() => import('./pages/PicksPost').then(m => ({ default: m.PicksPost })))
+const Submitted = lazy(() => import('./pages/Submitted').then(m => ({ default: m.Submitted })))
 
 export function App() {
   const [user, setUser] = useState<User | null>(pb.authStore.model as User | null)
@@ -229,6 +230,7 @@ export function App() {
             <Search path="/search" />
             <Picks path="/picks" />
             <PicksPost path="/picks/:slug" />
+            <Submitted path="/submitted" />
             <Page path="/:slug" />
           </Router>
         </Suspense>

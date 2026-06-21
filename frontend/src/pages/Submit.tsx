@@ -128,7 +128,11 @@ export function Submit(_props: Props) {
       }
 
       const created = await pb.collection('events').create(formData)
-      route(eventPath(created as unknown as EventType))
+      if (isLoggedIn) {
+        route(eventPath(created as unknown as EventType))
+      } else {
+        route('/submitted')
+      }
     } catch (err) {
       console.error('Failed to create event:', err)
       setError(err instanceof Error ? err.message : 'Failed to create event')
