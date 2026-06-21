@@ -653,6 +653,10 @@ main {
   font-size: var(--text-sm);
 }
 
+.page-loading {
+  min-height: 200px;
+}
+
 /* Fallback: CSS-only dark mode for no-JS / pre-script-execution */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
