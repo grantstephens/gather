@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { pb, Event, Place as PlaceType } from '../lib/pocketbase'
+import { usePageTitle } from '../lib/title'
 import { EventTimeline } from '../components/EventTimeline'
 import { SkeletonTimeline } from '../components/Skeleton'
 import './Place.css'
@@ -18,6 +19,7 @@ export function Place({ id }: Props) {
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [total, setTotal] = useState(0)
+  usePageTitle(place ? place.name : '')
 
   useEffect(() => {
     if (!id) return
