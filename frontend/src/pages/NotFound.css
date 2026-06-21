@@ -1,0 +1,10 @@
+.not-found {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.not-found h1 {
+  font-size: 4rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-text-muted, #64748b);
+}
