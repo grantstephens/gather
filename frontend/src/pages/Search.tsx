@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { Event, Place, Tag } from '../lib/pocketbase'
+import { usePageTitle } from '../lib/title'
 import { EventTimeline } from '../components/EventTimeline'
 import { tagStyle } from '../lib/color'
 import { SkeletonTimeline } from '../components/Skeleton'
@@ -16,6 +17,7 @@ export function Search(_props: Props) {
   const [tags, setTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
+  usePageTitle(query.trim() ? `Search results for "${query.trim()}"` : 'Search')
 
   // Read query from URL
   useEffect(() => {

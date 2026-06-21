@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { pb, Event, Tag as TagType } from '../lib/pocketbase'
+import { usePageTitle } from '../lib/title'
 import { EventTimeline } from '../components/EventTimeline'
 import { SkeletonTimeline } from '../components/Skeleton'
 import './Tag.css'
@@ -18,6 +19,7 @@ export function Tag({ name }: Props) {
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [total, setTotal] = useState(0)
+  usePageTitle(tag ? `#${tag.name}` : '')
 
   useEffect(() => {
     if (!name) return

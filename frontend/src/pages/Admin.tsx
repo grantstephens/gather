@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import { pb, Event, Place, Tag, canModerate, eventPath, isAdmin } from '../lib/pocketbase'
+import { usePageTitle } from '../lib/title'
 import { tagStyle } from '../lib/color'
 import type { PageRecord, PicksRecord } from '../lib/pocketbase'
 import { MarkdownEditor } from '../components/MarkdownEditor'
@@ -32,6 +33,7 @@ function slugify(title: string): string {
 }
 
 export function Admin(_props: Props) {
+  usePageTitle('Admin')
   const [allEvents, setAllEvents] = useState<Event[]>([])
   const [allPlaces, setAllPlaces] = useState<Place[]>([])
   const [allTags, setAllTags] = useState<Tag[]>([])
