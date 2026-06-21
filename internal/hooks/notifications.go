@@ -134,7 +134,12 @@ func sendApprovalNotification(app core.App, event core.Record, baseURL string) {
 
 	title := event.GetString("title")
 	startTime := formatEventTime(event.GetString("start_datetime"))
-	eventLink := fmt.Sprintf("%s/event/%s", baseURL, event.Id)
+	slug := event.GetString("slug")
+	eventPath := slug
+	if eventPath == "" {
+		eventPath = event.Id
+	}
+	eventLink := fmt.Sprintf("%s/event/%s", baseURL, eventPath)
 
 	subject := fmt.Sprintf("Your Event Has Been Published: %s", title)
 
@@ -212,7 +217,7 @@ func sendModeratorAlert(app core.App, event core.Record, baseURL string) {
 	submitterInfo := getSubmitterInfo(app, event)
 	startTime := formatEventTime(event.GetString("start_datetime"))
 	location := getLocationString(app, event)
-	reviewLink := fmt.Sprintf("%s/_/#/collections?collectionId=events&filter=id='%s'", baseURL, event.Id)
+	reviewLink := fmt.Sprintf("%s/admin", baseURL)
 
 	safeTitle := strings.ReplaceAll(strings.ReplaceAll(title, "\n", " "), "\r", " ")
 	subject := fmt.Sprintf("New Event Pending Review: %s", safeTitle)
