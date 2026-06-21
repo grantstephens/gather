@@ -36,6 +36,9 @@ export function Admin(_props: Props) {
   const [allPlaces, setAllPlaces] = useState<Place[]>([])
   const [allTags, setAllTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(true)
+  const [eventsPage, setEventsPage] = useState(1)
+  const [eventsTotalPages, setEventsTotalPages] = useState(1)
+  const [eventsLoading, setEventsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('events')
   const [pages, setPages] = useState<PageRecord[]>([])
   const [pagesLoaded, setPagesLoaded] = useState(false)
@@ -90,7 +93,7 @@ export function Admin(_props: Props) {
     async function load() {
       try {
         // Fetch sequentially to avoid race conditions
-        const events = await pb.collection('events').getFullList<Event>({
+        const eventsResult = await pb.collection('events').getList<Event>(1, 25, {
           sort: '-start_datetime',
           expand: 'place,tags',
         })
@@ -106,7 +109,8 @@ export function Admin(_props: Props) {
         })
         if (cancelled) return
 
-        setAllEvents(events)
+        setAllEvents(eventsResult.items)
+        setEventsTotalPages(eventsResult.totalPages)
         setAllPlaces(places)
         setAllTags(tags)
       } catch (err) {
@@ -131,17 +135,31 @@ export function Admin(_props: Props) {
   useEffect(() => {
     if (!canModerate()) return
     pb.collection('events').subscribe('*', () => {
-      pb.collection('events').getFullList<Event>({
+      pb.collection('events').getList<Event>(eventsPage, 25, {
         sort: '-start_datetime',
         expand: 'place,tags',
-      }).then(events => {
-        setAllEvents(events)
+      }).then(result => {
+        setAllEvents(result.items)
+        setEventsTotalPages(result.totalPages)
       }).catch(console.error)
     }, { filter: "status = 'pending'" }).catch(console.error)
     return () => {
       pb.collection('events').unsubscribe('*')
     }
-  }, [])
+  }, [eventsPage])
+
+  // Reload events when page changes
+  useEffect(() => {
+    if (!canModerate() || eventsPage === 1) return // page 1 is loaded in the initial load effect
+    setEventsLoading(true)
+    pb.collection('events').getList<Event>(eventsPage, 25, {
+      sort: '-start_datetime',
+      expand: 'place,tags',
+    }).then(result => {
+      setAllEvents(result.items)
+      setEventsTotalPages(result.totalPages)
+    }).catch(console.error).finally(() => setEventsLoading(false))
+  }, [eventsPage])
 
   useEffect(() => {
     if (activeTab !== 'pages' || !isAdmin() || pagesLoaded) return
@@ -637,7 +655,9 @@ export function Admin(_props: Props) {
 
       {activeTab === 'events' && (
         <div class="events-list">
-          {allEvents.length === 0 ? (
+          {eventsLoading ? (
+            <p class="no-events">Loading...</p>
+          ) : allEvents.length === 0 ? (
             <p class="no-events">No events found.</p>
           ) : (
             [...allEvents].sort((a, b) => {
@@ -671,6 +691,27 @@ export function Admin(_props: Props) {
                 </div>
               </div>
             ))
+          )}
+          {eventsTotalPages > 1 && (
+            <div class="pagination" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-6)', justifyContent: 'center' }}>
+              <button
+                class="btn btn-secondary"
+                onClick={() => setEventsPage(p => Math.max(1, p - 1))}
+                disabled={eventsPage === 1 || eventsLoading}
+              >
+                Previous
+              </button>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+                Page {eventsPage} of {eventsTotalPages}
+              </span>
+              <button
+                class="btn btn-secondary"
+                onClick={() => setEventsPage(p => Math.min(eventsTotalPages, p + 1))}
+                disabled={eventsPage === eventsTotalPages || eventsLoading}
+              >
+                Next
+              </button>
+            </div>
           )}
         </div>
       )}
