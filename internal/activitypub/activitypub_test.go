@@ -15,6 +15,16 @@ import (
 	_ "gather/migrations"
 )
 
+// TestMain disables the SSRF guard and HTTP signature verification for the
+// entire test binary so that httptest servers (127.0.0.1) are reachable and
+// unsigned test payloads are accepted. Individual tests that want to verify
+// SSRF behaviour call defaultSSRFCheck directly.
+func TestMain(m *testing.M) {
+	ssrfCheck = func(string) error { return nil }
+	signatureVerifier = func(_ core.App, _ string, _ *http.Request, _ []byte) error { return nil }
+	m.Run()
+}
+
 // ---- test helpers ----
 
 func newTestApp(t *testing.T) *tests.TestApp {
@@ -104,8 +114,8 @@ func TestGetActor_Fields(t *testing.T) {
 		t.Fatalf("GetActor: %v", err)
 	}
 
-	if actor.Type != "Application" {
-		t.Errorf("type = %q, want Application", actor.Type)
+	if actor.Type != "Service" {
+		t.Errorf("type = %q, want Service", actor.Type)
 	}
 	if actor.ID != "https://example.com/ap/actor" {
 		t.Errorf("ID = %q", actor.ID)
@@ -275,7 +285,8 @@ func TestGetOutbox_Structure(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Cleanup()
 
-	data, err := GetOutbox(app, "https://example.com")
+	// page=0 returns the OrderedCollection summary
+	data, err := GetOutbox(app, "https://example.com", 0)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -301,7 +312,7 @@ func TestGetOutbox_ActivityContext(t *testing.T) {
 	defer app.Cleanup()
 	createPublishedEvent(t, app, "Outbox Event", time.Now().Add(24*time.Hour))
 
-	data, err := GetOutbox(app, "https://example.com")
+	data, err := GetOutbox(app, "https://example.com", 1)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -334,7 +345,7 @@ func TestGetOutbox_ActivityFields(t *testing.T) {
 	start := time.Date(2026, 6, 20, 18, 0, 0, 0, time.UTC)
 	ev := createPublishedEvent(t, app, "Federated Event", start)
 
-	data, err := GetOutbox(app, "https://example.com")
+	data, err := GetOutbox(app, "https://example.com", 1)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -362,7 +373,7 @@ func TestGetOutbox_NoteFields(t *testing.T) {
 	start := time.Date(2026, 6, 20, 18, 0, 0, 0, time.UTC)
 	ev := createPublishedEvent(t, app, "Note Event", start)
 
-	data, err := GetOutbox(app, "https://example.com")
+	data, err := GetOutbox(app, "https://example.com", 1)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -429,7 +440,8 @@ func TestGetOutbox_OnlyPublishedEvents(t *testing.T) {
 	draft.Set("author", user.Id)
 	_ = app.Save(draft)
 
-	data, err := GetOutbox(app, "https://example.com")
+	// page=0 returns summary with totalItems count
+	data, err := GetOutbox(app, "https://example.com", 0)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -506,6 +518,13 @@ func mockActorServer(t *testing.T, inbox string) *httptest.Server {
 	}))
 }
 
+// inboxRequest wraps a JSON body string in an *http.Request suitable for HandleInbox.
+func inboxRequest(body string) *http.Request {
+	req := httptest.NewRequest(http.MethodPost, "/ap/inbox", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/activity+json")
+	return req
+}
+
 func TestHandleInbox_Follow(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Cleanup()
@@ -521,16 +540,17 @@ func TestHandleInbox_Follow(t *testing.T) {
 	actorSrv := mockActorServer(t, acceptSrv.URL)
 	defer actorSrv.Close()
 
-	body := strings.NewReader(fmt.Sprintf(`{
+	if err := HandleInbox(app, "https://example.com", inboxRequest(fmt.Sprintf(`{
 		"type": "Follow",
 		"id": "https://remote.example/follows/1",
 		"actor": %q,
 		"object": "https://example.com/ap/actor"
-	}`, actorSrv.URL))
-
-	if err := HandleInbox(app, "https://example.com", body); err != nil {
+	}`, actorSrv.URL))); err != nil {
 		t.Fatalf("HandleInbox Follow: %v", err)
 	}
+
+	// Wait for the async goroutine to complete
+	time.Sleep(200 * time.Millisecond)
 
 	follower, err := app.FindFirstRecordByFilter("ap_followers", "actor_url != ''")
 	if err != nil {
@@ -557,8 +577,8 @@ func TestHandleInbox_FollowDeduplicated(t *testing.T) {
 	actorSrv := mockActorServer(t, acceptSrv.URL)
 	defer actorSrv.Close()
 
-	followBody := func() *strings.Reader {
-		return strings.NewReader(fmt.Sprintf(`{
+	followBody := func() *http.Request {
+		return inboxRequest(fmt.Sprintf(`{
 			"type": "Follow",
 			"id": "https://remote.example/follows/1",
 			"actor": %q,
@@ -599,29 +619,30 @@ func TestHandleInbox_UndoFollow(t *testing.T) {
 	defer actorSrv.Close()
 
 	// First, follow
-	followBody := strings.NewReader(fmt.Sprintf(`{
+	if err := HandleInbox(app, "https://example.com", inboxRequest(fmt.Sprintf(`{
 		"type": "Follow",
 		"id": "https://remote.example/follows/1",
 		"actor": %q,
 		"object": "https://example.com/ap/actor"
-	}`, actorSrv.URL))
-	if err := HandleInbox(app, "https://example.com", followBody); err != nil {
+	}`, actorSrv.URL))); err != nil {
 		t.Fatalf("Follow: %v", err)
 	}
 
+	// Wait for the Follow goroutine to write the follower record before sending Undo
+	time.Sleep(200 * time.Millisecond)
+
 	// Then, undo
-	undoBody := strings.NewReader(fmt.Sprintf(`{
+	if err := HandleInbox(app, "https://example.com", inboxRequest(fmt.Sprintf(`{
 		"type": "Undo",
 		"id": "https://remote.example/undos/1",
 		"actor": %q,
 		"object": {"type": "Follow", "object": "https://example.com/ap/actor"}
-	}`, actorSrv.URL))
-	if err := HandleInbox(app, "https://example.com", undoBody); err != nil {
+	}`, actorSrv.URL))); err != nil {
 		t.Fatalf("Undo: %v", err)
 	}
 
-	// Wait a moment for goroutines
-	time.Sleep(50 * time.Millisecond)
+	// Wait for the Undo goroutine to delete the follower record
+	time.Sleep(200 * time.Millisecond)
 
 	followers, err := app.FindRecordsByFilter("ap_followers", "id != ''", "", 0, 0)
 	if err != nil {
@@ -636,16 +657,102 @@ func TestHandleInbox_UnknownActivityIgnored(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Cleanup()
 
-	body := strings.NewReader(`{
+	if err := HandleInbox(app, "https://example.com", inboxRequest(`{
 		"type": "Like",
 		"id": "https://remote.example/likes/1",
 		"actor": "https://remote.example/users/someone",
 		"object": "https://example.com/ap/events/abc"
-	}`)
-
-	if err := HandleInbox(app, "https://example.com", body); err != nil {
+	}`)); err != nil {
 		t.Errorf("unknown activity type should be silently ignored, got error: %v", err)
 	}
+}
+
+// ---- SSRF protection tests ----
+
+func TestCheckSSRF_LoopbackRejected(t *testing.T) {
+	for _, addr := range []string{
+		"http://127.0.0.1/actor",
+		"http://127.0.0.1:8080/actor",
+		"http://localhost/actor",
+	} {
+		if err := defaultSSRFCheck(addr); err == nil {
+			t.Errorf("expected SSRF error for %q, got nil", addr)
+		}
+	}
+}
+
+func TestCheckSSRF_PrivateRangesRejected(t *testing.T) {
+	for _, addr := range []string{
+		"http://10.0.0.1/actor",
+		"http://192.168.1.1/actor",
+		"http://172.16.0.1/actor",
+		"http://169.254.169.254/actor", // AWS metadata
+	} {
+		if err := defaultSSRFCheck(addr); err == nil {
+			t.Errorf("expected SSRF error for %q, got nil", addr)
+		}
+	}
+}
+
+func TestFetchPublicKey_SSRFBlocked(t *testing.T) {
+	// Temporarily restore the real SSRF guard (TestMain disables it globally)
+	orig := ssrfCheck
+	ssrfCheck = defaultSSRFCheck
+	defer func() { ssrfCheck = orig }()
+
+	app := newTestApp(t)
+	defer app.Cleanup()
+	createSettingsWithKeys(t, app)
+
+	_, err := fetchPublicKey(app, "https://example.com", "http://127.0.0.1:9999/actor#main-key")
+	if err == nil {
+		t.Fatal("expected SSRF error, got nil")
+	}
+	if !strings.Contains(err.Error(), "private/loopback") {
+		t.Errorf("error should mention private/loopback, got: %v", err)
+	}
+}
+
+func TestFetchPublicKey_CacheHit(t *testing.T) {
+	app := newTestApp(t)
+	defer app.Cleanup()
+	createSettingsWithKeys(t, app)
+
+	// Pre-generate a public key PEM to serve
+	_, pub, err := GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair: %v", err)
+	}
+
+	requestCount := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		w.Header().Set("Content-Type", "application/activity+json")
+		fmt.Fprintf(w, `{"publicKey": {"publicKeyPem": %q}}`, pub)
+	}))
+	defer srv.Close()
+
+	keyID := srv.URL + "#main-key"
+	// Clear any stale cache entry from prior test runs
+	keyCache.Delete(keyID)
+
+	k1, err := fetchPublicKey(app, "https://example.com", keyID)
+	if err != nil {
+		t.Fatalf("first fetchPublicKey: %v", err)
+	}
+	k2, err := fetchPublicKey(app, "https://example.com", keyID)
+	if err != nil {
+		t.Fatalf("second fetchPublicKey: %v", err)
+	}
+	if k1 != k2 {
+		t.Error("expected same pointer from cache on second call")
+	}
+	if requestCount != 1 {
+		t.Errorf("expected 1 HTTP request (cache hit on second call), got %d", requestCount)
+	}
+
+	// Clean up cache after test
+	keyCache.Delete(keyID)
 }
 
 // ---- delivery queue tests ----
