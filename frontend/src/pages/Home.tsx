@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
 import { marked } from 'marked'
 import { pb, Event, Tag, PicksRecord } from '../lib/pocketbase'
+import { usePageTitle } from '../lib/title'
 import { MiniCalendar } from '../components/MiniCalendar'
 import { tagStyle } from '../lib/color'
 import { EventTimeline } from '../components/EventTimeline'
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function Home(_props: Props) {
+  usePageTitle('')
   const [events, setEvents] = useState<Event[]>([])
   const [tags, setTags] = useState<Tag[]>([])
   const [tagCounts, setTagCounts] = useState<Record<string, number>>({})

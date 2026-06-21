@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import { pb } from '../lib/pocketbase'
+import { usePageTitle } from '../lib/title'
 import './Login.css'
 
 interface Props {
@@ -13,6 +14,7 @@ interface OAuthProvider {
 }
 
 export function Login(_props: Props) {
+  usePageTitle('Log In')
   const [isRegister, setIsRegister] = useState(false)
 
   // Redirect if already authenticated

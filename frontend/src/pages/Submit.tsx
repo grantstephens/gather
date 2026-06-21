@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import { pb, Place, Tag, eventPath, Event as EventType } from '../lib/pocketbase'
+import { usePageTitle } from '../lib/title'
 import { PlaceSearch } from '../components/PlaceSearch'
 import { TagPicker } from '../components/TagPicker'
 import { MarkdownEditor } from '../components/MarkdownEditor'
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function Submit(_props: Props) {
+  usePageTitle('Submit an Event')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')

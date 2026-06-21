@@ -3,6 +3,7 @@ import Router from 'preact-router'
 import { lazy } from 'preact/compat'
 import { pb, User, Settings, PageRecord } from './lib/pocketbase'
 import { getTheme, toggleTheme } from './lib/theme'
+import { setInstanceName } from './lib/title'
 import { SearchBar } from './components/SearchBar'
 import './style.css'
 import './components/Navigation.css'
@@ -85,6 +86,7 @@ export function App() {
 
           if (record.instance_name) {
             document.title = record.instance_name
+            setInstanceName(record.instance_name)
           }
 
           if (record.custom_css) {
