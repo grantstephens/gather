@@ -17,6 +17,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
+// DeliverActivity loads the private key from app settings and delivers the activity.
 func DeliverActivity(app core.App, activity Activity, inboxURL string) error {
 	settings, err := app.FindFirstRecordByFilter("settings", "id != ''")
 	if err != nil {
@@ -33,6 +34,12 @@ func DeliverActivity(app core.App, activity Activity, inboxURL string) error {
 		return err
 	}
 
+	return deliverActivityWithKey(privateKey, activity.Actor+"#main-key", activity, inboxURL)
+}
+
+// deliverActivityWithKey delivers an activity using the provided key — avoids a DB round-trip
+// when the caller already holds the key (e.g. the delivery queue worker).
+func deliverActivityWithKey(privateKey *rsa.PrivateKey, keyID string, activity Activity, inboxURL string) error {
 	body, err := json.Marshal(activity)
 	if err != nil {
 		return err
@@ -46,7 +53,7 @@ func DeliverActivity(app core.App, activity Activity, inboxURL string) error {
 	req.Header.Set("Content-Type", "application/activity+json")
 	req.Header.Set("Accept", "application/activity+json")
 
-	if err := signRequest(req, privateKey, activity.Actor+"#main-key", body); err != nil {
+	if err := signRequest(req, privateKey, keyID, body); err != nil {
 		return err
 	}
 
@@ -97,18 +104,8 @@ func signRequest(req *http.Request, privateKey *rsa.PrivateKey, keyID string, bo
 	return nil
 }
 
-// signGetRequest signs a GET request — used for authorized fetch (actor lookups on strict instances).
-// GET has no body so we only sign (request-target), host, and date.
-func signGetRequest(app core.App, req *http.Request, keyID string) error {
-	settings, err := app.FindFirstRecordByFilter("settings", "id != ''")
-	if err != nil {
-		return err
-	}
-	privateKey, err := ParsePrivateKey(settings.GetString("ap_private_key"))
-	if err != nil {
-		return err
-	}
-
+// signGetRequest signs a GET request with the provided private key — used for authorized fetch.
+func signGetRequest(privateKey *rsa.PrivateKey, req *http.Request, keyID string) error {
 	date := time.Now().UTC().Format(http.TimeFormat)
 	req.Header.Set("Date", date)
 
@@ -133,8 +130,25 @@ func signGetRequest(app core.App, req *http.Request, keyID string) error {
 	return nil
 }
 
+// QueueDelivery enqueues a single delivery to the given inbox.
+func QueueDelivery(app core.App, activity Activity, inboxURL string) error {
+	collection, err := app.FindCollectionByNameOrId("ap_delivery_queue")
+	if err != nil {
+		return err
+	}
+
+	record := core.NewRecord(collection)
+	activityJSON, _ := json.Marshal(activity)
+	record.Set("activity", string(activityJSON))
+	record.Set("inbox_url", inboxURL)
+	record.Set("attempts", 0)
+	record.Set("next_retry", time.Now())
+	return app.Save(record)
+}
+
+// QueueDeliveryToFollowers enqueues delivery to all follower inboxes (deduplicated by shared inbox).
 func QueueDeliveryToFollowers(app core.App, activity Activity) error {
-	followers, err := app.FindRecordsByFilter("ap_followers", "", "", 0, 0)
+	followers, err := app.FindRecordsByFilter("ap_followers", "id != ''", "", 0, 0)
 	if err != nil {
 		return err
 	}
@@ -148,19 +162,8 @@ func QueueDeliveryToFollowers(app core.App, activity Activity) error {
 		inboxes[inbox] = true
 	}
 
-	collection, err := app.FindCollectionByNameOrId("ap_delivery_queue")
-	if err != nil {
-		return err
-	}
-
 	for inbox := range inboxes {
-		record := core.NewRecord(collection)
-		activityJSON, _ := json.Marshal(activity)
-		record.Set("activity", string(activityJSON))
-		record.Set("inbox_url", inbox)
-		record.Set("attempts", 0)
-		record.Set("next_retry", time.Now())
-		if err := app.Save(record); err != nil {
+		if err := QueueDelivery(app, activity, inbox); err != nil {
 			return err
 		}
 	}

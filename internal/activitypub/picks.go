@@ -20,12 +20,17 @@ func picksToNote(picks *core.Record, baseURL string) Note {
 		picksURL,
 	)
 
+	published := picks.GetDateTime("created").Time()
+	if published.IsZero() {
+		published = time.Now()
+	}
+
 	return Note{
 		Type:         "Note",
 		ID:           fmt.Sprintf("%s/ap/picks/%s", baseURL, picks.Id),
 		AttributedTo: baseURL + "/ap/actor",
 		Content:      content,
-		Published:    time.Now(),
+		Published:    published,
 		URL:          picksURL,
 		To:           []string{"https://www.w3.org/ns/activitystreams#Public"},
 		Cc:           []string{baseURL + "/ap/actor/followers"},

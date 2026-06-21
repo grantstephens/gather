@@ -70,7 +70,7 @@ func GetActor(app core.App, baseURL string) (*Actor, error) {
 			"https://www.w3.org/ns/activitystreams",
 			"https://w3id.org/security/v1",
 		},
-		Type:              "Application",
+		Type:              "Service",
 		ID:                actorID,
 		PreferredUsername: "events",
 		Name:              name,
