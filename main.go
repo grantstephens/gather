@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"html"
 	"io"
 	"io/fs"
@@ -295,7 +296,13 @@ func main() {
 
 		// ActivityPub outbox
 		se.Router.GET("/ap/outbox", func(re *core.RequestEvent) error {
-			data, err := activitypub.GetOutbox(se.App, baseURL)
+			page := 0
+			if p := re.Request.URL.Query().Get("page"); p != "" {
+				if n, err := strconv.Atoi(p); err == nil && n >= 0 {
+					page = n
+				}
+			}
+			data, err := activitypub.GetOutbox(se.App, baseURL, page)
 			if err != nil {
 				return re.InternalServerError("Failed to get outbox", err)
 			}
@@ -330,7 +337,10 @@ func main() {
 
 		// ActivityPub inbox
 		se.Router.POST("/ap/inbox", func(re *core.RequestEvent) error {
-			if err := activitypub.HandleInbox(se.App, baseURL, re.Request.Body); err != nil {
+			if err := activitypub.HandleInbox(se.App, baseURL, re.Request); err != nil {
+				if errors.Is(err, activitypub.ErrUnauthorized) {
+					return re.Error(http.StatusUnauthorized, "unauthorized", err)
+				}
 				return re.InternalServerError("Failed to process activity", err)
 			}
 			return re.NoContent(202)

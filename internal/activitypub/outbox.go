@@ -7,15 +7,26 @@ import (
 	"strings"
 	"time"
 
+	dbx "github.com/pocketbase/dbx"
 	"gather/internal/recurrence"
 	"github.com/pocketbase/pocketbase/core"
 )
 
 type OrderedCollection struct {
+	Context    string `json:"@context"`
+	Type       string `json:"type"`
+	ID         string `json:"id"`
+	TotalItems int    `json:"totalItems"`
+	First      string `json:"first,omitempty"`
+}
+
+type OrderedCollectionPage struct {
 	Context      string `json:"@context"`
 	Type         string `json:"type"`
 	ID           string `json:"id"`
-	TotalItems   int    `json:"totalItems"`
+	PartOf       string `json:"partOf"`
+	Next         string `json:"next,omitempty"`
+	Prev         string `json:"prev,omitempty"`
 	OrderedItems []any  `json:"orderedItems"`
 }
 
@@ -43,13 +54,33 @@ type Note struct {
 	Tag          []any     `json:"tag,omitempty"`
 }
 
-func GetOutbox(app core.App, baseURL string) ([]byte, error) {
+const outboxPageSize = 20
+
+func GetOutbox(app core.App, baseURL string, page int) ([]byte, error) {
+	outboxURL := baseURL + "/ap/outbox"
+
+	if page == 0 {
+		total, err := app.CountRecords("events", dbx.HashExp{"status": "published"})
+		if err != nil {
+			return nil, err
+		}
+		collection := OrderedCollection{
+			Context:    "https://www.w3.org/ns/activitystreams",
+			Type:       "OrderedCollection",
+			ID:         outboxURL,
+			TotalItems: int(total),
+			First:      outboxURL + "?page=1",
+		}
+		return json.MarshalIndent(collection, "", "  ")
+	}
+
+	offset := (page - 1) * outboxPageSize
 	events, err := app.FindRecordsByFilter(
 		"events",
 		"status = 'published'",
-		"-start_datetime",
-		20,
-		0,
+		"-created",
+		outboxPageSize,
+		offset,
 	)
 	if err != nil {
 		return nil, err
@@ -68,15 +99,22 @@ func GetOutbox(app core.App, baseURL string) ([]byte, error) {
 		items = append(items, activity)
 	}
 
-	collection := OrderedCollection{
+	pageURL := fmt.Sprintf("%s?page=%d", outboxURL, page)
+	result := OrderedCollectionPage{
 		Context:      "https://www.w3.org/ns/activitystreams",
-		Type:         "OrderedCollection",
-		ID:           baseURL + "/ap/outbox",
-		TotalItems:   len(items),
+		Type:         "OrderedCollectionPage",
+		ID:           pageURL,
+		PartOf:       outboxURL,
 		OrderedItems: items,
 	}
+	if len(events) == outboxPageSize {
+		result.Next = fmt.Sprintf("%s?page=%d", outboxURL, page+1)
+	}
+	if page > 1 {
+		result.Prev = fmt.Sprintf("%s?page=%d", outboxURL, page-1)
+	}
 
-	return json.MarshalIndent(collection, "", "  ")
+	return json.MarshalIndent(result, "", "  ")
 }
 
 func eventToNote(event *core.Record, baseURL string) Note {

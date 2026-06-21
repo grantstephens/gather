@@ -1,14 +1,24 @@
 package activitypub
 
 import (
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+var ErrUnauthorized = errors.New("unauthorized")
 
 type IncomingActivity struct {
 	Type   string          `json:"type"`
@@ -17,10 +27,14 @@ type IncomingActivity struct {
 	Object json.RawMessage `json:"object"`
 }
 
-func HandleInbox(app core.App, baseURL string, body io.Reader) error {
-	data, err := io.ReadAll(body)
+func HandleInbox(app core.App, baseURL string, r *http.Request) error {
+	data, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err != nil {
 		return err
+	}
+
+	if err := verifyHTTPSignature(app, baseURL, r, data); err != nil {
+		return fmt.Errorf("%w: %v", ErrUnauthorized, err)
 	}
 
 	var activity IncomingActivity
@@ -33,7 +47,6 @@ func HandleInbox(app core.App, baseURL string, body io.Reader) error {
 
 	switch activity.Type {
 	case "Follow":
-		// Process asynchronously — accept immediately, handle errors in background
 		go func() {
 			if err := handleFollow(app, baseURL, activity); err != nil {
 				app.Logger().Error("ap-inbox: failed to handle Follow", "actor", activity.Actor, "error", err)
@@ -50,6 +63,137 @@ func HandleInbox(app core.App, baseURL string, body io.Reader) error {
 	}
 
 	return nil
+}
+
+// verifyHTTPSignature checks the HTTP Signature header on an incoming inbox request.
+func verifyHTTPSignature(app core.App, baseURL string, r *http.Request, body []byte) error {
+	sigHeader := r.Header.Get("Signature")
+	if sigHeader == "" {
+		return fmt.Errorf("missing Signature header")
+	}
+
+	params := parseSignatureHeader(sigHeader)
+	keyID := params["keyId"]
+	if keyID == "" {
+		return fmt.Errorf("missing keyId in Signature header")
+	}
+	headersList := strings.Fields(params["headers"])
+	sigBytes, err := base64.StdEncoding.DecodeString(params["signature"])
+	if err != nil {
+		return fmt.Errorf("decode signature: %w", err)
+	}
+
+	// Reconstruct the signed string
+	parts := make([]string, 0, len(headersList))
+	for _, h := range headersList {
+		switch h {
+		case "(request-target)":
+			parts = append(parts, fmt.Sprintf("(request-target): post %s", r.URL.RequestURI()))
+		case "digest":
+			digest := r.Header.Get("Digest")
+			// Also verify the digest matches the body
+			if strings.HasPrefix(digest, "SHA-256=") {
+				expected := "SHA-256=" + base64.StdEncoding.EncodeToString(func() []byte { h := sha256.Sum256(body); return h[:] }())
+				if digest != expected {
+					return fmt.Errorf("digest mismatch")
+				}
+			}
+			parts = append(parts, fmt.Sprintf("digest: %s", digest))
+		default:
+			parts = append(parts, fmt.Sprintf("%s: %s", h, r.Header.Get(http.CanonicalHeaderKey(h))))
+		}
+	}
+	signedString := strings.Join(parts, "\n")
+
+	pubKey, err := fetchPublicKey(app, baseURL, keyID)
+	if err != nil {
+		return fmt.Errorf("fetch public key for %s: %w", keyID, err)
+	}
+
+	hashed := sha256.Sum256([]byte(signedString))
+	if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, hashed[:], sigBytes); err != nil {
+		return fmt.Errorf("signature verification failed: %w", err)
+	}
+
+	return nil
+}
+
+// parseSignatureHeader parses `key="value",key="value"` into a map.
+func parseSignatureHeader(header string) map[string]string {
+	params := make(map[string]string)
+	for _, part := range strings.Split(header, ",") {
+		part = strings.TrimSpace(part)
+		idx := strings.IndexByte(part, '=')
+		if idx < 0 {
+			continue
+		}
+		key := strings.TrimSpace(part[:idx])
+		val := strings.TrimSpace(part[idx+1:])
+		val = strings.Trim(val, `"`)
+		params[key] = val
+	}
+	return params
+}
+
+// fetchPublicKey fetches and parses the RSA public key for a given keyId URL.
+func fetchPublicKey(app core.App, baseURL, keyID string) (*rsa.PublicKey, error) {
+	// Strip fragment (#main-key) to get the actor URL
+	actorURL := keyID
+	if idx := strings.IndexByte(keyID, '#'); idx >= 0 {
+		actorURL = keyID[:idx]
+	}
+
+	privKey, err := loadPrivateKey(app)
+	if err != nil {
+		return nil, fmt.Errorf("load private key: %w", err)
+	}
+
+	req, err := http.NewRequest("GET", actorURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/activity+json")
+
+	if err := signGetRequest(privKey, req, baseURL+"/ap/actor#main-key"); err != nil {
+		return nil, fmt.Errorf("sign actor fetch: %w", err)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("actor fetch returned %d", resp.StatusCode)
+	}
+
+	var actor struct {
+		PublicKey struct {
+			PublicKeyPem string `json:"publicKeyPem"`
+		} `json:"publicKey"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&actor); err != nil {
+		return nil, fmt.Errorf("decode actor JSON: %w", err)
+	}
+
+	block, _ := pem.Decode([]byte(actor.PublicKey.PublicKeyPem))
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode public key PEM")
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse public key: %w", err)
+	}
+
+	rsaPub, ok := pub.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("public key is not RSA")
+	}
+
+	return rsaPub, nil
 }
 
 func handleFollow(app core.App, baseURL string, activity IncomingActivity) error {
@@ -87,18 +231,11 @@ func handleFollow(app core.App, baseURL string, activity IncomingActivity) error
 		Object:  activity,
 	}
 
-	var lastErr error
-	for attempt, delay := range []time.Duration{0, 5 * time.Second, 30 * time.Second} {
-		if delay > 0 {
-			time.Sleep(delay)
-		}
-		if lastErr = DeliverActivity(app, accept, actorInfo.Inbox); lastErr == nil {
-			app.Logger().Info("ap-inbox: Accept delivered", "actor", activity.Actor, "inbox", actorInfo.Inbox)
-			return nil
-		}
-		app.Logger().Error("ap-inbox: Accept delivery failed", "attempt", attempt+1, "inbox", actorInfo.Inbox, "error", lastErr)
+	if err := QueueDelivery(app, accept, actorInfo.Inbox); err != nil {
+		return fmt.Errorf("queue Accept delivery: %w", err)
 	}
-	return fmt.Errorf("Accept delivery exhausted retries: %w", lastErr)
+	app.Logger().Info("ap-inbox: Accept queued", "actor", activity.Actor, "inbox", actorInfo.Inbox)
+	return nil
 }
 
 func handleUndo(app core.App, activity IncomingActivity) error {
@@ -129,15 +266,18 @@ type ActorInfo struct {
 }
 
 func fetchActor(app core.App, baseURL, actorURL string) (*ActorInfo, error) {
+	privKey, err := loadPrivateKey(app)
+	if err != nil {
+		return nil, fmt.Errorf("load private key: %w", err)
+	}
+
 	req, err := http.NewRequest("GET", actorURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/activity+json")
 
-	// Sign the GET request — GoToSocial and others with "authorized fetch" enabled
-	// return 401 for unsigned actor lookups.
-	if err := signGetRequest(app, req, baseURL+"/ap/actor#main-key"); err != nil {
+	if err := signGetRequest(privKey, req, baseURL+"/ap/actor#main-key"); err != nil {
 		return nil, fmt.Errorf("sign actor fetch: %w", err)
 	}
 
@@ -173,9 +313,14 @@ func fetchActor(app core.App, baseURL, actorURL string) (*ActorInfo, error) {
 	}, nil
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
+func loadPrivateKey(app core.App) (*rsa.PrivateKey, error) {
+	settings, err := app.FindFirstRecordByFilter("settings", "id != ''")
+	if err != nil {
+		return nil, err
 	}
-	return b
+	pem := settings.GetString("ap_private_key")
+	if pem == "" {
+		return nil, fmt.Errorf("no private key configured")
+	}
+	return ParsePrivateKey(pem)
 }
