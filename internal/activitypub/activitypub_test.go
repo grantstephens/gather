@@ -1,6 +1,7 @@
 package activitypub
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -275,7 +276,7 @@ func TestGetOutbox_Structure(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Cleanup()
 
-	data, err := GetOutbox(app, "https://example.com")
+	data, err := GetOutbox(app, "https://example.com", 0)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -301,7 +302,7 @@ func TestGetOutbox_ActivityContext(t *testing.T) {
 	defer app.Cleanup()
 	createPublishedEvent(t, app, "Outbox Event", time.Now().Add(24*time.Hour))
 
-	data, err := GetOutbox(app, "https://example.com")
+	data, err := GetOutbox(app, "https://example.com", 0)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -334,7 +335,7 @@ func TestGetOutbox_ActivityFields(t *testing.T) {
 	start := time.Date(2026, 6, 20, 18, 0, 0, 0, time.UTC)
 	ev := createPublishedEvent(t, app, "Federated Event", start)
 
-	data, err := GetOutbox(app, "https://example.com")
+	data, err := GetOutbox(app, "https://example.com", 0)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -362,7 +363,7 @@ func TestGetOutbox_NoteFields(t *testing.T) {
 	start := time.Date(2026, 6, 20, 18, 0, 0, 0, time.UTC)
 	ev := createPublishedEvent(t, app, "Note Event", start)
 
-	data, err := GetOutbox(app, "https://example.com")
+	data, err := GetOutbox(app, "https://example.com", 0)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -429,7 +430,7 @@ func TestGetOutbox_OnlyPublishedEvents(t *testing.T) {
 	draft.Set("author", user.Id)
 	_ = app.Save(draft)
 
-	data, err := GetOutbox(app, "https://example.com")
+	data, err := GetOutbox(app, "https://example.com", 0)
 	if err != nil {
 		t.Fatalf("GetOutbox: %v", err)
 	}
@@ -506,10 +507,48 @@ func mockActorServer(t *testing.T, inbox string) *httptest.Server {
 	}))
 }
 
+// mockKeyServer returns a test HTTP server that serves an AP actor response with the given public key PEM.
+// It is used as the keyId actor endpoint so that verifyHTTPSignature can fetch the public key.
+func mockKeyServer(t *testing.T, inbox, pubKeyPEM string) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/activity+json")
+		resp := map[string]any{
+			"inbox": inbox,
+			"endpoints": map[string]any{
+				"sharedInbox": "",
+			},
+			"publicKey": map[string]any{
+				"publicKeyPem": pubKeyPEM,
+			},
+		}
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+}
+
+// newSignedInboxRequest builds a properly signed *http.Request for the AP inbox,
+// using the app's stored private key. keyServerURL must point to a server that
+// returns the corresponding public key so that verifyHTTPSignature can verify it.
+func newSignedInboxRequest(t *testing.T, app *tests.TestApp, body []byte, keyServerURL string) *http.Request {
+	t.Helper()
+	privKey, err := loadPrivateKey(app)
+	if err != nil {
+		t.Fatalf("loadPrivateKey: %v", err)
+	}
+	keyID := keyServerURL + "#main-key"
+	req := httptest.NewRequest("POST", "/ap/inbox", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/activity+json")
+	req.Host = "example.com"
+	if err := signRequest(req, privKey, keyID, body); err != nil {
+		t.Fatalf("signRequest: %v", err)
+	}
+	return req
+}
+
 func TestHandleInbox_Follow(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Cleanup()
-	createSettingsWithKeys(t, app)
+	settings := createSettingsWithKeys(t, app)
 
 	// Mock the remote inbox that will receive our Accept
 	acceptSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -517,27 +556,32 @@ func TestHandleInbox_Follow(t *testing.T) {
 	}))
 	defer acceptSrv.Close()
 
-	// Mock the actor endpoint so fetchActor doesn't hit the real network
-	actorSrv := mockActorServer(t, acceptSrv.URL)
-	defer actorSrv.Close()
+	// Key server: serves the public key so verifyHTTPSignature can verify our signed request,
+	// and also acts as the actor server (provides inbox URL) so fetchActor works.
+	keySrv := mockKeyServer(t, acceptSrv.URL, settings.GetString("ap_public_key"))
+	defer keySrv.Close()
 
-	body := strings.NewReader(fmt.Sprintf(`{
+	bodyBytes := []byte(fmt.Sprintf(`{
 		"type": "Follow",
 		"id": "https://remote.example/follows/1",
 		"actor": %q,
 		"object": "https://example.com/ap/actor"
-	}`, actorSrv.URL))
+	}`, keySrv.URL))
 
-	if err := HandleInbox(app, "https://example.com", body); err != nil {
+	req := newSignedInboxRequest(t, app, bodyBytes, keySrv.URL)
+	if err := HandleInbox(app, "https://example.com", req); err != nil {
 		t.Fatalf("HandleInbox Follow: %v", err)
 	}
+
+	// handleFollow runs in a goroutine; wait for it to complete
+	time.Sleep(100 * time.Millisecond)
 
 	follower, err := app.FindFirstRecordByFilter("ap_followers", "actor_url != ''")
 	if err != nil {
 		t.Fatalf("follower record not created: %v", err)
 	}
-	if follower.GetString("actor_url") != actorSrv.URL {
-		t.Errorf("actor_url = %q, want %q", follower.GetString("actor_url"), actorSrv.URL)
+	if follower.GetString("actor_url") != keySrv.URL {
+		t.Errorf("actor_url = %q, want %q", follower.GetString("actor_url"), keySrv.URL)
 	}
 	if follower.GetString("inbox_url") != acceptSrv.URL {
 		t.Errorf("inbox_url = %q, want %q", follower.GetString("inbox_url"), acceptSrv.URL)
@@ -547,29 +591,31 @@ func TestHandleInbox_Follow(t *testing.T) {
 func TestHandleInbox_FollowDeduplicated(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Cleanup()
-	createSettingsWithKeys(t, app)
+	settings := createSettingsWithKeys(t, app)
 
 	acceptSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 	}))
 	defer acceptSrv.Close()
 
-	actorSrv := mockActorServer(t, acceptSrv.URL)
-	defer actorSrv.Close()
+	keySrv := mockKeyServer(t, acceptSrv.URL, settings.GetString("ap_public_key"))
+	defer keySrv.Close()
 
-	followBody := func() *strings.Reader {
-		return strings.NewReader(fmt.Sprintf(`{
+	followBody := func() []byte {
+		return []byte(fmt.Sprintf(`{
 			"type": "Follow",
 			"id": "https://remote.example/follows/1",
 			"actor": %q,
 			"object": "https://example.com/ap/actor"
-		}`, actorSrv.URL))
+		}`, keySrv.URL))
 	}
 
-	if err := HandleInbox(app, "https://example.com", followBody()); err != nil {
+	req1 := newSignedInboxRequest(t, app, followBody(), keySrv.URL)
+	if err := HandleInbox(app, "https://example.com", req1); err != nil {
 		t.Fatalf("first Follow: %v", err)
 	}
-	if err := HandleInbox(app, "https://example.com", followBody()); err != nil {
+	req2 := newSignedInboxRequest(t, app, followBody(), keySrv.URL)
+	if err := HandleInbox(app, "https://example.com", req2); err != nil {
 		t.Fatalf("second Follow: %v", err)
 	}
 
@@ -588,40 +634,45 @@ func TestHandleInbox_FollowDeduplicated(t *testing.T) {
 func TestHandleInbox_UndoFollow(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Cleanup()
-	createSettingsWithKeys(t, app)
+	settings := createSettingsWithKeys(t, app)
 
 	acceptSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 	}))
 	defer acceptSrv.Close()
 
-	actorSrv := mockActorServer(t, acceptSrv.URL)
-	defer actorSrv.Close()
+	keySrv := mockKeyServer(t, acceptSrv.URL, settings.GetString("ap_public_key"))
+	defer keySrv.Close()
 
 	// First, follow
-	followBody := strings.NewReader(fmt.Sprintf(`{
+	followBodyBytes := []byte(fmt.Sprintf(`{
 		"type": "Follow",
 		"id": "https://remote.example/follows/1",
 		"actor": %q,
 		"object": "https://example.com/ap/actor"
-	}`, actorSrv.URL))
-	if err := HandleInbox(app, "https://example.com", followBody); err != nil {
+	}`, keySrv.URL))
+	req1 := newSignedInboxRequest(t, app, followBodyBytes, keySrv.URL)
+	if err := HandleInbox(app, "https://example.com", req1); err != nil {
 		t.Fatalf("Follow: %v", err)
 	}
 
+	// Wait for Follow goroutine to save the follower record before sending Undo
+	time.Sleep(100 * time.Millisecond)
+
 	// Then, undo
-	undoBody := strings.NewReader(fmt.Sprintf(`{
+	undoBodyBytes := []byte(fmt.Sprintf(`{
 		"type": "Undo",
 		"id": "https://remote.example/undos/1",
 		"actor": %q,
 		"object": {"type": "Follow", "object": "https://example.com/ap/actor"}
-	}`, actorSrv.URL))
-	if err := HandleInbox(app, "https://example.com", undoBody); err != nil {
+	}`, keySrv.URL))
+	req2 := newSignedInboxRequest(t, app, undoBodyBytes, keySrv.URL)
+	if err := HandleInbox(app, "https://example.com", req2); err != nil {
 		t.Fatalf("Undo: %v", err)
 	}
 
-	// Wait a moment for goroutines
-	time.Sleep(50 * time.Millisecond)
+	// Wait for Undo goroutine to delete the follower record
+	time.Sleep(100 * time.Millisecond)
 
 	followers, err := app.FindRecordsByFilter("ap_followers", "id != ''", "", 0, 0)
 	if err != nil {
@@ -635,15 +686,21 @@ func TestHandleInbox_UndoFollow(t *testing.T) {
 func TestHandleInbox_UnknownActivityIgnored(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Cleanup()
+	settings := createSettingsWithKeys(t, app)
 
-	body := strings.NewReader(`{
+	// Need a key server so verifyHTTPSignature can fetch the public key
+	keySrv := mockKeyServer(t, "https://remote.example/inbox", settings.GetString("ap_public_key"))
+	defer keySrv.Close()
+
+	bodyBytes := []byte(fmt.Sprintf(`{
 		"type": "Like",
 		"id": "https://remote.example/likes/1",
-		"actor": "https://remote.example/users/someone",
+		"actor": %q,
 		"object": "https://example.com/ap/events/abc"
-	}`)
+	}`, keySrv.URL))
 
-	if err := HandleInbox(app, "https://example.com", body); err != nil {
+	req := newSignedInboxRequest(t, app, bodyBytes, keySrv.URL)
+	if err := HandleInbox(app, "https://example.com", req); err != nil {
 		t.Errorf("unknown activity type should be silently ignored, got error: %v", err)
 	}
 }
