@@ -63,7 +63,7 @@ export function Event({ id }: Props) {
         } catch {
           // Fall back to slug lookup
           const records = await pb.collection('events').getList<EventType>(1, 1, {
-            filter: `slug = "${id}"`,
+            filter: pb.filter('slug = {:id}', { id }),
             expand: 'place,tags,author',
           })
           if (records.items.length === 0) throw new Error('Event not found')
@@ -180,7 +180,7 @@ export function Event({ id }: Props) {
           )}
           <h1>{event.title}</h1>
           <div class="event-meta">
-            <time class="event-datetime">
+            <time class="event-datetime" dateTime={event.start_datetime}>
               {format(startDate, 'EEEE, MMMM d, yyyy · h:mm a')}
               {endDate && ` - ${format(endDate, 'h:mm a')}`}
             </time>
