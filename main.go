@@ -835,7 +835,7 @@ func main() {
 			}
 
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300, stale-if-error=86400")
+			re.Response.Header().Set("Cache-Control", "no-store")
 			return re.Blob(200, "text/html", html)
 		})
 
