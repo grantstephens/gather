@@ -37,3 +37,6 @@ jobs:
 
       - name: Build backend
         run: go build ./...
+
+      - name: Test backend
+        run: go test ./...
