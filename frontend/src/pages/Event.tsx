@@ -163,12 +163,18 @@ export function Event({ id }: Props) {
   const startDate = new Date(event.start_datetime)
   const endDate = event.end_datetime ? new Date(event.end_datetime) : null
   const imageUrl = getImageUrl(event, '800x600')
+  const imageUrl400 = getImageUrl(event, '400x300')
 
   return (
     <article class="event-page">
       {imageUrl && (
         <div class="event-hero">
-          <img src={imageUrl} alt="" />
+          <img
+            src={imageUrl}
+            srcset={`${imageUrl400} 400w, ${imageUrl} 800w`}
+            sizes="(max-width: 600px) 400px, 800px"
+            alt={event.title}
+          />
         </div>
       )}
       <div class="event-content">

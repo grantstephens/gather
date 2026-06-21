@@ -28,7 +28,15 @@ export function EventCard({ event, variant = 'featured' }: Props) {
         </div>
         {imageUrl && (
           <div class="event-card-compact-thumb">
-            <img src={imageUrl} alt="" width="80" height="60" loading="lazy" />
+            <img
+              src={imageUrl}
+              srcset={`${getImageUrl(event, '200x150')} 200w, ${imageUrl} 400w`}
+              sizes="80px"
+              alt={event.title}
+              width="80"
+              height="60"
+              loading="lazy"
+            />
           </div>
         )}
       </a>
@@ -42,7 +50,15 @@ export function EventCard({ event, variant = 'featured' }: Props) {
     <a href={eventPath(event)} class={cardClass} data-umami-event="event-click" data-umami-event-type="featured">
       {imageUrl ? (
         <div class="event-card-thumb">
-          <img src={imageUrl} alt="" width="400" height="300" loading="lazy" />
+          <img
+            src={imageUrl}
+            srcset={`${getImageUrl(event, '200x150')} 200w, ${imageUrl} 400w, ${getImageUrl(event, '800x600')} 800w`}
+            sizes="(max-width: 600px) 300px, 400px"
+            alt={event.title}
+            width="400"
+            height="300"
+            loading="lazy"
+          />
         </div>
       ) : (
         <div class="event-card-thumb">
