@@ -56,12 +56,15 @@ export function Home(_props: Props) {
     if (selectedTags.size > 0) {
       filters.push(`(${[...selectedTags].map(id => `tags.id ?= '${id}'`).join(' || ')})`)
     }
-    pb.collection('events').getFullList({
+    // 200 events/month is well above any realistic single-month count; avoids an
+    // unbounded getFullList across the entire events table.
+    pb.collection('events').getList(1, 200, {
       filter: filters.join(' && '),
       fields: 'start_datetime,expand.tags.color',
       expand: 'tags',
       '$autoCancel': false,
-    }).then((items: any[]) => {
+    }).then((result: any) => {
+      const items: any[] = result.items
       const dateColors = new Map<string, string[]>()
       items.forEach(e => {
         const date = e.start_datetime.split(' ')[0]
