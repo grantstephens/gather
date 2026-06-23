@@ -119,17 +119,17 @@ func convertAndReplaceImage(e *core.RecordEvent, fieldName string, allowSVG bool
 		return e.Next()
 	}
 
-	// Delete the original file
-	if err := fs.Delete(filePath); err != nil {
-		log.Printf("Failed to delete original file %s: %v", filePath, err)
-		// Continue anyway, we'll write the new file
-	}
-
-	// Write the WebP file
+	// Write the WebP file before deleting the original so that if the upload
+	// fails, the original PNG is still accessible (and the AP activity URL won't 404).
 	newFilePath := basePath + "/" + newFilename
 	if err := fs.Upload(webpBytes, newFilePath); err != nil {
 		log.Printf("Failed to write WebP file %s: %v", newFilePath, err)
 		return e.Next()
+	}
+
+	// Delete the original only after the WebP is safely stored
+	if err := fs.Delete(filePath); err != nil {
+		log.Printf("Failed to delete original file %s: %v", filePath, err)
 	}
 
 	// Pre-generate WebP thumbnails for common sizes
