@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -130,7 +131,7 @@ func eventToNote(event *core.Record, baseURL string) Note {
 
 	dateStr := ""
 	if !startTime.IsZero() {
-		dateStr = startTime.Format("Monday, January 2, 2006 at 3:04 PM")
+		dateStr = startTime.Local().Format("Monday, January 2, 2006 at 3:04 PM MST")
 	}
 
 	content := fmt.Sprintf(
@@ -160,17 +161,17 @@ func eventToNote(event *core.Record, baseURL string) Note {
 		Cc:           []string{baseURL + "/ap/actor/followers"},
 	}
 
-	// Attach event image if present
+	// Attach event image if present. All uploaded images are converted to WebP,
+	// so we always reference the .webp file regardless of the stored filename.
 	if image := event.GetString("image"); image != "" {
+		ext := strings.ToLower(filepath.Ext(image))
+		if ext != ".webp" && ext != ".svg" {
+			image = strings.TrimSuffix(image, filepath.Ext(image)) + ".webp"
+		}
 		imageURL := fmt.Sprintf("%s/api/files/%s/%s", baseURL, event.BaseFilesPath(), image)
 		mediaType := "image/webp"
-		switch {
-		case strings.HasSuffix(image, ".png"):
-			mediaType = "image/png"
-		case strings.HasSuffix(image, ".jpg"), strings.HasSuffix(image, ".jpeg"):
-			mediaType = "image/jpeg"
-		case strings.HasSuffix(image, ".gif"):
-			mediaType = "image/gif"
+		if ext == ".svg" {
+			mediaType = "image/svg+xml"
 		}
 		note.Attachment = []any{APImage{
 			Type:      "Document",
