@@ -866,6 +866,21 @@ func main() {
 			return re.Blob(200, "text/html", html)
 		})
 
+		// Picks post: SSR for bots
+		se.Router.GET("/picks/{slug}", func(re *core.RequestEvent) error {
+			if !seo.IsBot(re.Request.Header.Get("User-Agent")) {
+				return serveSPA(re)
+			}
+			slug := re.Request.PathValue("slug")
+			html, err := seo.GeneratePicksHTML(se.App, slug, baseURL)
+			if err != nil {
+				return serveSPA(re)
+			}
+			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+			re.Response.Header().Set("Cache-Control", "no-store")
+			return re.Blob(200, "text/html", html)
+		})
+
 		// Home page: SSR for bots, SPA/Vite for humans
 		// Use /{$} to match only exact root — GET / conflicts with GET /{path...} in Go 1.22+
 		se.Router.GET("/{$}", func(re *core.RequestEvent) error {
