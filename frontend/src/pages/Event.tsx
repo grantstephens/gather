@@ -24,6 +24,7 @@ export function Event({ id }: Props) {
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<any>(null)
+  const descriptionRef = useRef<HTMLDivElement>(null)
   const isModerator = canModerate()
 
   const handleDelete = () => {
@@ -151,6 +152,27 @@ export function Event({ id }: Props) {
     }
   }, [event])
 
+  useEffect(() => {
+    const el = descriptionRef.current
+    if (!el || !event) return
+    const handleClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement).closest('a')
+      if (!anchor?.href) return
+      try {
+        const url = new URL(anchor.href)
+        if (url.origin === window.location.origin) return
+        ;(window as any).umami?.track('event-outbound-link', {
+          url: anchor.href,
+          domain: url.hostname,
+          event_id: event.id,
+          event_title: event.title,
+        })
+      } catch {}
+    }
+    el.addEventListener('click', handleClick)
+    return () => el.removeEventListener('click', handleClick)
+  }, [event])
+
   if (loading) {
     return <SkeletonEventDetailPage />
   }
@@ -235,7 +257,7 @@ export function Event({ id }: Props) {
         {event.description && (
           <section class="event-description">
             <p class="section-label">About</p>
-            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(event.description) as string) }} />
+            <div ref={descriptionRef} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(event.description) as string) }} />
           </section>
         )}
 
