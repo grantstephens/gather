@@ -102,19 +102,37 @@ export function Home(_props: Props) {
   }, [])
 
   useEffect(() => {
+    const now = new Date()
+    const dow = now.getDay() // 0=Sun … 6=Sat
+
+    // Find the Saturday of the current/upcoming weekend
+    let targetSat: Date
+    if (dow === 6) {
+      targetSat = new Date(now)
+    } else if (dow === 0) {
+      // Sunday — this weekend's Saturday was yesterday
+      targetSat = new Date(now)
+      targetSat.setDate(targetSat.getDate() - 1)
+    } else {
+      // Mon–Fri — next Saturday
+      targetSat = new Date(now)
+      targetSat.setDate(targetSat.getDate() + (6 - dow))
+    }
+
+    // Stop showing after Sunday 17:00
+    const showUntil = new Date(targetSat)
+    showUntil.setDate(showUntil.getDate() + 1)
+    showUntil.setHours(17, 0, 0, 0)
+    if (now >= showUntil) return
+
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const satStr = `${targetSat.getFullYear()}-${pad(targetSat.getMonth() + 1)}-${pad(targetSat.getDate())}`
+
     pb.collection('picks').getList<PicksRecord>(1, 1, {
-      filter: 'hidden = false',
-      sort: '-start_date',
-      fields: 'id,title,slug,blurb,start_date',
+      filter: `hidden = false && start_date = "${satStr}"`,
+      fields: 'id,title,slug,blurb',
     }).then(result => {
-      const picks = result.items[0] ?? null
-      if (picks?.start_date) {
-        // Show until Sunday 17:00 — start_date is always the Saturday
-        const showUntil = new Date(picks.start_date + 'T17:00:00')
-        showUntil.setDate(showUntil.getDate() + 1)
-        if (new Date() >= showUntil) return
-      }
-      setCurrentPicks(picks)
+      setCurrentPicks(result.items[0] ?? null)
     }).catch(() => {})
   }, [])
 
