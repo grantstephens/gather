@@ -105,9 +105,16 @@ export function Home(_props: Props) {
     pb.collection('picks').getList<PicksRecord>(1, 1, {
       filter: 'hidden = false',
       sort: '-start_date',
-      fields: 'id,title,slug,blurb',
+      fields: 'id,title,slug,blurb,start_date',
     }).then(result => {
-      setCurrentPicks(result.items[0] ?? null)
+      const picks = result.items[0] ?? null
+      if (picks?.start_date) {
+        // Show until Sunday 17:00 — start_date is always the Saturday
+        const showUntil = new Date(picks.start_date + 'T17:00:00')
+        showUntil.setDate(showUntil.getDate() + 1)
+        if (new Date() >= showUntil) return
+      }
+      setCurrentPicks(picks)
     }).catch(() => {})
   }, [])
 
