@@ -81,12 +81,17 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 	}
 
 	// Picks archive + individual posts
-	entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/picks", baseURL), LastMod: time.Now().Format("2006-01-02")})
 	picks, _ := app.FindRecordsByFilter("picks", "hidden = false", "-start_date", 200, 0)
+	picksIndexLastMod := time.Now().Format("2006-01-02")
+	if len(picks) > 0 {
+		picksIndexLastMod = picks[0].GetDateTime("updated").Time().Format("2006-01-02")
+	}
+	entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/picks", baseURL), LastMod: picksIndexLastMod})
 	for _, post := range picks {
+		lastMod := post.GetDateTime("updated").Time().Format("2006-01-02")
 		entries = append(entries, SitemapEntry{
 			URL:     fmt.Sprintf("%s/picks/%s", baseURL, post.GetString("slug")),
-			LastMod: time.Now().Format("2006-01-02"),
+			LastMod: lastMod,
 		})
 	}
 
