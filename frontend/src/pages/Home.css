@@ -311,3 +311,19 @@
 }
 
 .picks-teaser-link:hover { text-decoration: underline; }
+
+.picks-next-teaser {
+  margin: 0 0 1rem;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.picks-next-teaser a {
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.picks-next-teaser a:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
