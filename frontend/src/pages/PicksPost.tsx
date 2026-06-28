@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { pb, PicksRecord, getImageUrl } from '../lib/pocketbase'
+import { usePageTitle } from '../lib/title'
 import { EventCard } from '../components/EventCard'
 import './PicksPost.css'
 
@@ -23,6 +24,7 @@ function setMetaTag(attr: string, value: string, content: string) {
 export function PicksPost({ slug }: Props) {
   const [post, setPost] = useState<PicksRecord | null>(null)
   const [loading, setLoading] = useState(true)
+  usePageTitle(post?.title ?? '')
 
   useEffect(() => {
     if (!slug) {
@@ -37,18 +39,28 @@ export function PicksPost({ slug }: Props) {
         )
         setPost(record)
 
-        document.title = record.title
         const plainBlurb = (marked.parse(record.blurb) as string).replace(/<[^>]*>/g, '').slice(0, 160)
+        const pageUrl = window.location.href
+
         setMetaTag('name', 'description', plainBlurb)
+        setMetaTag('property', 'og:type', 'article')
         setMetaTag('property', 'og:title', record.title)
         setMetaTag('property', 'og:description', plainBlurb)
+        setMetaTag('property', 'og:url', pageUrl)
+        setMetaTag('name', 'twitter:card', 'summary')
+        setMetaTag('name', 'twitter:title', record.title)
+        setMetaTag('name', 'twitter:description', plainBlurb)
 
         const firstEvent = record.expand?.events
           ?.slice()
           .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())[0]
         if (firstEvent) {
           const imageUrl = getImageUrl(firstEvent, '800x600')
-          if (imageUrl) setMetaTag('property', 'og:image', imageUrl)
+          if (imageUrl) {
+            setMetaTag('property', 'og:image', imageUrl)
+            setMetaTag('name', 'twitter:card', 'summary_large_image')
+            setMetaTag('name', 'twitter:image', imageUrl)
+          }
         }
       } catch {
         setPost(null)
