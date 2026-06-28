@@ -105,31 +105,30 @@ export function Home(_props: Props) {
     const now = new Date()
     const dow = now.getDay() // 0=Sun … 6=Sat
 
-    // Find the Saturday of the current/upcoming weekend
-    let targetSat: Date
-    if (dow === 6) {
-      targetSat = new Date(now)
-    } else if (dow === 0) {
-      // Sunday — this weekend's Saturday was yesterday
-      targetSat = new Date(now)
-      targetSat.setDate(targetSat.getDate() - 1)
+    // Find the Friday of the current/upcoming weekend (Fri–Sun)
+    const targetFri = new Date(now)
+    if (dow === 0) {
+      targetFri.setDate(targetFri.getDate() - 2) // Sunday → last Friday
+    } else if (dow === 6) {
+      targetFri.setDate(targetFri.getDate() - 1) // Saturday → yesterday
     } else {
-      // Mon–Fri — next Saturday
-      targetSat = new Date(now)
-      targetSat.setDate(targetSat.getDate() + (6 - dow))
+      targetFri.setDate(targetFri.getDate() + (5 - dow)) // Mon–Fri → this/next Friday
     }
 
+    const targetSun = new Date(targetFri)
+    targetSun.setDate(targetSun.getDate() + 2)
+
     // Stop showing after Sunday 17:00
-    const showUntil = new Date(targetSat)
-    showUntil.setDate(showUntil.getDate() + 1)
+    const showUntil = new Date(targetSun)
     showUntil.setHours(17, 0, 0, 0)
     if (now >= showUntil) return
 
     const pad = (n: number) => String(n).padStart(2, '0')
-    const satStr = `${targetSat.getFullYear()}-${pad(targetSat.getMonth() + 1)}-${pad(targetSat.getDate())}`
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
     pb.collection('picks').getList<PicksRecord>(1, 1, {
-      filter: `hidden = false && start_date = "${satStr}"`,
+      filter: `hidden = false && start_date >= "${fmt(targetFri)}" && start_date <= "${fmt(targetSun)}"`,
+      sort: 'start_date',
       fields: 'id,title,slug,blurb',
     }).then(result => {
       setCurrentPicks(result.items[0] ?? null)
