@@ -866,6 +866,20 @@ func main() {
 			return re.Blob(200, "text/html", html)
 		})
 
+		// Picks index: SSR for bots
+		se.Router.GET("/picks", func(re *core.RequestEvent) error {
+			if !seo.IsBot(re.Request.Header.Get("User-Agent")) {
+				return serveSPA(re)
+			}
+			html, err := seo.GeneratePicksIndexHTML(se.App, baseURL)
+			if err != nil {
+				return serveSPA(re)
+			}
+			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+			re.Response.Header().Set("Cache-Control", "no-store")
+			return re.Blob(200, "text/html", html)
+		})
+
 		// Picks post: SSR for bots
 		se.Router.GET("/picks/{slug}", func(re *core.RequestEvent) error {
 			if !seo.IsBot(re.Request.Header.Get("User-Agent")) {
