@@ -34,6 +34,7 @@ export function Home(_props: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const today = new Date().toISOString().split('T')[0]
   const [currentPicks, setCurrentPicks] = useState<PicksRecord | null>(null)
+  const [nextPicks, setNextPicks] = useState<PicksRecord | null>(null)
 
   // Reset all filters when the brand/logo link is clicked
   useEffect(() => {
@@ -105,33 +106,46 @@ export function Home(_props: Props) {
     const now = new Date()
     const dow = now.getDay() // 0=Sun … 6=Sat
 
-    // Find the Friday of the current/upcoming weekend (Fri–Sun)
-    const targetFri = new Date(now)
-    if (dow === 0) {
-      targetFri.setDate(targetFri.getDate() - 2) // Sunday → last Friday
-    } else if (dow === 6) {
-      targetFri.setDate(targetFri.getDate() - 1) // Saturday → yesterday
-    } else {
-      targetFri.setDate(targetFri.getDate() + (5 - dow)) // Mon–Fri → this/next Friday
-    }
-
-    const targetSun = new Date(targetFri)
-    targetSun.setDate(targetSun.getDate() + 2)
-
-    // Stop showing after Sunday 17:00
-    const showUntil = new Date(targetSun)
-    showUntil.setHours(17, 0, 0, 0)
-    if (now >= showUntil) return
-
     const pad = (n: number) => String(n).padStart(2, '0')
     const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
+    // Find the Friday of the current/upcoming weekend (Fri–Sun)
+    const thisFri = new Date(now)
+    if (dow === 0) {
+      thisFri.setDate(thisFri.getDate() - 2) // Sunday → last Friday
+    } else if (dow === 6) {
+      thisFri.setDate(thisFri.getDate() - 1) // Saturday → yesterday
+    } else {
+      thisFri.setDate(thisFri.getDate() + (5 - dow)) // Mon–Fri → this/next Friday
+    }
+    const thisSun = new Date(thisFri)
+    thisSun.setDate(thisSun.getDate() + 2)
+
+    // Show current weekend picks until Sunday 17:00
+    const showUntil = new Date(thisSun)
+    showUntil.setHours(17, 0, 0, 0)
+    if (now < showUntil) {
+      pb.collection('picks').getList<PicksRecord>(1, 1, {
+        filter: `hidden = false && start_date >= "${fmt(thisFri)}" && start_date <= "${fmt(thisSun)}"`,
+        sort: 'start_date',
+        fields: 'id,title,slug,blurb',
+      }).then(result => {
+        setCurrentPicks(result.items[0] ?? null)
+      }).catch(() => {})
+    }
+
+    // Peek at next weekend
+    const nextFri = new Date(thisFri)
+    nextFri.setDate(nextFri.getDate() + 7)
+    const nextSun = new Date(nextFri)
+    nextSun.setDate(nextSun.getDate() + 2)
+
     pb.collection('picks').getList<PicksRecord>(1, 1, {
-      filter: `hidden = false && start_date >= "${fmt(targetFri)}" && start_date <= "${fmt(targetSun)}"`,
+      filter: `hidden = false && start_date >= "${fmt(nextFri)}" && start_date <= "${fmt(nextSun)}"`,
       sort: 'start_date',
-      fields: 'id,title,slug,blurb',
+      fields: 'id,slug',
     }).then(result => {
-      setCurrentPicks(result.items[0] ?? null)
+      setNextPicks(result.items[0] ?? null)
     }).catch(() => {})
   }, [])
 
@@ -355,6 +369,11 @@ export function Home(_props: Props) {
             )}
             <a href="/picks" class="picks-teaser-link">See all picks →</a>
           </div>
+        )}
+        {nextPicks && (
+          <p class="picks-next-teaser">
+            <a href={`/picks/${nextPicks.slug}`}>Take a peek at next weekend →</a>
+          </p>
         )}
         <div class="events-header">
           <h2>
