@@ -85,11 +85,13 @@ func GenerateEventJSONLD(app core.App, event *core.Record, baseURL string) ([]by
 			jsonLD.Location = &EventLocation{
 				Type: "Place",
 				Name: place.GetString("name"),
-				Geo: &EventGeo{
+			}
+			if loc.Lat != 0 || loc.Lon != 0 {
+				jsonLD.Location.Geo = &EventGeo{
 					Type:      "GeoCoordinates",
 					Latitude:  loc.Lat,
 					Longitude: loc.Lon,
-				},
+				}
 			}
 
 			// Add address if available
@@ -124,12 +126,14 @@ func GenerateEventJSONLD(app core.App, event *core.Record, baseURL string) ([]by
 	return json.MarshalIndent(jsonLD, "", "  ")
 }
 
-// formatDateTime converts types.DateTime to ISO 8601 (RFC3339) format
+// formatDateTime converts types.DateTime to ISO 8601 (RFC3339) format in local time.
+// Using Local() ensures BST events show +01:00 rather than UTC Z, which Google
+// uses to display the correct local time to users.
 func formatDateTime(t types.DateTime) string {
 	if t.IsZero() {
 		return ""
 	}
-	return t.Time().Format(time.RFC3339)
+	return t.Time().Local().Format(time.RFC3339)
 }
 
 // mapEventStatus converts event status to Schema.org EventStatusType
