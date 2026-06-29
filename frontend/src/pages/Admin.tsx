@@ -74,6 +74,12 @@ export function Admin(_props: Props) {
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [tagForm, setTagForm] = useState({ name: '', color: '' })
 
+  // Bulk selection state
+  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set())
+  const [selectedPlaces, setSelectedPlaces] = useState<Set<string>>(new Set())
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
+  const [bulkLoading, setBulkLoading] = useState(false)
+
   // API Keys state
   const [serviceAccounts, setServiceAccounts] = useState<ServiceAccount[]>([])
   const [apiKeysLoaded, setApiKeysLoaded] = useState(false)
@@ -154,6 +160,7 @@ export function Admin(_props: Props) {
   useEffect(() => {
     if (!canModerate() || eventsPage === 1) return // page 1 is loaded in the initial load effect
     setEventsLoading(true)
+    setSelectedEvents(new Set())
     pb.collection('events').getList<Event>(eventsPage, 25, {
       sort: '-start_datetime',
       expand: 'place,tags',
@@ -162,6 +169,13 @@ export function Admin(_props: Props) {
       setEventsTotalPages(result.totalPages)
     }).catch(console.error).finally(() => setEventsLoading(false))
   }, [eventsPage])
+
+  // Clear bulk selections when switching tabs
+  useEffect(() => {
+    setSelectedEvents(new Set())
+    setSelectedPlaces(new Set())
+    setSelectedTags(new Set())
+  }, [activeTab])
 
   useEffect(() => {
     if (activeTab !== 'pages' || !isAdmin() || pagesLoaded) return
@@ -374,6 +388,96 @@ export function Admin(_props: Props) {
       setAllTags(prev => prev.filter(t => t.id !== tagId))
     } catch (err) {
       alert('Failed to delete tag')
+    }
+  }
+
+  const handleBulkApproveEvents = async () => {
+    const ids = [...selectedEvents].filter(id => allEvents.find(e => e.id === id)?.status === 'pending')
+    if (ids.length === 0) return
+    setBulkLoading(true)
+    try {
+      await Promise.all(ids.map(id => pb.collection('events').update(id, { status: 'published' })))
+      setAllEvents(prev => prev.map(e => ids.includes(e.id) ? { ...e, status: 'published' } : e))
+      setSelectedEvents(new Set())
+    } catch (err: any) {
+      alert(err?.message || 'Failed to approve some events. Check that their places and tags are approved first.')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
+  const handleBulkDeleteEvents = async () => {
+    const ids = [...selectedEvents]
+    if (!confirm(`Delete ${ids.length} event${ids.length !== 1 ? 's' : ''}? This cannot be undone.`)) return
+    setBulkLoading(true)
+    try {
+      await Promise.all(ids.map(id => pb.collection('events').delete(id)))
+      setAllEvents(prev => prev.filter(e => !ids.includes(e.id)))
+      setSelectedEvents(new Set())
+    } catch {
+      alert('Failed to delete some events.')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
+  const handleBulkApprovePlaces = async () => {
+    const ids = [...selectedPlaces].filter(id => allPlaces.find(p => p.id === id)?.status === 'pending')
+    if (ids.length === 0) return
+    setBulkLoading(true)
+    try {
+      await Promise.all(ids.map(id => pb.collection('places').update(id, { status: 'approved' })))
+      setAllPlaces(prev => prev.map(p => ids.includes(p.id) ? { ...p, status: 'approved' } : p))
+      setSelectedPlaces(new Set())
+    } catch {
+      alert('Failed to approve some places.')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
+  const handleBulkDeletePlaces = async () => {
+    const ids = [...selectedPlaces]
+    if (!confirm(`Delete ${ids.length} place${ids.length !== 1 ? 's' : ''}? Events using them will need to be updated.`)) return
+    setBulkLoading(true)
+    try {
+      await Promise.all(ids.map(id => pb.collection('places').delete(id)))
+      setAllPlaces(prev => prev.filter(p => !ids.includes(p.id)))
+      setSelectedPlaces(new Set())
+    } catch {
+      alert('Failed to delete some places.')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
+  const handleBulkApproveTags = async () => {
+    const ids = [...selectedTags].filter(id => allTags.find(t => t.id === id)?.status === 'pending')
+    if (ids.length === 0) return
+    setBulkLoading(true)
+    try {
+      await Promise.all(ids.map(id => pb.collection('tags').update(id, { status: 'approved' })))
+      setAllTags(prev => prev.map(t => ids.includes(t.id) ? { ...t, status: 'approved' } : t))
+      setSelectedTags(new Set())
+    } catch {
+      alert('Failed to approve some tags.')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
+  const handleBulkDeleteTags = async () => {
+    const ids = [...selectedTags]
+    if (!confirm(`Delete ${ids.length} tag${ids.length !== 1 ? 's' : ''}? Events using them will need to be updated.`)) return
+    setBulkLoading(true)
+    try {
+      await Promise.all(ids.map(id => pb.collection('tags').delete(id)))
+      setAllTags(prev => prev.filter(t => !ids.includes(t.id)))
+      setSelectedTags(new Set())
+    } catch {
+      alert('Failed to delete some tags.')
+    } finally {
+      setBulkLoading(false)
     }
   }
 
@@ -657,42 +761,91 @@ export function Admin(_props: Props) {
 
       {activeTab === 'events' && (
         <div class="events-list">
+          {selectedEvents.size > 0 && (
+            <div class="bulk-toolbar">
+              <span class="bulk-count">{selectedEvents.size} selected</span>
+              {[...selectedEvents].some(id => allEvents.find(e => e.id === id)?.status === 'pending') && (
+                <button class="btn btn-primary" onClick={handleBulkApproveEvents} disabled={bulkLoading}>
+                  Approve selected
+                </button>
+              )}
+              <button class="btn btn-danger" onClick={handleBulkDeleteEvents} disabled={bulkLoading}>
+                Delete selected
+              </button>
+              <button class="btn btn-secondary" onClick={() => setSelectedEvents(new Set())}>
+                Clear
+              </button>
+            </div>
+          )}
           {eventsLoading ? (
             <p class="no-events">Loading...</p>
           ) : allEvents.length === 0 ? (
             <p class="no-events">No events found.</p>
           ) : (
-            [...allEvents].sort((a, b) => {
-              if (a.status === 'pending' && b.status !== 'pending') return -1
-              if (a.status !== 'pending' && b.status === 'pending') return 1
-              return 0
-            }).map(event => (
-              <div key={event.id} class="admin-event-card">
-                <div class="event-status-row">
-                  <span class={`status-badge status-${event.status}`}>{event.status}</span>
-                  {event.recurrence_rule && (
-                    <span class="status-badge" style={{ background: 'var(--color-accent)', color: '#fff' }}>recurring</span>
-                  )}
-                </div>
-                <EventCard event={event} />
-                <div class="admin-event-actions">
-                  {event.status === 'pending' && (
-                    <button class="btn btn-primary" onClick={() => handleApproveEvent(event.id)}>
-                      Approve
+            <>
+              {pendingEventsCount > 0 && (
+                <label class="bulk-select-all">
+                  <input
+                    type="checkbox"
+                    checked={allEvents.filter(e => e.status === 'pending').every(e => selectedEvents.has(e.id))}
+                    onChange={() => {
+                      const pending = allEvents.filter(e => e.status === 'pending')
+                      const allSelected = pending.every(e => selectedEvents.has(e.id))
+                      setSelectedEvents(prev => {
+                        const next = new Set(prev)
+                        pending.forEach(e => allSelected ? next.delete(e.id) : next.add(e.id))
+                        return next
+                      })
+                    }}
+                  />
+                  {' '}Select all pending ({pendingEventsCount})
+                </label>
+              )}
+              {[...allEvents].sort((a, b) => {
+                if (a.status === 'pending' && b.status !== 'pending') return -1
+                if (a.status !== 'pending' && b.status === 'pending') return 1
+                return 0
+              }).map(event => (
+                <div key={event.id} class={`admin-event-card${selectedEvents.has(event.id) ? ' bulk-selected' : ''}`}>
+                  <div class="event-status-row">
+                    {event.status === 'pending' && (
+                      <input
+                        type="checkbox"
+                        class="bulk-checkbox"
+                        checked={selectedEvents.has(event.id)}
+                        onChange={() => setSelectedEvents(prev => {
+                          const next = new Set(prev)
+                          next.has(event.id) ? next.delete(event.id) : next.add(event.id)
+                          return next
+                        })}
+                        aria-label={`Select ${event.title}`}
+                      />
+                    )}
+                    <span class={`status-badge status-${event.status}`}>{event.status}</span>
+                    {event.recurrence_rule && (
+                      <span class="status-badge" style={{ background: 'var(--color-accent)', color: '#fff' }}>recurring</span>
+                    )}
+                  </div>
+                  <EventCard event={event} />
+                  <div class="admin-event-actions">
+                    {event.status === 'pending' && (
+                      <button class="btn btn-primary" onClick={() => handleApproveEvent(event.id)}>
+                        Approve
+                      </button>
+                    )}
+                    <a href={eventPath(event)} class="btn btn-secondary">
+                      View
+                    </a>
+                    <a href={`/edit/${event.id}`} class="btn btn-secondary">
+                      Edit
+                    </a>
+                    <button class="btn btn-danger" onClick={() => handleRejectEvent(event.id)}>
+                      Delete
                     </button>
-                  )}
-                  <a href={eventPath(event)} class="btn btn-secondary">
-                    View
-                  </a>
-                  <a href={`/edit/${event.id}`} class="btn btn-secondary">
-                    Edit
-                  </a>
-                  <button class="btn btn-danger" onClick={() => handleRejectEvent(event.id)}>
-                    Delete
-                  </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </>
           )}
           {eventsTotalPages > 1 && (
             <div class="pagination" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-6)', justifyContent: 'center' }}>
@@ -724,9 +877,43 @@ export function Admin(_props: Props) {
             <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 500 }}>Add a place</label>
             <PlaceSearch value={null} onChange={handleAddPlace} />
           </div>
+          {selectedPlaces.size > 0 && (
+            <div class="bulk-toolbar">
+              <span class="bulk-count">{selectedPlaces.size} selected</span>
+              {[...selectedPlaces].some(id => allPlaces.find(p => p.id === id)?.status === 'pending') && (
+                <button class="btn btn-primary" onClick={handleBulkApprovePlaces} disabled={bulkLoading}>
+                  Approve selected
+                </button>
+              )}
+              <button class="btn btn-danger" onClick={handleBulkDeletePlaces} disabled={bulkLoading}>
+                Delete selected
+              </button>
+              <button class="btn btn-secondary" onClick={() => setSelectedPlaces(new Set())}>
+                Clear
+              </button>
+            </div>
+          )}
+          {pendingPlacesCount > 0 && (
+            <label class="bulk-select-all">
+              <input
+                type="checkbox"
+                checked={allPlaces.filter(p => p.status === 'pending').every(p => selectedPlaces.has(p.id))}
+                onChange={() => {
+                  const pending = allPlaces.filter(p => p.status === 'pending')
+                  const allSelected = pending.every(p => selectedPlaces.has(p.id))
+                  setSelectedPlaces(prev => {
+                    const next = new Set(prev)
+                    pending.forEach(p => allSelected ? next.delete(p.id) : next.add(p.id))
+                    return next
+                  })
+                }}
+              />
+              {' '}Select all pending ({pendingPlacesCount})
+            </label>
+          )}
           <div class="items-list">
             {allPlaces.map(place => (
-              <div key={place.id} class="admin-item-card">
+              <div key={place.id} class={`admin-item-card${selectedPlaces.has(place.id) ? ' bulk-selected' : ''}`}>
                 {editingPlaceId === place.id ? (
                   <div style={{ flex: 1 }}>
                     <p class="item-detail" style={{ marginBottom: 'var(--space-2)' }}>
@@ -745,13 +932,29 @@ export function Admin(_props: Props) {
                   </div>
                 ) : (
                   <>
-                    <div class="item-info">
-                      <h3>
-                        {place.status === 'pending' && <span class="status-badge status-pending">pending</span>}
-                        {place.name}
-                      </h3>
-                      {place.address && <p class="item-detail">{place.address}</p>}
-                      {place.city && <p class="item-detail">{place.city}</p>}
+                    <div class="item-info" style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
+                      {place.status === 'pending' && (
+                        <input
+                          type="checkbox"
+                          class="bulk-checkbox"
+                          checked={selectedPlaces.has(place.id)}
+                          onChange={() => setSelectedPlaces(prev => {
+                            const next = new Set(prev)
+                            next.has(place.id) ? next.delete(place.id) : next.add(place.id)
+                            return next
+                          })}
+                          aria-label={`Select ${place.name}`}
+                          style={{ marginTop: '3px', flexShrink: 0 }}
+                        />
+                      )}
+                      <div>
+                        <h3>
+                          {place.status === 'pending' && <span class="status-badge status-pending">pending</span>}
+                          {place.name}
+                        </h3>
+                        {place.address && <p class="item-detail">{place.address}</p>}
+                        {place.city && <p class="item-detail">{place.city}</p>}
+                      </div>
                     </div>
                     <div class="admin-event-actions">
                       {place.status === 'pending' && (
@@ -775,67 +978,116 @@ export function Admin(_props: Props) {
       )}
 
       {activeTab === 'tags' && (
-        <div class="items-list">
-          {allTags.length === 0 ? (
-            <p class="no-events">No tags found.</p>
-          ) : (
-            allTags.map(tag => (
-              <div key={tag.id} class="admin-item-card">
-                {editingTagId === tag.id ? (
-                  <>
-                    <div class="item-info" style={{ flex: 1 }}>
-                      <div class="inline-edit-fields">
-                        <input
-                          type="text"
-                          value={tagForm.name}
-                          onInput={(e) => setTagForm(f => ({ ...f, name: (e.target as HTMLInputElement).value }))}
-                          placeholder="Name"
-                        />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+        <div>
+          {selectedTags.size > 0 && (
+            <div class="bulk-toolbar">
+              <span class="bulk-count">{selectedTags.size} selected</span>
+              {[...selectedTags].some(id => allTags.find(t => t.id === id)?.status === 'pending') && (
+                <button class="btn btn-primary" onClick={handleBulkApproveTags} disabled={bulkLoading}>
+                  Approve selected
+                </button>
+              )}
+              <button class="btn btn-danger" onClick={handleBulkDeleteTags} disabled={bulkLoading}>
+                Delete selected
+              </button>
+              <button class="btn btn-secondary" onClick={() => setSelectedTags(new Set())}>
+                Clear
+              </button>
+            </div>
+          )}
+          {pendingTagsCount > 0 && (
+            <label class="bulk-select-all">
+              <input
+                type="checkbox"
+                checked={allTags.filter(t => t.status === 'pending').every(t => selectedTags.has(t.id))}
+                onChange={() => {
+                  const pending = allTags.filter(t => t.status === 'pending')
+                  const allSelected = pending.every(t => selectedTags.has(t.id))
+                  setSelectedTags(prev => {
+                    const next = new Set(prev)
+                    pending.forEach(t => allSelected ? next.delete(t.id) : next.add(t.id))
+                    return next
+                  })
+                }}
+              />
+              {' '}Select all pending ({pendingTagsCount})
+            </label>
+          )}
+          <div class="items-list">
+            {allTags.length === 0 ? (
+              <p class="no-events">No tags found.</p>
+            ) : (
+              allTags.map(tag => (
+                <div key={tag.id} class={`admin-item-card${selectedTags.has(tag.id) ? ' bulk-selected' : ''}`}>
+                  {editingTagId === tag.id ? (
+                    <>
+                      <div class="item-info" style={{ flex: 1 }}>
+                        <div class="inline-edit-fields">
                           <input
-                            type="color"
-                            value={tagForm.color || '#808080'}
-                            onInput={(e) => setTagForm(f => ({ ...f, color: (e.target as HTMLInputElement).value }))}
-                            style={{ width: '40px', height: '32px', padding: '2px', cursor: 'pointer' }}
+                            type="text"
+                            value={tagForm.name}
+                            onInput={(e) => setTagForm(f => ({ ...f, name: (e.target as HTMLInputElement).value }))}
+                            placeholder="Name"
                           />
-                          <span class="tag-preview" style={tagStyle(tagForm.color)}>{tagForm.name || 'preview'}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                            <input
+                              type="color"
+                              value={tagForm.color || '#808080'}
+                              onInput={(e) => setTagForm(f => ({ ...f, color: (e.target as HTMLInputElement).value }))}
+                              style={{ width: '40px', height: '32px', padding: '2px', cursor: 'pointer' }}
+                            />
+                            <span class="tag-preview" style={tagStyle(tagForm.color)}>{tagForm.name || 'preview'}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div class="admin-event-actions">
-                      <button class="btn btn-primary" onClick={() => handleSaveTag(tag.id)}>Save</button>
-                      <button class="btn btn-secondary" onClick={() => setEditingTagId(null)}>Cancel</button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div class="item-info">
-                      {tag.status === 'pending' && <span class="status-badge status-pending">pending</span>}
-                      <span
-                        class="tag-preview"
-                        style={tagStyle(tag.color)}
-                      >
-                        {tag.name}
-                      </span>
-                    </div>
-                    <div class="admin-event-actions">
-                      {tag.status === 'pending' && (
-                        <button class="btn btn-primary" onClick={() => handleApproveTag(tag.id)}>
-                          Approve
+                      <div class="admin-event-actions">
+                        <button class="btn btn-primary" onClick={() => handleSaveTag(tag.id)}>Save</button>
+                        <button class="btn btn-secondary" onClick={() => setEditingTagId(null)}>Cancel</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div class="item-info" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        {tag.status === 'pending' && (
+                          <input
+                            type="checkbox"
+                            class="bulk-checkbox"
+                            checked={selectedTags.has(tag.id)}
+                            onChange={() => setSelectedTags(prev => {
+                              const next = new Set(prev)
+                              next.has(tag.id) ? next.delete(tag.id) : next.add(tag.id)
+                              return next
+                            })}
+                            aria-label={`Select ${tag.name}`}
+                          />
+                        )}
+                        {tag.status === 'pending' && <span class="status-badge status-pending">pending</span>}
+                        <span
+                          class="tag-preview"
+                          style={tagStyle(tag.color)}
+                        >
+                          {tag.name}
+                        </span>
+                      </div>
+                      <div class="admin-event-actions">
+                        {tag.status === 'pending' && (
+                          <button class="btn btn-primary" onClick={() => handleApproveTag(tag.id)}>
+                            Approve
+                          </button>
+                        )}
+                        <button class="btn btn-secondary" onClick={() => handleEditTag(tag)}>
+                          Edit
                         </button>
-                      )}
-                      <button class="btn btn-secondary" onClick={() => handleEditTag(tag)}>
-                        Edit
-                      </button>
-                      <button class="btn btn-danger" onClick={() => handleRejectTag(tag.id)}>
-                        Delete
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))
-          )}
+                        <button class="btn btn-danger" onClick={() => handleRejectTag(tag.id)}>
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 
