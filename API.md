@@ -472,14 +472,14 @@ Gather provides RSS and iCalendar feeds for syndication.
 
 ```http
 GET /feed.rss                      # All published events
-GET /feed/tag/{tagname}.rss        # Events with specific tag
+GET /feed/tag/{tagname}            # Events with specific tag
 ```
 
 **Example:**
 
 ```bash
 curl http://localhost:8090/feed.rss
-curl http://localhost:8090/feed/tag/wellness.rss
+curl http://localhost:8090/feed/tag/wellness
 ```
 
 ### iCalendar Feeds
@@ -551,11 +551,12 @@ curl http://localhost:8090/ics/event/event_abc123
 
 ## Rate Limiting
 
-PocketBase does not enforce rate limiting by default. For production deployments, consider:
+Gather enforces rate limiting by default on sensitive endpoints:
 
-- Implementing reverse proxy rate limiting (nginx, Caddy)
-- Using API gateway rate limiting
-- Monitoring authentication endpoint abuse
+- **Authentication** (`/api/collections/users/auth-with-password`) — rate limited to prevent brute-force attacks
+- **Event submission** — rate limited for anonymous submissions
+
+For additional protection at the network level, you can also configure rate limiting in your reverse proxy (nginx, Caddy).
 
 ---
 
@@ -851,8 +852,8 @@ When an event's status changes to `published`, it automatically:
 
 For issues, questions, or feature requests:
 
-- **GitHub Issues:** https://github.com/your-repo/gather/issues
-- **Documentation:** See CLAUDE.md and README.md in the repository
+- **GitHub Issues:** https://github.com/grantstephens/gather/issues
+- **Documentation:** See README.md and DEPLOY.md in the repository
 - **Admin Dashboard:** Access at `http://your-instance.com/_/` for database inspection
 
 ---
