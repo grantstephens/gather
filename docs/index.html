@@ -614,7 +614,27 @@
         <div class="feature-card">
           <span class="feature-icon">🔁</span>
           <h3>Recurring events</h3>
-          <p>Schedule weekly, monthly, and custom recurring events with ease.</p>
+          <p>Schedule weekly, monthly, and custom recurring events. Cancel individual occurrences without touching the series.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📰</span>
+          <h3>Editorial Picks</h3>
+          <p>Publish curated weekly roundups. A teaser appears on the home page automatically each weekend.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📍</span>
+          <h3>Proximity search</h3>
+          <p>Let visitors find events near them. Uses device location and OpenStreetMap — no Google Maps.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">⚡</span>
+          <h3>Real-time updates</h3>
+          <p>The calendar updates live via PocketBase SSE — no page refresh needed when events change.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🔑</span>
+          <h3>OAuth2 &amp; API keys</h3>
+          <p>Social login via any OAuth2 provider. API keys for external integrations and automation.</p>
         </div>
         <div class="feature-card">
           <span class="feature-icon">📝</span>
@@ -639,7 +659,7 @@
         <div class="feature-card">
           <span class="feature-icon">📦</span>
           <h3>Single binary</h3>
-          <p>One binary, no external database, no external dependencies. Runs anywhere.</p>
+          <p>One binary, no external database, no external dependencies. Runs anywhere Docker runs.</p>
         </div>
       </div>
     </section>
@@ -787,14 +807,19 @@ make build
             <tr>
               <td><code>PB_ENCRYPTION_KEY</code></td>
               <td><em>empty</em></td>
-              <td>Encryption key for sensitive data (<code>openssl rand -hex 32</code>)</td>
+              <td>Encryption key for sensitive data. Generate: <code>openssl rand -hex 32</code></td>
+            </tr>
+            <tr>
+              <td><code>TZ</code></td>
+              <td><code>UTC</code></td>
+              <td>IANA timezone (e.g. <code>Europe/London</code>). Affects iCal feeds and event JSON-LD dates.</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <div class="note" style="margin-top: var(--space-5)">
-        <strong>Feeds:</strong> Your instance automatically exposes RSS at <code>/feed/events.rss</code>, iCal at <code>/ical/events.ics</code>, and (when enabled) an ActivityPub actor at <code>/ap/actor</code>.
+        <strong>Feeds:</strong> Your instance automatically exposes RSS at <code>/feed.rss</code> and per-tag at <code>/feed/tag/{name}</code>; iCal at <code>/feed.ics</code>, <code>/ics/tag/{name}</code>, and <code>/ics/event/{id}</code>; and (when enabled) an ActivityPub actor at <code>/ap/actor</code>.
       </div>
 
       <hr class="divider" />
@@ -837,7 +862,7 @@ docker compose up -d</code></pre>
       <a href="https://perthshire.events" class="footer-link" target="_blank" rel="noopener">Live Example</a>
     </div>
     <div class="footer-powered">
-      Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" class="footer-link" target="_blank" rel="noopener">CC BY-SA 4.0</a>
+      Licensed under <a href="https://github.com/grantstephens/gather/blob/main/LICENSE" class="footer-link" target="_blank" rel="noopener">AGPL-3.0</a>
     </div>
   </div>
 </footer>
