@@ -50,24 +50,28 @@ func GetActor(app core.App, baseURL string) (*Actor, error) {
 
 	actorID := baseURL + "/ap/actor"
 
-	// Build icon from favicon — only use raster formats; Mastodon ignores SVG avatars.
+	// Build icon: prefer ap_avatar, fall back to raster favicon.
+	// Mastodon ignores SVG so we never emit SVG here.
 	var icon *APImage
-	if favicon := settings.GetString("favicon"); favicon != "" {
-		var mediaType string
+	rasterMediaType := func(filename string) string {
 		switch {
-		case strings.HasSuffix(favicon, ".png"):
-			mediaType = "image/png"
-		case strings.HasSuffix(favicon, ".webp"):
-			mediaType = "image/webp"
-		case strings.HasSuffix(favicon, ".jpg"), strings.HasSuffix(favicon, ".jpeg"):
-			mediaType = "image/jpeg"
+		case strings.HasSuffix(filename, ".png"):
+			return "image/png"
+		case strings.HasSuffix(filename, ".webp"):
+			return "image/webp"
+		case strings.HasSuffix(filename, ".jpg"), strings.HasSuffix(filename, ".jpeg"):
+			return "image/jpeg"
 		}
-		if mediaType != "" {
-			icon = &APImage{
-				Type:      "Image",
-				MediaType: mediaType,
-				URL:       baseURL + "/api/files/" + settings.BaseFilesPath() + "/" + favicon,
-			}
+		return ""
+	}
+	filesBase := settings.BaseFilesPath()
+	if avatar := settings.GetString("ap_avatar"); avatar != "" {
+		if mt := rasterMediaType(avatar); mt != "" {
+			icon = &APImage{Type: "Image", MediaType: mt, URL: baseURL + "/api/files/" + filesBase + "/" + avatar}
+		}
+	} else if favicon := settings.GetString("favicon"); favicon != "" {
+		if mt := rasterMediaType(favicon); mt != "" {
+			icon = &APImage{Type: "Image", MediaType: mt, URL: baseURL + "/api/files/" + filesBase + "/" + favicon}
 		}
 	}
 
