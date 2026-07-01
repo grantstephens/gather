@@ -14,9 +14,11 @@ type Actor struct {
 	PreferredUsername string     `json:"preferredUsername"`
 	Name              string     `json:"name"`
 	Summary           string     `json:"summary,omitempty"`
+	URL               string     `json:"url"`
 	Inbox             string     `json:"inbox"`
 	Outbox            string     `json:"outbox"`
 	Followers         string     `json:"followers"`
+	Discoverable      bool       `json:"discoverable"`
 	Icon              *APImage   `json:"icon,omitempty"`
 	PublicKey         *PublicKey `json:"publicKey,omitempty"`
 }
@@ -48,20 +50,24 @@ func GetActor(app core.App, baseURL string) (*Actor, error) {
 
 	actorID := baseURL + "/ap/actor"
 
-	// Build icon URL: use the custom favicon if set, else the default SVG at /favicon.ico
-	iconURL := baseURL + "/favicon.ico"
-	iconMediaType := "image/svg+xml"
+	// Build icon from favicon — only use raster formats; Mastodon ignores SVG avatars.
+	var icon *APImage
 	if favicon := settings.GetString("favicon"); favicon != "" {
-		iconURL = baseURL + "/api/files/" + settings.BaseFilesPath() + "/" + favicon
+		var mediaType string
 		switch {
 		case strings.HasSuffix(favicon, ".png"):
-			iconMediaType = "image/png"
+			mediaType = "image/png"
 		case strings.HasSuffix(favicon, ".webp"):
-			iconMediaType = "image/webp"
+			mediaType = "image/webp"
 		case strings.HasSuffix(favicon, ".jpg"), strings.HasSuffix(favicon, ".jpeg"):
-			iconMediaType = "image/jpeg"
-		case strings.HasSuffix(favicon, ".ico"):
-			iconMediaType = "image/x-icon"
+			mediaType = "image/jpeg"
+		}
+		if mediaType != "" {
+			icon = &APImage{
+				Type:      "Image",
+				MediaType: mediaType,
+				URL:       baseURL + "/api/files/" + settings.BaseFilesPath() + "/" + favicon,
+			}
 		}
 	}
 
@@ -75,14 +81,12 @@ func GetActor(app core.App, baseURL string) (*Actor, error) {
 		PreferredUsername: "events",
 		Name:              name,
 		Summary:           summary,
+		URL:               baseURL,
 		Inbox:             baseURL + "/ap/inbox",
 		Outbox:            baseURL + "/ap/outbox",
 		Followers:         baseURL + "/ap/actor/followers",
-		Icon: &APImage{
-			Type:      "Image",
-			MediaType: iconMediaType,
-			URL:       iconURL,
-		},
+		Discoverable:      true,
+		Icon:              icon,
 	}
 
 	if publicKey != "" {
