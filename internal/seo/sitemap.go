@@ -31,12 +31,9 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 
 	entries := make([]SitemapEntry, 0, len(events)+50)
 	for _, event := range events {
-		updatedTime := event.GetDateTime("updated").Time()
-		var lastMod string
-		if updatedTime.IsZero() {
-			lastMod = time.Now().Format("2006-01-02")
-		} else {
-			lastMod = updatedTime.Format("2006-01-02")
+		lastMod := time.Now().Format("2006-01-02")
+		if t := event.GetDateTime("updated").Time(); t.Year() >= 2000 {
+			lastMod = t.Format("2006-01-02")
 		}
 		urlPath := event.GetString("slug")
 		if urlPath == "" {
@@ -98,7 +95,10 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 	}
 	entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/picks", baseURL), LastMod: picksIndexLastMod})
 	for _, post := range picks {
-		lastMod := post.GetDateTime("updated").Time().Format("2006-01-02")
+		lastMod := time.Now().Format("2006-01-02")
+		if t := post.GetDateTime("updated").Time(); t.Year() >= 2000 {
+			lastMod = t.Format("2006-01-02")
+		}
 		entries = append(entries, SitemapEntry{
 			URL:     fmt.Sprintf("%s/picks/%s", baseURL, post.GetString("slug")),
 			LastMod: lastMod,
