@@ -66,7 +66,7 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 	tags, _ := app.FindRecordsByFilter("tags", "status = 'approved'", "name", 200, 0)
 	for _, tag := range tags {
 		lastMod := time.Now().Format("2006-01-02")
-		if t := tag.GetDateTime("updated").Time(); !t.IsZero() {
+		if t := tag.GetDateTime("updated").Time(); t.Year() >= 2000 {
 			lastMod = t.Format("2006-01-02")
 		}
 		entries = append(entries, SitemapEntry{
@@ -79,7 +79,7 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 	places, _ := app.FindRecordsByFilter("places", "status = 'approved'", "name", 200, 0)
 	for _, place := range places {
 		lastMod := time.Now().Format("2006-01-02")
-		if t := place.GetDateTime("updated").Time(); !t.IsZero() {
+		if t := place.GetDateTime("updated").Time(); t.Year() >= 2000 {
 			lastMod = t.Format("2006-01-02")
 		}
 		entries = append(entries, SitemapEntry{
@@ -92,7 +92,9 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 	picks, _ := app.FindRecordsByFilter("picks", "hidden = false", "-start_date", 200, 0)
 	picksIndexLastMod := time.Now().Format("2006-01-02")
 	if len(picks) > 0 {
-		picksIndexLastMod = picks[0].GetDateTime("updated").Time().Format("2006-01-02")
+		if t := picks[0].GetDateTime("updated").Time(); t.Year() >= 2000 {
+			picksIndexLastMod = t.Format("2006-01-02")
+		}
 	}
 	entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/picks", baseURL), LastMod: picksIndexLastMod})
 	for _, post := range picks {
