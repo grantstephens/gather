@@ -134,12 +134,20 @@ func eventToNote(event *core.Record, baseURL string) Note {
 		dateStr = startTime.Local().Format("Monday, January 2, 2006 at 3:04 PM MST")
 	}
 
+	urlPath := event.GetString("slug")
+	if urlPath == "" {
+		urlPath = event.Id
+	}
+	eventURL := fmt.Sprintf("%s/event/%s", baseURL, urlPath)
+
 	content := fmt.Sprintf(
-		"<p><strong>%s</strong></p><p>%s</p>%s<p>%s</p>",
+		"<p><strong>%s</strong></p><p>%s</p>%s<p>%s</p><p><a href=\"%s\">%s</a></p>",
 		title,
 		dateStr,
 		recurrenceInfo,
 		desc,
+		eventURL,
+		eventURL,
 	)
 
 	// Published is when the Note was posted to the fediverse, not when the event occurs.
@@ -156,7 +164,7 @@ func eventToNote(event *core.Record, baseURL string) Note {
 		AttributedTo: baseURL + "/ap/actor",
 		Content:      content,
 		Published:    published,
-		URL:          fmt.Sprintf("%s/event/%s", baseURL, event.Id),
+		URL:          eventURL,
 		To:           []string{"https://www.w3.org/ns/activitystreams#Public"},
 		Cc:           []string{baseURL + "/ap/actor/followers"},
 	}
