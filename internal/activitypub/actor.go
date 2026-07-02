@@ -14,9 +14,11 @@ type Actor struct {
 	PreferredUsername string     `json:"preferredUsername"`
 	Name              string     `json:"name"`
 	Summary           string     `json:"summary,omitempty"`
+	URL               string     `json:"url"`
 	Inbox             string     `json:"inbox"`
 	Outbox            string     `json:"outbox"`
 	Followers         string     `json:"followers"`
+	Discoverable      bool       `json:"discoverable"`
 	Icon              *APImage   `json:"icon,omitempty"`
 	PublicKey         *PublicKey `json:"publicKey,omitempty"`
 }
@@ -48,20 +50,28 @@ func GetActor(app core.App, baseURL string) (*Actor, error) {
 
 	actorID := baseURL + "/ap/actor"
 
-	// Build icon URL: use the custom favicon if set, else the default SVG at /favicon.ico
-	iconURL := baseURL + "/favicon.ico"
-	iconMediaType := "image/svg+xml"
-	if favicon := settings.GetString("favicon"); favicon != "" {
-		iconURL = baseURL + "/api/files/" + settings.BaseFilesPath() + "/" + favicon
+	// Build icon: prefer ap_avatar, fall back to raster favicon.
+	// Mastodon ignores SVG so we never emit SVG here.
+	var icon *APImage
+	rasterMediaType := func(filename string) string {
 		switch {
-		case strings.HasSuffix(favicon, ".png"):
-			iconMediaType = "image/png"
-		case strings.HasSuffix(favicon, ".webp"):
-			iconMediaType = "image/webp"
-		case strings.HasSuffix(favicon, ".jpg"), strings.HasSuffix(favicon, ".jpeg"):
-			iconMediaType = "image/jpeg"
-		case strings.HasSuffix(favicon, ".ico"):
-			iconMediaType = "image/x-icon"
+		case strings.HasSuffix(filename, ".png"):
+			return "image/png"
+		case strings.HasSuffix(filename, ".webp"):
+			return "image/webp"
+		case strings.HasSuffix(filename, ".jpg"), strings.HasSuffix(filename, ".jpeg"):
+			return "image/jpeg"
+		}
+		return ""
+	}
+	filesBase := settings.BaseFilesPath()
+	if avatar := settings.GetString("ap_avatar"); avatar != "" {
+		if mt := rasterMediaType(avatar); mt != "" {
+			icon = &APImage{Type: "Image", MediaType: mt, URL: baseURL + "/api/files/" + filesBase + "/" + avatar}
+		}
+	} else if favicon := settings.GetString("favicon"); favicon != "" {
+		if mt := rasterMediaType(favicon); mt != "" {
+			icon = &APImage{Type: "Image", MediaType: mt, URL: baseURL + "/api/files/" + filesBase + "/" + favicon}
 		}
 	}
 
@@ -75,14 +85,12 @@ func GetActor(app core.App, baseURL string) (*Actor, error) {
 		PreferredUsername: "events",
 		Name:              name,
 		Summary:           summary,
+		URL:               baseURL,
 		Inbox:             baseURL + "/ap/inbox",
 		Outbox:            baseURL + "/ap/outbox",
 		Followers:         baseURL + "/ap/actor/followers",
-		Icon: &APImage{
-			Type:      "Image",
-			MediaType: iconMediaType,
-			URL:       iconURL,
-		},
+		Discoverable:      true,
+		Icon:              icon,
 	}
 
 	if publicKey != "" {
