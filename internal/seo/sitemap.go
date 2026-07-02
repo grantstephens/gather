@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	dbx "github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -62,9 +63,17 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 		})
 	}
 
-	// Approved tags
+	// Approved tags with at least one upcoming published event
+	today := time.Now().Format("2006-01-02 15:04:05")
 	tags, _ := app.FindRecordsByFilter("tags", "status = 'approved'", "name", 200, 0)
 	for _, tag := range tags {
+		count, _ := app.CountRecords("events", dbx.NewExp(
+			"status = 'published' AND start_datetime >= {:today} AND tags LIKE {:tagId}",
+			dbx.Params{"today": today, "tagId": "%" + tag.Id + "%"},
+		))
+		if count == 0 {
+			continue
+		}
 		lastMod := time.Now().Format("2006-01-02")
 		if t := tag.GetDateTime("updated").Time(); t.Year() >= 2000 {
 			lastMod = t.Format("2006-01-02")
@@ -75,9 +84,16 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 		})
 	}
 
-	// Approved places
+	// Approved places with at least one upcoming published event
 	places, _ := app.FindRecordsByFilter("places", "status = 'approved'", "name", 200, 0)
 	for _, place := range places {
+		count, _ := app.CountRecords("events", dbx.NewExp(
+			"status = 'published' AND start_datetime >= {:today} AND place = {:placeId}",
+			dbx.Params{"today": today, "placeId": place.Id},
+		))
+		if count == 0 {
+			continue
+		}
 		lastMod := time.Now().Format("2006-01-02")
 		if t := place.GetDateTime("updated").Time(); t.Year() >= 2000 {
 			lastMod = t.Format("2006-01-02")
