@@ -47,6 +47,10 @@ func GenerateTagHTML(app core.App, tagName, baseURL string) ([]byte, error) {
 		map[string]any{"today": today, "tagId": tag.Id},
 	)
 
+	if len(events) == 0 {
+		return nil, fmt.Errorf("no upcoming events for tag")
+	}
+
 	items := make([]tagEvent, 0, len(events))
 	for _, ev := range events {
 		slug := ev.GetString("slug")

@@ -59,9 +59,33 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 		})
 	}
 
-	// Approved tags
+	// Build sets of active place/tag IDs from upcoming events — one query instead of N+1.
+	today := time.Now().Format("2006-01-02 15:04:05")
+	upcoming, _ := app.FindRecordsByFilter(
+		"events",
+		"status = 'published' && start_datetime >= {:today}",
+		"",
+		1000,
+		0,
+		map[string]any{"today": today},
+	)
+	activePlaces := make(map[string]bool, len(upcoming))
+	activeTags := make(map[string]bool)
+	for _, ev := range upcoming {
+		if pid := ev.GetString("place"); pid != "" {
+			activePlaces[pid] = true
+		}
+		for _, tid := range ev.GetStringSlice("tags") {
+			activeTags[tid] = true
+		}
+	}
+
+	// Approved tags with at least one upcoming published event
 	tags, _ := app.FindRecordsByFilter("tags", "status = 'approved'", "name", 200, 0)
 	for _, tag := range tags {
+		if !activeTags[tag.Id] {
+			continue
+		}
 		lastMod := time.Now().Format("2006-01-02")
 		if t := tag.GetDateTime("updated").Time(); t.Year() >= 2000 {
 			lastMod = t.Format("2006-01-02")
@@ -72,9 +96,12 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 		})
 	}
 
-	// Approved places
+	// Approved places with at least one upcoming published event
 	places, _ := app.FindRecordsByFilter("places", "status = 'approved'", "name", 200, 0)
 	for _, place := range places {
+		if !activePlaces[place.Id] {
+			continue
+		}
 		lastMod := time.Now().Format("2006-01-02")
 		if t := place.GetDateTime("updated").Time(); t.Year() >= 2000 {
 			lastMod = t.Format("2006-01-02")

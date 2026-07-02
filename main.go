@@ -866,7 +866,7 @@ func main() {
 			return re.Blob(200, "text/html", html)
 		})
 
-		// Tag page: SSR for bots
+		// Tag page: SSR for bots, 404 if tag doesn't exist or has no upcoming events
 		se.Router.GET("/tag/{name}", func(re *core.RequestEvent) error {
 			if !seo.IsBot(re.Request.Header.Get("User-Agent")) {
 				return serveSPA(re)
@@ -874,14 +874,14 @@ func main() {
 			name := re.Request.PathValue("name")
 			html, err := seo.GenerateTagHTML(se.App, name, baseURL)
 			if err != nil {
-				return serveSPA(re)
+				return re.NotFoundError("", nil)
 			}
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 			re.Response.Header().Set("Cache-Control", "no-store")
 			return re.Blob(200, "text/html", html)
 		})
 
-		// Place page: SSR for bots
+		// Place page: SSR for bots, 404 if place doesn't exist or has no upcoming events
 		se.Router.GET("/place/{id}", func(re *core.RequestEvent) error {
 			if !seo.IsBot(re.Request.Header.Get("User-Agent")) {
 				return serveSPA(re)
@@ -889,7 +889,7 @@ func main() {
 			id := re.Request.PathValue("id")
 			html, err := seo.GeneratePlaceHTML(se.App, id, baseURL)
 			if err != nil {
-				return serveSPA(re)
+				return re.NotFoundError("", nil)
 			}
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 			re.Response.Header().Set("Cache-Control", "no-store")
@@ -956,6 +956,15 @@ func main() {
 			// Skip API and admin routes
 			if strings.HasPrefix(path, "api/") || strings.HasPrefix(path, "_/") {
 				return re.Next()
+			}
+
+			// Custom pages: SSR for bots
+			if seo.IsBot(re.Request.Header.Get("User-Agent")) {
+				if html, err := seo.GeneratePageHTML(se.App, path, baseURL); err == nil {
+					re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+					re.Response.Header().Set("Cache-Control", "no-store")
+					return re.Blob(200, "text/html", html)
+				}
 			}
 
 			// Dev mode: proxy to Vite
