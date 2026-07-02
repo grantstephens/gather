@@ -25,8 +25,8 @@ func GeneratePlaceHTML(app core.App, placeID, baseURL string) ([]byte, error) {
 	}
 
 	place, err := app.FindRecordById("places", placeID)
-	if err != nil {
-		return nil, err
+	if err != nil || place.GetString("status") != "approved" {
+		return nil, fmt.Errorf("place not found or not approved")
 	}
 
 	placeName := place.GetString("name")
@@ -48,6 +48,10 @@ func GeneratePlaceHTML(app core.App, placeID, baseURL string) ([]byte, error) {
 		0,
 		map[string]any{"today": today, "placeId": placeID},
 	)
+
+	if len(events) == 0 {
+		return nil, fmt.Errorf("no upcoming events for place")
+	}
 
 	items := make([]placeEvent, 0, len(events))
 	for _, ev := range events {
