@@ -11,16 +11,17 @@ RUN apk add --no-cache \
 
 WORKDIR /build
 
-# Copy go mod files
+# Cache Go modules
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy frontend files and build
-COPY frontend ./frontend
-RUN cd frontend && npm install && npm run build
+# Cache npm install (keyed on package.json only)
+COPY frontend/package*.json ./frontend/
+RUN cd frontend && npm install
 
-# Copy Go source and build binary
+# Copy all source and build (frontend then backend, so binary always embeds current frontend)
 COPY . .
+RUN cd frontend && npm run build
 RUN CGO_ENABLED=1 GOOS=linux go build -a -ldflags="-s -w" -o gather .
 
 # Runtime stage
