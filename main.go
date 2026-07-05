@@ -179,7 +179,7 @@ func main() {
 		}
 		serveSPA := func(re *core.RequestEvent) error {
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-			re.Response.Header().Set("Cache-Control", "no-cache, stale-if-error=86400")
+			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60, stale-if-error=86400")
 			_, err := re.Response.Write(spaHTML)
 			return err
 		}
