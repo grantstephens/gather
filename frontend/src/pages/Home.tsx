@@ -129,6 +129,7 @@ export function Home(_props: Props) {
         filter: `hidden = false && start_date >= "${fmt(thisFri)}" && start_date <= "${fmt(thisSun)}"`,
         sort: 'start_date',
         fields: 'id,title,slug,blurb',
+        '$autoCancel': false,
       }).then(result => {
         setCurrentPicks(result.items[0] ?? null)
       }).catch(() => {})
@@ -144,6 +145,7 @@ export function Home(_props: Props) {
       filter: `hidden = false && start_date >= "${fmt(nextFri)}" && start_date <= "${fmt(nextSun)}"`,
       sort: 'start_date',
       fields: 'id,slug',
+      '$autoCancel': false,
     }).then(result => {
       setNextPicks(result.items[0] ?? null)
     }).catch(() => {})

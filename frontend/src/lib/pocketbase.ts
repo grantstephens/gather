@@ -108,7 +108,7 @@ export function getImageUrl(record: Event, thumb?: string): string | undefined {
   // Virtual/recurring events have synthetic IDs; use base_event_id for the real PocketBase record ID
   const realId = record.base_event_id || record.id
   const rec = { ...record, id: realId }
-  return pb.files.getUrl(rec as unknown as BaseModel, record.image, { thumb })
+  return pb.files.getURL(rec as unknown as BaseModel, record.image, { thumb })
 }
 
 // Auth helpers

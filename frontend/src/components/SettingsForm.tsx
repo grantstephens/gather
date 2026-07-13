@@ -225,7 +225,7 @@ export function SettingsForm() {
             {settings?.favicon && (
               <div class="favicon-preview">
                 <img
-                  src={pb.files.getUrl(settings, settings.favicon, { thumb: '100x100' })}
+                  src={pb.files.getURL(settings, settings.favicon, { thumb: '100x100' })}
                   alt="Current favicon"
                 />
               </div>
