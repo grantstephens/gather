@@ -102,12 +102,12 @@ export function Admin(_props: Props) {
         if (cancelled) return
 
         const places = await pb.collection('places').getFullList<Place>({
-          sort: 'status,name',
+          sort: '-status,name',
         })
         if (cancelled) return
 
         const tags = await pb.collection('tags').getFullList<Tag>({
-          sort: 'status,name',
+          sort: '-status,name',
         })
         if (cancelled) return
 
