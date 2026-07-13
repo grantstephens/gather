@@ -11,7 +11,7 @@ interface Props {
 
 function getThisWeekendWindow(): { start: Date; end: Date } {
   const now = new Date()
-  const day = now.getDay() // 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
+  const day = now.getDay()
   let daysToFri: number
   if (day === 5) daysToFri = 0
   else if (day === 6) daysToFri = -1
@@ -30,12 +30,10 @@ function getThisWeekendWindow(): { start: Date; end: Date } {
 }
 
 function isThisWeekend(post: PicksRecord): boolean {
-  if (post.hidden) return false
+  if (!post.start_date) return false
   const { start, end } = getThisWeekendWindow()
-  return (post.expand?.events ?? []).some(e => {
-    const eventStart = new Date(e.start_datetime)
-    return eventStart >= start && eventStart <= end
-  })
+  const d = new Date(post.start_date)
+  return d >= start && d <= end
 }
 
 function sortedEvents(events: Event[]): Event[] {
@@ -50,23 +48,15 @@ export function Picks(_props: Props) {
 
   useEffect(() => {
     document.title = 'Picks'
-    async function load() {
-      try {
-        const records = await pb.collection('picks').getFullList<PicksRecord>({
-          filter: 'hidden = false',
-          expand: 'events,events.place,events.tags',
-        })
-        const eventMin = (events: Event[] | undefined): number =>
-          events?.length ? Math.min(...events.map(e => new Date(e.start_datetime).getTime())) : Infinity
-        records.sort((a, b) => eventMin(a.expand?.events) - eventMin(b.expand?.events))
-        setPosts(records)
-      } catch {
-        // show empty state on failure
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
+    const today = new Date().toISOString().split('T')[0]
+    pb.collection('picks').getFullList<PicksRecord>({
+      filter: `hidden = false && start_date >= "${today}"`,
+      sort: 'start_date',
+      expand: 'events,events.place,events.tags',
+      '$autoCancel': false,
+    }).then(records => {
+      setPosts(records)
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   if (loading) return <div class="loading">Loading...</div>
