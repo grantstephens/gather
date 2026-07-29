@@ -846,19 +846,19 @@ func main() {
 				event, err = se.App.FindRecordById("events", id)
 			}
 			if err != nil {
-				return serveSPA(re) // Let SPA handle 404
+				return re.NotFoundError("", nil)
 			}
 
 			// Only serve metadata for published events
 			if event.GetString("status") != "published" {
-				return serveSPA(re)
+				return re.NotFoundError("", nil)
 			}
 
 			// Generate HTML with metadata
 			html, err := seo.GenerateEventHTML(se.App, event, baseURL)
 			if err != nil {
 				log.Println("Failed to generate SEO HTML:", err)
-				return serveSPA(re) // Fallback to SPA
+				return re.NotFoundError("", nil)
 			}
 
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -958,13 +958,14 @@ func main() {
 				return re.Next()
 			}
 
-			// Custom pages: SSR for bots
+			// Custom pages: SSR for bots; 404 if no custom page found
 			if seo.IsBot(re.Request.Header.Get("User-Agent")) {
 				if html, err := seo.GeneratePageHTML(se.App, path, baseURL); err == nil {
 					re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 					re.Response.Header().Set("Cache-Control", "no-store")
 					return re.Blob(200, "text/html", html)
 				}
+				return re.NotFoundError("", nil)
 			}
 
 			// Dev mode: proxy to Vite
