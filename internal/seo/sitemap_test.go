@@ -51,7 +51,7 @@ func TestBuildRobotsTxt(t *testing.T) {
 
 func TestRobotsTxtDisallowsInternalPaths(t *testing.T) {
 	result := BuildRobotsTxt("https://example.com")
-	for _, path := range []string{"/api/", "/_/"} {
+	for _, path := range []string{"/api/", "/_/", "/feed", "/ics", "/federation", "/embed"} {
 		if !strings.Contains(result, "Disallow: "+path) {
 			t.Errorf("robots.txt should disallow %s", path)
 		}

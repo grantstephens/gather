@@ -132,6 +132,12 @@ func main() {
 				h.Set("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400, stale-if-error=2592000")
 			}
 
+			// Feed, AP, and embed endpoints are for programmatic use — tell crawlers not to index them
+			if strings.HasPrefix(path, "/feed") || strings.HasPrefix(path, "/ics") ||
+				strings.HasPrefix(path, "/federation") || strings.HasPrefix(path, "/embed") {
+				h.Set("X-Robots-Tag", "noindex, nofollow")
+			}
+
 			return e.Next()
 		})
 

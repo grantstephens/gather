@@ -168,6 +168,10 @@ Disallow: /api/
 Disallow: /_/
 Disallow: /search
 Disallow: /login
+Disallow: /feed
+Disallow: /ics
+Disallow: /federation
+Disallow: /embed
 
 Sitemap: %s/sitemap.xml
 `, baseURL)
