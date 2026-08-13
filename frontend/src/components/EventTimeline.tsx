@@ -1,6 +1,7 @@
-import { useMemo } from 'preact/hooks'
+import { useMemo, useRef } from 'preact/hooks'
 import { format, parseISO } from 'date-fns'
 import { Event } from '../lib/pocketbase'
+import { groupEventsByDayShuffled } from '../lib/shuffleDayEvents'
 import { EventCard } from './EventCard'
 import './EventTimeline.css'
 
@@ -17,15 +18,11 @@ function formatDayHeading(dateKey: string): string {
 }
 
 export function EventTimeline({ events }: Props) {
-  const grouped = useMemo(() => {
-    const map = new Map<string, Event[]>()
-    for (const event of events) {
-      const dateKey = event.start_datetime?.split(' ')[0] ?? ''
-      if (!map.has(dateKey)) map.set(dateKey, [])
-      map.get(dateKey)!.push(event)
-    }
-    return map
-  }, [events])
+  const dayOrderCache = useRef(new Map<string, string[]>())
+  const grouped = useMemo(
+    () => groupEventsByDayShuffled(events, dayOrderCache.current),
+    [events]
+  )
 
   if (events.length === 0) return null
 
