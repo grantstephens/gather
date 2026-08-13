@@ -23,19 +23,27 @@ export function groupEventsByDayShuffled(
   const result = new Map<string, Event[]>()
   for (const [dateKey, dayEvents] of byDay) {
     const byId = new Map(dayEvents.map(e => [e.id, e]))
-    const currentIds = [...byId.keys()].sort().join(',')
     const cached = cache.get(dateKey)
-    const cachedIds = cached ? [...cached].sort().join(',') : null
+    const isSameSet =
+      cached !== undefined &&
+      cached.length === byId.size &&
+      cached.every(id => byId.has(id))
 
     let order: string[]
-    if (cached && cachedIds === currentIds) {
-      order = cached
+    if (isSameSet) {
+      order = cached!
     } else {
       order = shuffle(dayEvents).map(e => e.id)
       cache.set(dateKey, order)
     }
 
     result.set(dateKey, order.map(id => byId.get(id)!))
+  }
+
+  // Evict cache entries for days no longer present, so the cache doesn't
+  // grow unbounded over a long-lived session (infinite scroll, SSE updates).
+  for (const dateKey of cache.keys()) {
+    if (!byDay.has(dateKey)) cache.delete(dateKey)
   }
 
   return result

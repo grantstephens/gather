@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend build build-frontend build-backend serve clean seed seed-test-users setup-admin help watch run reset stop test-unit test-api test-e2e test-e2e-ui test-watch test-coverage test docker-build docker-run docker-stop docker-up docker-down docker-logs docker-restart
+.PHONY: dev dev-backend dev-frontend build build-frontend build-backend serve clean seed seed-test-users setup-admin help watch run reset stop test-unit test-frontend test-api test-e2e test-e2e-ui test-watch test-coverage test docker-build docker-run docker-stop docker-up docker-down docker-logs docker-restart
 
 # Development: run Vite + backend with hot reload proxy
 dev: build-backend setup-admin
@@ -109,6 +109,10 @@ test-unit:
 	@echo "Running Go unit tests..."
 	@go test ./internal/... -v 2>/dev/null || echo "No unit tests found or tests failed"
 
+test-frontend:
+	@echo "Running frontend unit tests..."
+	@cd frontend && npm test
+
 test-api:
 	@echo "Running API integration tests..."
 	@if [ -d "./internal/api" ]; then \
@@ -135,7 +139,7 @@ test-coverage:
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
 
-test: test-unit test-api test-e2e
+test: test-unit test-frontend test-api test-e2e
 	@echo "All tests passed!"
 
 # Docker
@@ -204,6 +208,7 @@ help:
 	@echo "Testing:"
 	@echo "  test           Run all tests (unit, API, E2E)"
 	@echo "  test-unit      Run Go unit tests"
+	@echo "  test-frontend  Run frontend unit tests"
 	@echo "  test-api       Run API integration tests"
 	@echo "  test-e2e       Run E2E tests (headless)"
 	@echo "  test-e2e-ui    Run E2E tests (interactive UI)"

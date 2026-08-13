@@ -88,4 +88,15 @@ describe('groupEventsByDayShuffled', () => {
     expect(result.get('2026-08-13')!.map(e => e.id).sort()).toEqual(['a', 'b', 'c'])
     expect(cache.get('2026-08-13')!.sort()).toEqual(['a', 'b', 'c'])
   })
+
+  it('evicts cache entries for days no longer present in events', () => {
+    const cache = new Map<string, string[]>()
+    groupEventsByDayShuffled([makeEvent('a', '2026-08-13 09:00:00.000Z')], cache)
+    expect(cache.has('2026-08-13')).toBe(true)
+
+    groupEventsByDayShuffled([makeEvent('b', '2026-08-14 09:00:00.000Z')], cache)
+
+    expect(cache.has('2026-08-13')).toBe(false)
+    expect(cache.has('2026-08-14')).toBe(true)
+  })
 })
