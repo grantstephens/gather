@@ -34,6 +34,7 @@ function slugify(title: string): string {
 
 export function Admin(_props: Props) {
   usePageTitle('Admin')
+  const [pendingEvents, setPendingEvents] = useState<Event[]>([])
   const [allEvents, setAllEvents] = useState<Event[]>([])
   const [allPlaces, setAllPlaces] = useState<Place[]>([])
   const [allTags, setAllTags] = useState<Tag[]>([])
@@ -95,22 +96,31 @@ export function Admin(_props: Props) {
     async function load() {
       try {
         // Fetch sequentially to avoid race conditions
+        const pending = await pb.collection('events').getFullList<Event>({
+          filter: "status = 'pending'",
+          sort: '-created',
+          expand: 'place,tags',
+        })
+        if (cancelled) return
+
         const eventsResult = await pb.collection('events').getList<Event>(1, 25, {
+          filter: "status != 'pending'",
           sort: '-start_datetime',
           expand: 'place,tags',
         })
         if (cancelled) return
 
         const places = await pb.collection('places').getFullList<Place>({
-          sort: 'status,name',
+          sort: '-status,name',
         })
         if (cancelled) return
 
         const tags = await pb.collection('tags').getFullList<Tag>({
-          sort: 'status,name',
+          sort: '-status,name',
         })
         if (cancelled) return
 
+        setPendingEvents(pending)
         setAllEvents(eventsResult.items)
         setEventsTotalPages(eventsResult.totalPages)
         setAllPlaces(places)
@@ -137,7 +147,13 @@ export function Admin(_props: Props) {
   useEffect(() => {
     if (!canModerate()) return
     pb.collection('events').subscribe('*', () => {
+      pb.collection('events').getFullList<Event>({
+        filter: "status = 'pending'",
+        sort: '-created',
+        expand: 'place,tags',
+      }).then(setPendingEvents).catch(console.error)
       pb.collection('events').getList<Event>(eventsPage, 25, {
+        filter: "status != 'pending'",
         sort: '-start_datetime',
         expand: 'place,tags',
       }).then(result => {
@@ -155,6 +171,7 @@ export function Admin(_props: Props) {
     if (!canModerate() || eventsPage === 1) return // page 1 is loaded in the initial load effect
     setEventsLoading(true)
     pb.collection('events').getList<Event>(eventsPage, 25, {
+      filter: "status != 'pending'",
       sort: '-start_datetime',
       expand: 'place,tags',
     }).then(result => {
@@ -322,7 +339,9 @@ export function Admin(_props: Props) {
 
     try {
       await pb.collection('events').update(eventId, { status: 'published' })
-      setAllEvents(prev => prev.map(e => e.id === eventId ? { ...e, status: 'published' } : e))
+      const approved = pendingEvents.find(e => e.id === eventId)
+      setPendingEvents(prev => prev.filter(e => e.id !== eventId))
+      if (approved) setAllEvents(prev => [{ ...approved, status: 'published' }, ...prev])
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to approve event'
       alert(message)
@@ -333,6 +352,7 @@ export function Admin(_props: Props) {
     if (!confirm('Are you sure you want to delete this event?')) return
     try {
       await pb.collection('events').delete(eventId)
+      setPendingEvents(prev => prev.filter(e => e.id !== eventId))
       setAllEvents(prev => prev.filter(e => e.id !== eventId))
     } catch (err) {
       alert('Failed to delete event')
@@ -589,7 +609,7 @@ export function Admin(_props: Props) {
     )
   }
 
-  const pendingEventsCount = allEvents.filter(e => e.status === 'pending').length
+  const pendingEventsCount = pendingEvents.length
   const pendingPlacesCount = allPlaces.filter(p => p.status === 'pending').length
   const pendingTagsCount = allTags.filter(t => t.status === 'pending').length
   const totalPending = pendingEventsCount + pendingPlacesCount + pendingTagsCount
@@ -657,16 +677,7 @@ export function Admin(_props: Props) {
 
       {activeTab === 'events' && (
         <div class="events-list">
-          {eventsLoading ? (
-            <p class="no-events">Loading...</p>
-          ) : allEvents.length === 0 ? (
-            <p class="no-events">No events found.</p>
-          ) : (
-            [...allEvents].sort((a, b) => {
-              if (a.status === 'pending' && b.status !== 'pending') return -1
-              if (a.status !== 'pending' && b.status === 'pending') return 1
-              return 0
-            }).map(event => (
+          {pendingEvents.map(event => (
               <div key={event.id} class="admin-event-card">
                 <div class="event-status-row">
                   <span class={`status-badge status-${event.status}`}>{event.status}</span>
@@ -692,8 +703,25 @@ export function Admin(_props: Props) {
                   </button>
                 </div>
               </div>
-            ))
-          )}
+          ))}
+          {eventsLoading ? (
+            <p class="no-events">Loading...</p>
+          ) : allEvents.map(event => (
+            <div key={event.id} class="admin-event-card">
+              <div class="event-status-row">
+                <span class={`status-badge status-${event.status}`}>{event.status}</span>
+                {event.recurrence_rule && (
+                  <span class="status-badge" style={{ background: 'var(--color-accent)', color: '#fff' }}>recurring</span>
+                )}
+              </div>
+              <EventCard event={event} />
+              <div class="admin-event-actions">
+                <a href={eventPath(event)} class="btn btn-secondary">View</a>
+                <a href={`/edit/${event.id}`} class="btn btn-secondary">Edit</a>
+                <button class="btn btn-danger" onClick={() => handleRejectEvent(event.id)}>Delete</button>
+              </div>
+            </div>
+          ))}
           {eventsTotalPages > 1 && (
             <div class="pagination" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-6)', justifyContent: 'center' }}>
               <button
