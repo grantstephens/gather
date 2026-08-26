@@ -924,7 +924,7 @@ func main() {
 			slug := re.Request.PathValue("slug")
 			html, err := seo.GeneratePicksHTML(se.App, slug, baseURL)
 			if err != nil {
-				return serveSPA(re)
+				return re.NotFoundError("", nil)
 			}
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 			re.Response.Header().Set("Cache-Control", "no-store")
