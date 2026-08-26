@@ -852,12 +852,14 @@ func main() {
 				event, err = se.App.FindRecordById("events", id)
 			}
 			if err != nil {
-				return serveSPA(re) // Let SPA handle 404
+				// A 200 SPA shell for a bot here is a soft 404 — bots never run the
+				// client JS that would tell them the event doesn't exist.
+				return re.NotFoundError("", nil)
 			}
 
 			// Only serve metadata for published events
 			if event.GetString("status") != "published" {
-				return serveSPA(re)
+				return re.NotFoundError("", nil)
 			}
 
 			// Generate HTML with metadata
@@ -924,7 +926,7 @@ func main() {
 			slug := re.Request.PathValue("slug")
 			html, err := seo.GeneratePicksHTML(se.App, slug, baseURL)
 			if err != nil {
-				return serveSPA(re)
+				return re.NotFoundError("", nil)
 			}
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 			re.Response.Header().Set("Cache-Control", "no-store")
@@ -964,9 +966,13 @@ func main() {
 				return re.Next()
 			}
 
-			// Custom pages: SSR for bots
-			if seo.IsBot(re.Request.Header.Get("User-Agent")) {
-				if html, err := seo.GeneratePageHTML(se.App, path, baseURL); err == nil {
+			isBot := seo.IsBot(re.Request.Header.Get("User-Agent"))
+
+			// Custom pages: SSR for bots. Frontend links to these as /p/{slug},
+			// but the "pages" collection stores the bare slug.
+			if isBot {
+				pageSlug := strings.TrimPrefix(path, "p/")
+				if html, err := seo.GeneratePageHTML(se.App, pageSlug, baseURL); err == nil {
 					re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 					re.Response.Header().Set("Cache-Control", "no-store")
 					return re.Blob(200, "text/html", html)
@@ -988,6 +994,14 @@ func main() {
 					re.Response.Header().Set("Cache-Control", "public, max-age=31536000, immutable, stale-if-error=2592000")
 				}
 				return re.FileFS(frontend, path)
+			}
+
+			// Bots hitting anything else here — stale URLs, retired routes, app-only
+			// screens like /submit or /login with no unique content — get a real 404
+			// instead of a 200 SPA shell (that's what Google flags as a soft 404).
+			// Humans still get the SPA shell so client-side routing/UI works normally.
+			if isBot {
+				return re.NotFoundError("", nil)
 			}
 
 			// Fallback to index.html for SPA
