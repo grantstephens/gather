@@ -6,8 +6,7 @@ Built with Go ([PocketBase](https://pocketbase.io)) and [Preact](https://preactj
 
 **Live example:** [perthshire.events](https://perthshire.events)
 
-<img width="1679" height="1369" alt="image" src="https://github.com/user-attachments/assets/14db277a-c3cb-4a8d-9834-8a93f550efb4" />
-
+<img width="1679" height="1369" alt="Gather home page showing the event calendar" src=".github/assets/screenshot.png" />
 
 ## Features
 
