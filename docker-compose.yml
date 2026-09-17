@@ -26,6 +26,9 @@ services:
       - PB_ENCRYPTION_KEY=${PB_ENCRYPTION_KEY:-}
       # Timezone for event times in ActivityPub posts (e.g. Europe/London, America/New_York)
       - TZ=${TZ:-UTC}
+      # Optional: client-IP header set by a reverse proxy in front of Gather (e.g. X-Forwarded-For).
+      # Only set this if Gather is ONLY reachable through that proxy.
+      - TRUSTED_PROXY_HEADER=${TRUSTED_PROXY_HEADER:-}
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8090/api/health"]
       interval: 30s

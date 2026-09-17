@@ -78,6 +78,19 @@ func main() {
 			log.Println("Warning: failed to configure rate limits:", err)
 		}
 
+		// Trust the reverse proxy's client-IP header so RealIP() (and therefore
+		// the rate limit rules above) key off the actual client, not the proxy.
+		// Only set this if the app is unreachable except through that proxy —
+		// otherwise a request can spoof the header and forge its own rate-limit bucket.
+		if header := os.Getenv("TRUSTED_PROXY_HEADER"); header != "" {
+			appSettings.TrustedProxy.Headers = []string{header}
+		} else {
+			appSettings.TrustedProxy.Headers = nil
+		}
+		if err := se.App.Save(appSettings); err != nil {
+			log.Println("Warning: failed to configure trusted proxy header:", err)
+		}
+
 		// Build initial CSP from custom_head setting
 		var cachedCSP atomic.Value
 		if s, err := se.App.FindFirstRecordByFilter("settings", ""); err == nil {
@@ -132,9 +145,11 @@ func main() {
 				h.Set("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400, stale-if-error=2592000")
 			}
 
-			// Feed, AP, and embed endpoints are for programmatic use — tell crawlers not to index them
+			// Feed, AP, embed, admin UI, and API endpoints aren't meant for search results —
+			// tell crawlers not to index them (belt-and-suspenders alongside robots.txt)
 			if strings.HasPrefix(path, "/feed") || strings.HasPrefix(path, "/ics") ||
-				strings.HasPrefix(path, "/federation") || strings.HasPrefix(path, "/embed") {
+				strings.HasPrefix(path, "/federation") || strings.HasPrefix(path, "/embed") ||
+				strings.HasPrefix(path, "/_/") || strings.HasPrefix(path, "/api/") {
 				h.Set("X-Robots-Tag", "noindex, nofollow")
 			}
 

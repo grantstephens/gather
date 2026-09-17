@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # Go modules (backend) — bundled into a single PR per week
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      golang:
+        patterns:
+          - "*"
+
+  # npm packages (frontend)
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+
+  # GitHub Actions used in workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
