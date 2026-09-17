@@ -7,6 +7,7 @@ import { marked } from 'marked'
 import { pb, Event as EventType, getImageUrl, canModerate, recurrenceLabel, parseVirtualId } from '../lib/pocketbase'
 import { SkeletonEventDetailPage } from '../components/Skeleton'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { usePageTitle } from '../lib/title'
 import leafletCss from 'leaflet/dist/leaflet.css?inline'
 import './Event.css'
 
@@ -18,6 +19,7 @@ interface Props {
 export function Event({ id }: Props) {
   const [event, setEvent] = useState<EventType | null>(null)
   const [loading, setLoading] = useState(true)
+  usePageTitle(event?.title ?? '')
   const [error, setError] = useState<string | null>(null)
   const [cancelled, setCancelled] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)

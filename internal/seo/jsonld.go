@@ -162,12 +162,16 @@ func determineAttendanceMode(event *core.Record) string {
 	return "https://schema.org/OfflineEventAttendanceMode"
 }
 
-// stripMarkdown removes markdown and HTML formatting from text
+// stripMarkdown removes markdown, HTML, and scraper boilerplate from text
 func stripMarkdown(text string) string {
+	// Remove scraper-appended boilerplate lines (Cost/Booking/Source) before any other processing
+	text = regexp.MustCompile(`(?i)\n?\s*(Cost|Booking|Source)\s*:.*`).ReplaceAllString(text, "")
 	// Remove HTML tags
 	text = regexp.MustCompile(`<[^>]+>`).ReplaceAllString(text, " ")
 	// Remove markdown links [text](url)
 	text = regexp.MustCompile(`\[([^\]]+)\]\([^\)]+\)`).ReplaceAllString(text, "$1")
+	// Remove bare URLs
+	text = regexp.MustCompile(`https?://\S+`).ReplaceAllString(text, "")
 	// Remove bold/italic **text** or *text*
 	text = regexp.MustCompile(`\*\*([^\*]+)\*\*`).ReplaceAllString(text, "$1")
 	text = regexp.MustCompile(`\*([^\*]+)\*`).ReplaceAllString(text, "$1")
