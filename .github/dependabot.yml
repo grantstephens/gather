@@ -21,3 +21,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+
+  # Dockerfile base image (golang builder, alpine runtime) — gomod updates
+  # never touch this, so it needs its own watch to stay in sync with go.mod
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"

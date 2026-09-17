@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.25-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 # Install build dependencies for libwebp and Node.js
 RUN apk add --no-cache \
