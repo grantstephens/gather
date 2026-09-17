@@ -14,6 +14,7 @@ type picksEvent struct {
 	Title     string
 	URL       string
 	StartDate string
+	Venue     string
 }
 
 // GeneratePicksHTML creates a complete HTML page with meta tags for a picks post.
@@ -35,7 +36,8 @@ func GeneratePicksHTML(app core.App, slug, baseURL string) ([]byte, error) {
 	}
 
 	title := picks.GetString("title")
-	description := truncateText(stripMarkdown(picks.GetString("blurb")), 300)
+	fullBlurb := stripMarkdown(picks.GetString("blurb"))
+	description := truncateText(fullBlurb, 160)
 	picksURL := fmt.Sprintf("%s/picks/%s", baseURL, slug)
 
 	published := picks.GetDateTime("created").Time()
@@ -69,10 +71,17 @@ func GeneratePicksHTML(app core.App, slug, baseURL string) ([]byte, error) {
 			dateStr = startTime.Format("Monday 2 January, 3:04 PM")
 		}
 
+		venue := ""
+		if placeID := ev.GetString("place"); placeID != "" {
+			if place, err := app.FindRecordById("places", placeID); err == nil {
+				venue = place.GetString("name")
+			}
+		}
 		events = append(events, picksEvent{
 			Title:     ev.GetString("title"),
 			URL:       evURL,
 			StartDate: dateStr,
+			Venue:     venue,
 		})
 
 		if imageURL == "" {
@@ -94,13 +103,13 @@ func GeneratePicksHTML(app core.App, slug, baseURL string) ([]byte, error) {
 	}
 
 	return []byte(buildPicksHTML(
-		title, instanceName, description, picksURL, baseURL,
+		title, instanceName, fullBlurb, description, picksURL, baseURL,
 		imageURL, imageType, published, modified, events,
 	)), nil
 }
 
 func buildPicksHTML(
-	title, instanceName, description, picksURL, baseURL,
+	title, instanceName, fullBlurb, description, picksURL, baseURL,
 	imageURL, imageType string,
 	published, modified time.Time,
 	events []picksEvent,
@@ -183,15 +192,21 @@ func buildPicksHTML(
 
 	b.WriteString("</head>\n<body>\n")
 	b.WriteString(fmt.Sprintf("  <h1>%s</h1>\n", htmlEscape(title)))
-	if description != "" {
-		b.WriteString(fmt.Sprintf("  <p>%s</p>\n", htmlEscape(description)))
+	if fullBlurb != "" {
+		b.WriteString(fmt.Sprintf("  <p>%s</p>\n", htmlEscape(fullBlurb)))
 	}
 	if len(events) > 0 {
 		b.WriteString("  <h2>This weekend's picks</h2>\n  <ul>\n")
 		for _, ev := range events {
-			if ev.StartDate != "" {
+			meta := ev.StartDate
+			if ev.Venue != "" && meta != "" {
+				meta = meta + ", " + ev.Venue
+			} else if ev.Venue != "" {
+				meta = ev.Venue
+			}
+			if meta != "" {
 				b.WriteString(fmt.Sprintf("    <li><a href=\"%s\">%s</a> &mdash; %s</li>\n",
-					htmlEscape(ev.URL), htmlEscape(ev.Title), htmlEscape(ev.StartDate)))
+					htmlEscape(ev.URL), htmlEscape(ev.Title), htmlEscape(meta)))
 			} else {
 				b.WriteString(fmt.Sprintf("    <li><a href=\"%s\">%s</a></li>\n",
 					htmlEscape(ev.URL), htmlEscape(ev.Title)))
@@ -199,7 +214,6 @@ func buildPicksHTML(
 		}
 		b.WriteString("  </ul>\n")
 	}
-	b.WriteString(fmt.Sprintf("  <p><a href=\"%s\">Read the full picks post</a></p>\n", htmlEscape(picksURL)))
 	b.WriteString("</body>\n</html>\n")
 	return b.String()
 }
