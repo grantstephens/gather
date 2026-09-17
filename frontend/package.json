@@ -17,7 +17,7 @@
     "dompurify": "^3.3.1",
     "flatpickr": "^4.6.13",
     "leaflet": "^1.9.4",
-    "marked": "^17.0.3",
+    "marked": "^18.0.13",
     "pocketbase": "^0.27.0",
     "preact": "^10.19.3",
     "preact-router": "^4.1.2"
