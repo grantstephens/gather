@@ -10,17 +10,25 @@ updates:
         patterns:
           - "*"
 
-  # npm packages (frontend)
+  # npm packages (frontend) — bundled into a single PR per week
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    groups:
+      npm:
+        patterns:
+          - "*"
 
-  # GitHub Actions used in workflows
+  # GitHub Actions used in workflows — bundled into a single PR per week
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   # Dockerfile base image (golang builder, alpine runtime) — gomod updates
   # never touch this, so it needs its own watch to stay in sync with go.mod
@@ -28,3 +36,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      docker:
+        patterns:
+          - "*"
