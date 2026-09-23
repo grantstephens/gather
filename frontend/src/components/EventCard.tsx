@@ -6,9 +6,10 @@ import './EventCard.css'
 interface Props {
   event: Event
   variant?: 'featured' | 'compact'
+  priority?: boolean
 }
 
-export function EventCard({ event, variant = 'featured' }: Props) {
+export function EventCard({ event, variant = 'featured', priority = false }: Props) {
   const startDate = new Date(event.start_datetime)
   const imageUrl = getImageUrl(event, '400x300')
 
@@ -57,7 +58,8 @@ export function EventCard({ event, variant = 'featured' }: Props) {
             alt={event.title}
             width="400"
             height="300"
-            loading="lazy"
+            loading={priority ? 'eager' : 'lazy'}
+            fetchpriority={priority ? 'high' : 'auto'}
           />
         </div>
       ) : (

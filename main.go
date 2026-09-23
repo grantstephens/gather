@@ -205,6 +205,23 @@ func main() {
 			return err
 		}
 
+		// Home page for real visitors: same SPA shell, but with a server-rendered
+		// snapshot of the first event card spliced into an #app-shell sibling div
+		// so the LCP image starts loading before the JS bundle even executes.
+		// main.tsx removes #app-shell right after the client app mounts.
+		serveHomeSPA := func(re *core.RequestEvent) error {
+			page := spaHTML
+			if shell, err := seo.GenerateHomeShell(se.App, baseURL); err == nil && shell != "" {
+				page = []byte(strings.Replace(string(spaHTML),
+					`<div id="app"></div>`,
+					`<div id="app-shell">`+shell+`</div><div id="app"></div>`, 1))
+			}
+			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+			re.Response.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=60, stale-if-error=86400")
+			_, err := re.Response.Write(page)
+			return err
+		}
+
 		// RSS feeds
 		se.Router.GET("/feed.rss", func(re *core.RequestEvent) error {
 			data, err := rss.GenerateFeed(se.App, baseURL, "")
@@ -997,7 +1014,7 @@ func main() {
 					viteProxy.ServeHTTP(re.Response, re.Request)
 					return nil
 				}
-				return serveSPA(re)
+				return serveHomeSPA(re)
 			}
 
 			html, err := seo.GenerateHomeHTML(se.App, baseURL)

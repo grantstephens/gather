@@ -49,7 +49,7 @@ export function EventTimeline({ events }: Props) {
                 <time class="timeline-date-label">{formatDayHeading(dateKey)}</time>
               </div>
               <div class="timeline-day-events">
-                <EventCard event={dayEvents[0]} variant="featured" />
+                <EventCard event={dayEvents[0]} variant="featured" priority={i === 0} />
                 {dayEvents.length > 1 && (
                   <div class="timeline-compact-row">
                     {dayEvents.slice(1).map(e => (
