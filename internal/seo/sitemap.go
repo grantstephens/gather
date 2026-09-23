@@ -174,5 +174,6 @@ Disallow: /federation
 Disallow: /embed
 
 Sitemap: %s/sitemap.xml
-`, baseURL)
+Agentmap: %s/.well-known/ard.json
+`, baseURL, baseURL)
 }

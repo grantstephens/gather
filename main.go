@@ -48,7 +48,7 @@ func main() {
 		// Enable daily backups by default if not already configured
 		if se.App.Settings().Backups.Cron == "" {
 			se.App.Settings().Backups.Cron = "0 3 * * *" // 3 AM daily
-			se.App.Settings().Backups.CronMaxKeep = 7     // keep 7 backups
+			se.App.Settings().Backups.CronMaxKeep = 7    // keep 7 backups
 			if err := se.App.Save(se.App.Settings()); err != nil {
 				log.Println("Warning: failed to configure default backup schedule:", err)
 			}
@@ -288,6 +288,48 @@ func main() {
 			re.Response.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=604800")
 			return re.String(200, content)
 		})
+
+		// llms.txt — machine-readable summary for AI agents browsing the site
+		se.Router.GET("/llms.txt", func(re *core.RequestEvent) error {
+			settings, err := se.App.FindFirstRecordByFilter("settings", "")
+			instanceName := "Gather"
+			description := ""
+			if err == nil {
+				if n := settings.GetString("instance_name"); n != "" {
+					instanceName = n
+				}
+				description = settings.GetString("instance_description")
+			}
+			content := seo.BuildLLMsTxt(baseURL, instanceName, description)
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300, stale-if-error=86400")
+			re.Response.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			return re.String(200, content)
+		})
+
+		// ai-catalog.json (ARD predecessor path) / ard.json (current ARD path) —
+		// machine-readable capability manifest for AI agent registries.
+		// Served at both paths: current Lighthouse (13.5.0) still resolves only
+		// the predecessor /.well-known/ai-catalog.json path, while the ARD v0.91
+		// spec itself requires /.well-known/ard.json. See
+		// https://github.com/GoogleChrome/lighthouse/issues/17251
+		aiCatalogHandler := func(re *core.RequestEvent) error {
+			settings, err := se.App.FindFirstRecordByFilter("settings", "")
+			instanceName := "Gather"
+			if err == nil {
+				if n := settings.GetString("instance_name"); n != "" {
+					instanceName = n
+				}
+			}
+			data, err := seo.BuildAICatalogJSON(baseURL, instanceName)
+			if err != nil {
+				return re.InternalServerError("Failed to build AI catalog", err)
+			}
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=300, stale-if-error=86400")
+			return re.Blob(200, "application/json", data)
+		}
+		se.Router.GET("/.well-known/ai-catalog.json", aiCatalogHandler)
+		se.Router.GET("/.well-known/ard.json", aiCatalogHandler)
+		se.Router.GET("/ai-catalog.json", aiCatalogHandler)
 
 		// ActivityPub actor
 		se.Router.GET("/ap/actor", func(re *core.RequestEvent) error {
