@@ -38,6 +38,8 @@ export function eventPath(event: Pick<Event, 'id' | 'slug'>): string {
 
 export interface Place {
   id: string
+  /** Readable URL segment (/place/{slug}); absent on rows from before slugs existed */
+  slug?: string
   osm_id?: number
   osm_type?: 'node' | 'way' | 'relation'
   name: string

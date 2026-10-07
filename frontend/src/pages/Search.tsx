@@ -3,6 +3,7 @@ import { Event, Place, Tag } from '../lib/pocketbase'
 import { usePageTitle } from '../lib/title'
 import { EventTimeline } from '../components/EventTimeline'
 import { tagStyle } from '../lib/color'
+import { placeHref } from '../lib/placeHref'
 import { SkeletonTimeline } from '../components/Skeleton'
 import './Search.css'
 
@@ -116,7 +117,7 @@ export function Search(_props: Props) {
           <h2 class="search-section-title">Places ({places.length})</h2>
           <div class="search-places">
             {places.map(place => (
-              <a key={place.id} href={`/place/${place.id}`} class="search-place-link" data-umami-event="search-place-click" data-umami-event-place={place.name}>
+              <a key={place.id} href={placeHref(place)} class="search-place-link" data-umami-event="search-place-click" data-umami-event-place={place.name}>
                 <span class="search-place-name">{place.name}</span>
                 {place.city && <span class="search-place-city">{place.city}</span>}
               </a>

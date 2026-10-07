@@ -630,6 +630,7 @@ func main() {
 			for _, p := range places {
 				placeResults = append(placeResults, map[string]any{
 					"id":      p.Id,
+					"slug":    p.GetString("slug"),
 					"name":    p.GetString("name"),
 					"address": p.GetString("address"),
 					"city":    p.GetString("city"),

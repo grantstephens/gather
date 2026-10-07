@@ -10,7 +10,8 @@ interface Props {
   id?: string
 }
 
-export function Place({ id }: Props) {
+export function Place({ id: ref }: Props) {
+  // The route parameter is the place's slug (or, on old links, its record id).
   const [place, setPlace] = useState<PlaceType | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,17 +23,19 @@ export function Place({ id }: Props) {
   usePageTitle(place ? place.name : '')
 
   useEffect(() => {
-    if (!id) return
+    if (!ref) return
 
     async function load() {
       try {
-        const placeRecord = await pb.collection('places').getOne<PlaceType>(id!)
+        const placeRecord = await pb.collection('places').getFirstListItem<PlaceType>(
+          pb.filter('slug = {:ref} || id = {:ref}', { ref }),
+        )
         setPlace(placeRecord)
 
         const now = new Date().toISOString()
         const eventRecords = await pb.collection('events').getList<Event>(1, 50, {
           filter: pb.filter('status = "published" && place = {:placeId} && start_datetime >= {:now}', {
-            placeId: id,
+            placeId: placeRecord.id,
             now,
           }),
           sort: 'start_datetime',
@@ -50,16 +53,16 @@ export function Place({ id }: Props) {
     }
 
     load()
-  }, [id])
+  }, [ref])
 
   const loadMore = async () => {
-    if (!id) return
+    if (!place) return
     setLoadingMore(true)
     const nextPage = page + 1
     const now = new Date().toISOString()
     const more = await pb.collection('events').getList<Event>(nextPage, 50, {
       filter: pb.filter('status = "published" && place = {:placeId} && start_datetime >= {:now}', {
-        placeId: id,
+        placeId: place.id,
         now,
       }),
       sort: 'start_datetime',

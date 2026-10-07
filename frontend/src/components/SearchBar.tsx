@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import { Event, Place, Tag, eventPath } from '../lib/pocketbase'
 import { tagStyle } from '../lib/color'
+import { placeHref } from '../lib/placeHref'
 import './SearchBar.css'
 
 interface SearchResults {
@@ -134,7 +135,7 @@ export function SearchBar() {
             <button
               key={place.id}
               class="search-dropdown-item"
-              onClick={() => navigate(`/place/${place.id}`)}
+              onClick={() => navigate(placeHref(place))}
             >
               <span class="search-dropdown-type">Place</span>
               <span class="search-dropdown-label">{place.name}</span>
