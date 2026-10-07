@@ -11,6 +11,7 @@ import (
 func RegisterTextHooks(app core.App) {
 	handler := func(e *core.RecordEvent) error {
 		textutil.DecodeRecordText(e.Record)
+		textutil.FillCostSource(e.Record)
 		return e.Next()
 	}
 	app.OnRecordCreate("events", "places", "tags").BindFunc(handler)

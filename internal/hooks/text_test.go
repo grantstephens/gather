@@ -110,3 +110,49 @@ func TestDecodeAllExistingRewritesOldRowsButNotSlugs(t *testing.T) {
 		t.Fatalf("must be idempotent: %v", err)
 	}
 }
+
+func TestCostAndSourceAreParsedFromBoilerplate(t *testing.T) {
+	app := api.NewTestApp(t)
+	defer app.Cleanup()
+	hooks.RegisterTextHooks(app)
+
+	ev := newEvent(t, app, "Concert", "Lovely.<br><br>Cost: £5<br>Source: https://x.test/e")
+	if err := app.Save(ev); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := app.FindRecordById("events", ev.Id)
+	if got.GetString("cost") != "£5" || got.GetString("source_url") != "https://x.test/e" {
+		t.Errorf("cost=%q source_url=%q", got.GetString("cost"), got.GetString("source_url"))
+	}
+
+	// an explicit value is never overwritten by the boilerplate
+	ev2 := newEvent(t, app, "Concert 2", "Lovely.<br><br>Cost: £5")
+	ev2.Set("cost", "Free for members")
+	if err := app.Save(ev2); err != nil {
+		t.Fatal(err)
+	}
+	got2, _ := app.FindRecordById("events", ev2.Id)
+	if got2.GetString("cost") != "Free for members" {
+		t.Errorf("explicit cost overwritten: %q", got2.GetString("cost"))
+	}
+}
+
+func TestBackfillCostSource(t *testing.T) {
+	app := api.NewTestApp(t)
+	defer app.Cleanup()
+
+	ev := newEvent(t, app, "Old", "x<br><br>Cost: Free<br>Source: https://old.test/e")
+	if err := app.Save(ev); err != nil { // hooks not registered: fields stay empty
+		t.Fatal(err)
+	}
+	if got, _ := app.FindRecordById("events", ev.Id); got.GetString("cost") != "" {
+		t.Fatalf("precondition: cost should be empty, got %q", got.GetString("cost"))
+	}
+	if err := textutil.BackfillCostSource(app); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := app.FindRecordById("events", ev.Id)
+	if got.GetString("cost") != "Free" || got.GetString("source_url") != "https://old.test/e" {
+		t.Errorf("cost=%q source_url=%q", got.GetString("cost"), got.GetString("source_url"))
+	}
+}
