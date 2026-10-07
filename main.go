@@ -879,6 +879,7 @@ func main() {
 		hooks.RegisterImageConversionHooks(se.App)
 		hooks.RegisterModerationHooks(se.App)
 		hooks.RegisterEventHooks(se.App, baseURL)
+		hooks.RegisterTextHooks(se.App) // before slugs, so slugs come from decoded titles
 		hooks.RegisterSlugHooks(se.App)
 
 		// Defense-in-depth: strip ap_private_key from settings API responses for
