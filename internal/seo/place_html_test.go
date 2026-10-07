@@ -4,6 +4,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"gather/internal/api"
+
+	"github.com/pocketbase/pocketbase/core"
+
+	_ "gather/migrations"
 )
 
 func TestPlacePageTitle(t *testing.T) {
@@ -41,4 +47,51 @@ func TestBuildPlaceHTMLIntroAndItemList(t *testing.T) {
 			t.Errorf("missing %q in:\n%s", want, html)
 		}
 	}
+}
+
+// Datetimes are stored in UTC. The place/tag pages must compare against UTC "now":
+// otherwise, on a server whose TZ is ahead of UTC, an event starting soon makes
+// the event page link to a place page that then 404s.
+func TestPlaceAndTagPagesExistWhenTheServerClockIsNotUTC(t *testing.T) {
+	old := time.Local
+	time.Local = time.FixedZone("ahead", 5*3600)
+	defer func() { time.Local = old }()
+
+	app := api.NewTestApp(t)
+	defer app.Cleanup()
+	places, _ := app.FindCollectionByNameOrId("places")
+	tags, _ := app.FindCollectionByNameOrId("tags")
+	pl := core.NewRecord(places)
+	pl.Set("name", "Soon Hall")
+	pl.Set("status", "approved")
+	tg := core.NewRecord(tags)
+	tg.Set("name", "soon")
+	tg.Set("status", "approved")
+	for _, r := range []*core.Record{pl, tg} {
+		if err := app.SaveNoValidate(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mkEvent(t, app, "Starts in two hours", time.Now().Add(2*time.Hour), func(r *core.Record) {
+		r.Set("place", pl.Id)
+		r.Set("tags", []string{tg.Id})
+	})
+	if _, err := GeneratePlaceHTML(app, pl.Id, "https://x"); err != nil {
+		t.Errorf("place page must exist for an event starting in two hours: %v", err)
+	}
+	if _, err := GenerateTagHTML(app, "soon", "https://x"); err != nil {
+		t.Errorf("tag page must exist for an event starting in two hours: %v", err)
+	}
+	if !strings.Contains(string(mustHome(t, app)), "Starts in two hours") {
+		t.Errorf("homepage must list it too")
+	}
+}
+
+func mustHome(t *testing.T, app core.App) []byte {
+	t.Helper()
+	b, err := GenerateHomeHTML(app, "https://x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }

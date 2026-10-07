@@ -47,7 +47,7 @@ func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
 		entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/%s", baseURL, pg.GetString("slug")), LastMod: lastMod(pg)})
 	}
 	for _, tag := range ActiveTags(app, now) {
-		entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/tag/%s", baseURL, tag.GetString("name")), LastMod: lastMod(tag)})
+		entries = append(entries, SitemapEntry{URL: tagURL(baseURL, tag.GetString("name")), LastMod: lastMod(tag)})
 	}
 	for _, place := range ActivePlaces(app, now) {
 		entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/place/%s", baseURL, PlaceRef(place)), LastMod: lastMod(place)})

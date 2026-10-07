@@ -33,9 +33,9 @@ func GenerateTagHTML(app core.App, tagName, baseURL string) ([]byte, error) {
 		return nil, err
 	}
 
-	tagURL := fmt.Sprintf("%s/tag/%s", baseURL, tagName)
+	pageURL := tagURL(baseURL, tagName)
 
-	today := time.Now().Format("2006-01-02 15:04:05")
+	today := time.Now().UTC().Format("2006-01-02 15:04:05")
 	events, _ := app.FindRecordsByFilter(
 		"events",
 		"status = 'published' && start_datetime >= {:today} && tags ?~ {:tagId}",
@@ -68,7 +68,7 @@ func GenerateTagHTML(app core.App, tagName, baseURL string) ([]byte, error) {
 		})
 	}
 
-	return []byte(buildTagHTML(title, instanceName, description, tagURL, baseURL, tagName, items)), nil
+	return []byte(buildTagHTML(title, instanceName, description, pageURL, baseURL, tagName, items)), nil
 }
 
 // tagPageTitle: "Strathearn Arts events in Perthshire - Perthshire Events".

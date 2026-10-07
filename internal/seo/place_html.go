@@ -34,7 +34,7 @@ func GeneratePlaceHTML(app core.App, placeID, baseURL string) ([]byte, error) {
 	placeURL := fmt.Sprintf("%s/place/%s", baseURL, PlaceRef(place))
 	city := place.GetString("city")
 
-	today := time.Now().Format("2006-01-02 15:04:05")
+	today := time.Now().UTC().Format("2006-01-02 15:04:05")
 	events, _ := app.FindRecordsByFilter(
 		"events",
 		"status = 'published' && start_datetime >= {:today} && place = {:placeId}",

@@ -49,7 +49,7 @@ func GenerateHomeHTML(app core.App, baseURL string) ([]byte, error) {
 		}
 	}
 
-	today := time.Now().Format("2006-01-02")
+	today := time.Now().UTC().Format("2006-01-02")
 	events, _ := app.FindRecordsByFilter(
 		"events",
 		"status = 'published' && start_datetime >= {:today}",
@@ -79,7 +79,7 @@ func GenerateHomeHTML(app core.App, baseURL string) ([]byte, error) {
 		browse.Places = append(browse.Places, Link{Text: p.GetString("name"), URL: baseURL + "/place/" + PlaceRef(p)})
 	}
 	for _, t := range ActiveTags(app, now) {
-		browse.Tags = append(browse.Tags, Link{Text: humanizeTag(t.GetString("name")), URL: baseURL + "/tag/" + t.GetString("name")})
+		browse.Tags = append(browse.Tags, Link{Text: humanizeTag(t.GetString("name")), URL: tagURL(baseURL, t.GetString("name"))})
 	}
 	picks, _ := app.FindRecordsByFilter("picks", "hidden = false", "-start_date", 30, 0)
 	for _, pk := range picks {

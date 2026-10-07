@@ -15,8 +15,22 @@ func VaryUserAgent(e *core.RequestEvent) error {
 	return e.Next()
 }
 
+// Paths that never branch on the user agent. Matched on a path-segment boundary
+// (the prefix, then end / "/" / "."), so a custom page slug that merely starts
+// the same way (/feedback, /embedded-events, /apple) still gets the header.
 var noVaryPrefixes = []string{
-	"/api/", "/_/", "/assets/", "/feed", "/ics", "/ap/", "/federation", "/embed", "/.well-known/",
+	"/api", "/_", "/assets", "/feed", "/ics", "/ap", "/federation", "/embed", "/.well-known",
+}
+
+func underPrefix(path, prefix string) bool {
+	if !strings.HasPrefix(path, prefix) {
+		return false
+	}
+	if len(path) == len(prefix) {
+		return true
+	}
+	c := path[len(prefix)]
+	return c == '/' || c == '.'
 }
 
 var noVaryExact = map[string]bool{
@@ -32,7 +46,7 @@ func applyVary(h http.Header, method, path string) {
 		return
 	}
 	for _, p := range noVaryPrefixes {
-		if strings.HasPrefix(path, p) {
+		if underPrefix(path, p) {
 			return
 		}
 	}

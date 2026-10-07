@@ -1,8 +1,10 @@
 package hooks_test
 
 import (
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"gather/internal/api"
 	"gather/internal/hooks"
@@ -154,5 +156,24 @@ func TestBackfillCostSource(t *testing.T) {
 	got, _ := app.FindRecordById("events", ev.Id)
 	if got.GetString("cost") != "Free" || got.GetString("source_url") != "https://old.test/e" {
 		t.Errorf("cost=%q source_url=%q", got.GetString("cost"), got.GetString("source_url"))
+	}
+}
+
+func TestLongCostLineDoesNotStopTheEventSaving(t *testing.T) {
+	app := api.NewTestApp(t)
+	defer app.Cleanup()
+	hooks.RegisterTextHooks(app)
+
+	long := strings.Repeat("Adults £10, children free. ", 20) // ~540 chars
+	ev := newEvent(t, app, "Concert", "Nice.<br><br>Cost: "+long)
+	if err := app.Save(ev); err != nil {
+		t.Fatalf("a long Cost: line must never make the save fail: %v", err)
+	}
+	got, _ := app.FindRecordById("events", ev.Id)
+	if n := utf8.RuneCountInString(got.GetString("cost")); n == 0 || n > 200 {
+		t.Errorf("cost should be kept but capped at 200 characters, got %d", n)
+	}
+	if !utf8.ValidString(got.GetString("cost")) {
+		t.Errorf("cost truncation must not split a multi-byte character")
 	}
 }

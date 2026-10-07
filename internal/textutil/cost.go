@@ -24,6 +24,18 @@ func ParseBoilerplate(description string) (cost, sourceURL string) {
 	return cost, sourceURL
 }
 
+// maxCostRunes matches the events.cost field's Max. A longer "Cost:" line must
+// be cut, not rejected: validation would otherwise refuse the whole event.
+const maxCostRunes = 200
+
+func capRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return strings.TrimSpace(string(r[:n]))
+}
+
 // FillCostSource sets an event's empty cost/source_url fields from its
 // description boilerplate and reports whether anything changed. Explicit
 // values are never overwritten.
@@ -38,7 +50,7 @@ func FillCostSource(rec *core.Record) bool {
 	cost, source := ParseBoilerplate(rec.GetString("description"))
 	changed := false
 	if needCost && cost != "" {
-		rec.Set("cost", cost)
+		rec.Set("cost", capRunes(cost, maxCostRunes))
 		changed = true
 	}
 	if needSource && source != "" {

@@ -1,6 +1,7 @@
 package seo
 
 import (
+	"net/url"
 	"strings"
 	"unicode"
 )
@@ -23,4 +24,10 @@ func humanizeTag(name string) string {
 		words[i] = string(r)
 	}
 	return strings.Join(words, " ")
+}
+
+// tagURL is a tag page's URL. The name is a path segment, so it must be
+// escaped: "C#" would otherwise lose its fragment and "a/b" gain a segment.
+func tagURL(baseURL, name string) string {
+	return baseURL + "/tag/" + url.PathEscape(name)
 }

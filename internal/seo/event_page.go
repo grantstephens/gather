@@ -213,7 +213,7 @@ func BuildEventPage(app core.App, event *core.Record, baseURL string, now time.T
 		if len(upcoming("tags ?~ {:t}", 1, dbx.Params{"t": tag.Id})) == 0 {
 			continue
 		}
-		p.Tags = append(p.Tags, Link{Text: tag.GetString("name"), URL: baseURL + "/tag/" + tag.GetString("name")})
+		p.Tags = append(p.Tags, Link{Text: tag.GetString("name"), URL: tagURL(baseURL, tag.GetString("name"))})
 	}
 
 	// series: same title (and place) on other upcoming dates

@@ -51,8 +51,9 @@ func TestPlaceSlugHook(t *testing.T) {
 	if got := newPlace(t, app, "!!!", nil); got.GetString("slug") != "place" {
 		t.Errorf("unusable name falls back to 'place', got %q", got.GetString("slug"))
 	}
-	if got := newPlace(t, app, "Whatever", func(p *core.Record) { p.Set("slug", "my-own") }); got.GetString("slug") != "my-own" {
-		t.Errorf("a supplied slug is respected, got %q", got.GetString("slug"))
+	// places can be created anonymously: a client must not be able to choose its slug
+	if got := newPlace(t, app, "Whatever", func(p *core.Record) { p.Set("slug", "birnam-arts") }); got.GetString("slug") != "whatever" {
+		t.Errorf("a client-supplied slug must be ignored, got %q", got.GetString("slug"))
 	}
 	if got := newPlace(t, app, "St John&#39;s Kirk", nil); got.GetString("slug") != "st-john-s-kirk" {
 		t.Errorf("entities must be decoded before slugging, got %q", got.GetString("slug"))
