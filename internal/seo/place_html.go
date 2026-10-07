@@ -32,12 +32,7 @@ func GeneratePlaceHTML(app core.App, placeID, baseURL string) ([]byte, error) {
 	placeName := place.GetString("name")
 	address := place.GetString("address")
 	placeURL := fmt.Sprintf("%s/place/%s", baseURL, PlaceRef(place))
-	title := fmt.Sprintf("%s - %s", placeName, instanceName)
-	description := fmt.Sprintf("Upcoming events at %s", placeName)
-	if address != "" {
-		description += fmt.Sprintf(", %s", address)
-	}
-	description += "."
+	city := place.GetString("city")
 
 	today := time.Now().Format("2006-01-02 15:04:05")
 	events, _ := app.FindRecordsByFilter(
@@ -52,6 +47,8 @@ func GeneratePlaceHTML(app core.App, placeID, baseURL string) ([]byte, error) {
 	if len(events) == 0 {
 		return nil, fmt.Errorf("no upcoming events for place")
 	}
+	title := placePageTitle(placeName, city, instanceName)
+	description := placeIntro(placeName, address, len(events), events[0].GetDateTime("start_datetime").Time())
 
 	items := make([]placeEvent, 0, len(events))
 	for _, ev := range events {
@@ -73,6 +70,31 @@ func GeneratePlaceHTML(app core.App, placeID, baseURL string) ([]byte, error) {
 	loc := place.GetGeoPoint("location")
 
 	return []byte(buildPlaceHTML(title, instanceName, description, placeURL, baseURL, placeName, address, loc.Lat, loc.Lon, items)), nil
+}
+
+// placePageTitle: "Events at Pitlochry Festival Theatre, Pitlochry - Perthshire Events".
+func placePageTitle(name, city, instanceName string) string {
+	if city != "" && !strings.Contains(name, city) {
+		return fmt.Sprintf("Events at %s, %s - %s", name, city, instanceName)
+	}
+	return fmt.Sprintf("Events at %s - %s", name, instanceName)
+}
+
+// placeIntro is the meta description and opening paragraph of a place page.
+func placeIntro(name, address string, n int, next time.Time) string {
+	noun := "events"
+	if n == 1 {
+		noun = "event"
+	}
+	where := name
+	if address != "" {
+		where += ", " + address
+	}
+	out := fmt.Sprintf("%d upcoming %s at %s.", n, noun, where)
+	if !next.IsZero() {
+		out += " Next: " + shortDate(next) + "."
+	}
+	return out
 }
 
 func buildPlaceHTML(title, instanceName, description, placeURL, baseURL, placeName, address string, lat, lon float64, items []placeEvent) string {
@@ -131,11 +153,17 @@ func buildPlaceHTML(title, instanceName, description, placeURL, baseURL, placeNa
 		b.WriteString("\n  </script>\n")
 	}
 
+	links := make([]Link, 0, len(items))
+	for _, it := range items {
+		links = append(links, Link{Text: it.Title, URL: it.URL})
+	}
+	if list := itemListJSONLD(links); list != "" {
+		b.WriteString("  <script type=\"application/ld+json\">\n  " + list + "\n  </script>\n")
+	}
+
 	b.WriteString("</head>\n<body>\n")
 	b.WriteString(fmt.Sprintf("  <h1>%s</h1>\n", htmlEscape(placeName)))
-	if address != "" {
-		b.WriteString(fmt.Sprintf("  <p>%s</p>\n", htmlEscape(address)))
-	}
+	b.WriteString(fmt.Sprintf("  <p>%s</p>\n", htmlEscape(description)))
 
 	if len(items) > 0 {
 		b.WriteString("  <h2>Upcoming events</h2>\n  <ul>\n")

@@ -34,8 +34,6 @@ func GenerateTagHTML(app core.App, tagName, baseURL string) ([]byte, error) {
 	}
 
 	tagURL := fmt.Sprintf("%s/tag/%s", baseURL, tagName)
-	title := fmt.Sprintf("%s events - %s", tagName, instanceName)
-	description := fmt.Sprintf("Browse upcoming %s events on %s.", tagName, instanceName)
 
 	today := time.Now().Format("2006-01-02 15:04:05")
 	events, _ := app.FindRecordsByFilter(
@@ -50,6 +48,8 @@ func GenerateTagHTML(app core.App, tagName, baseURL string) ([]byte, error) {
 	if len(events) == 0 {
 		return nil, fmt.Errorf("no upcoming events for tag")
 	}
+	title := tagPageTitle(tagName, instanceName)
+	description := tagIntro(tagName, len(events))
 
 	items := make([]tagEvent, 0, len(events))
 	for _, ev := range events {
@@ -69,6 +69,24 @@ func GenerateTagHTML(app core.App, tagName, baseURL string) ([]byte, error) {
 	}
 
 	return []byte(buildTagHTML(title, instanceName, description, tagURL, baseURL, tagName, items)), nil
+}
+
+// tagPageTitle: "Strathearn Arts events in Perthshire - Perthshire Events".
+func tagPageTitle(tagName, instanceName string) string {
+	heading := humanizeTag(tagName) + " events"
+	if region := regionFromInstance(instanceName); region != strings.TrimSpace(instanceName) && region != "" {
+		heading += " in " + region
+	}
+	return heading + " - " + instanceName
+}
+
+// tagIntro is the meta description and opening paragraph of a tag page.
+func tagIntro(tagName string, n int) string {
+	noun := "events"
+	if n == 1 {
+		noun = "event"
+	}
+	return fmt.Sprintf("%d upcoming %s %s — dates, venues and booking details.", n, strings.ToLower(humanizeTag(tagName)), noun)
 }
 
 func buildTagHTML(title, instanceName, description, tagURL, baseURL, tagName string, items []tagEvent) string {
@@ -107,7 +125,7 @@ func buildTagHTML(title, instanceName, description, tagURL, baseURL, tagName str
 		Type:    "BreadcrumbList",
 		ItemListElement: []breadcrumbItem{
 			{Type: "ListItem", Position: 1, Name: instanceName, Item: baseURL},
-			{Type: "ListItem", Position: 2, Name: tagName + " events", Item: tagURL},
+			{Type: "ListItem", Position: 2, Name: humanizeTag(tagName) + " events", Item: tagURL},
 		},
 	}
 	if ldJSON, err := json.Marshal(ld); err == nil {
@@ -116,8 +134,16 @@ func buildTagHTML(title, instanceName, description, tagURL, baseURL, tagName str
 		b.WriteString("\n  </script>\n")
 	}
 
+	links := make([]Link, 0, len(items))
+	for _, it := range items {
+		links = append(links, Link{Text: it.Title, URL: it.URL})
+	}
+	if list := itemListJSONLD(links); list != "" {
+		b.WriteString("  <script type=\"application/ld+json\">\n  " + list + "\n  </script>\n")
+	}
+
 	b.WriteString("</head>\n<body>\n")
-	b.WriteString(fmt.Sprintf("  <h1>%s</h1>\n", htmlEscape(title)))
+	b.WriteString(fmt.Sprintf("  <h1>%s</h1>\n", htmlEscape(humanizeTag(tagName))))
 	b.WriteString(fmt.Sprintf("  <p>%s</p>\n", htmlEscape(description)))
 
 	if len(items) > 0 {
