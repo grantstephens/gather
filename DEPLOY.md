@@ -193,26 +193,46 @@ Requires Go 1.25+, Node.js 18+, and `libwebp-dev`. Run `make build` from the rep
 - **GitHub Issues:** https://github.com/grantstephens/gather/issues
 - **PocketBase admin:** `http://your-instance.com/_/` for database inspection and log viewing
 
-## Reverse-proxy caching
+## Reverse-proxy caching (Nginx Proxy Manager + Cloudflare)
 
 Gather serves different HTML to crawlers and to people (server-rendered pages for bots, the SPA for
-browsers), so every such response carries `Vary: User-Agent`. If a cache sits in front of Gather
-(nginx `proxy_cache`, Caddy cache module, a CDN rule) it must honour `Vary`, or **Googlebot will be
-served the cached empty SPA shell** after any human visit to the same URL.
+browsers), so every such response carries `Vary: User-Agent`. A cache in front of Gather must not
+serve one variant to the other visitor, or **Googlebot is handed the cached empty SPA shell** after
+any human visit to the same URL.
 
-If your cache does not honour `Vary`, bypass it for crawlers. nginx example:
+**Nginx Proxy Manager.** The `x-cache-status: HIT/MISS/STALE` header on pages comes from NPM's
+per-host *Cache Assets* switch (nginx `proxy_cache`, keyed by URL alone). nginx has honoured `Vary`
+for cached responses since 1.7.7, so with `Vary: User-Agent` it keeps a separate copy per user agent
+and the problem goes away; the cost is a lower hit rate (one copy per browser UA string).
+Gather's own `Cache-Control: no-store` on the crawler variant means bot responses are never cached.
+
+If you would rather not rely on that, keep crawlers out of the cache entirely. NPM loads
+`/data/nginx/custom/http_top.conf` at the http level:
 
 ```nginx
+# /data/nginx/custom/http_top.conf
 map $http_user_agent $is_bot {
     default 0;
     ~*(bot|crawl|spider|slurp|facebookexternalhit|bingpreview) 1;
 }
-# in the location that proxies to Gather:
+```
+
+and in the proxy host's **Advanced** tab:
+
+```nginx
 proxy_cache_bypass $is_bot;
 proxy_no_cache     $is_bot;
 ```
 
-Verify after every proxy or caching change:
+(The pattern should cover at least what `internal/seo/bot_detection.go` treats as a bot.)
+Or simply switch *Cache Assets* off for the host; the app serves HTML fast and sends long-lived
+cache headers for hashed `/assets/*` and uploaded files itself.
+
+**Cloudflare.** HTML must stay uncached there: Cloudflare only varies on `Accept-Encoding`, so a
+"Cache Everything" rule on this hostname would reintroduce the problem. Pages should show
+`cf-cache-status: DYNAMIC`.
+
+Verify after every proxy, NPM or Cloudflare change:
 
 ```bash
 scripts/check_bot_cache.sh https://your.domain /event/some-event-slug /tag/some-tag
