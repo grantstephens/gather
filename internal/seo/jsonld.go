@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +26,7 @@ type EventJSONLD struct {
 	Location            *EventLocation         `json:"location,omitempty"`
 	Image               string                 `json:"image,omitempty"`
 	Organizer           *EventOrganizer        `json:"organizer,omitempty"`
+	Offers              any                    `json:"offers,omitempty"`
 	URL                 string                 `json:"url"`
 }
 
@@ -59,15 +62,26 @@ type EventOrganizer struct {
 
 // GenerateEventJSONLD creates Schema.org Event JSON-LD from a PocketBase event record
 func GenerateEventJSONLD(app core.App, event *core.Record, baseURL string) ([]byte, error) {
+	placeName, placeCity := "", ""
+	if placeID := event.GetString("place"); placeID != "" {
+		if p, err := app.FindRecordById("places", placeID); err == nil {
+			placeName, placeCity = p.GetString("name"), p.GetString("city")
+		}
+	}
+
 	jsonLD := &EventJSONLD{
 		Context:             "https://schema.org",
 		Type:                "Event",
 		Name:                event.GetString("title"),
-		Description:         stripMarkdown(event.GetString("description")),
+		Description:         metaDescription(event.GetString("description"), event.GetDateTime("start_datetime").Time(), placeName, placeCity),
 		StartDate:           formatDateTime(event.GetDateTime("start_datetime")),
 		EventStatus:         mapEventStatus(event.GetString("status")),
 		EventAttendanceMode: determineAttendanceMode(event),
 		URL:                 eventPageURL(baseURL, event),
+	}
+
+	if o := buildOffers(event.GetString("cost"), event.GetString("source_url"), jsonLD.URL); o != nil {
+		jsonLD.Offers = o
 	}
 
 	// Add end date if it exists, otherwise default to start + 2 hours
@@ -185,4 +199,103 @@ func stripMarkdown(text string) string {
 	text = regexp.MustCompile(`\n\n+`).ReplaceAllString(text, "\n")
 	// Trim whitespace
 	return strings.TrimSpace(text)
+}
+
+// Offer is a schema.org Offer for a single price.
+type Offer struct {
+	Type          string `json:"@type"`
+	Price         string `json:"price"`
+	PriceCurrency string `json:"priceCurrency"`
+	Availability  string `json:"availability"`
+	URL           string `json:"url,omitempty"`
+}
+
+// AggregateOffer is a schema.org AggregateOffer for a price range.
+type AggregateOffer struct {
+	Type          string `json:"@type"`
+	LowPrice      string `json:"lowPrice"`
+	HighPrice     string `json:"highPrice"`
+	PriceCurrency string `json:"priceCurrency"`
+	OfferCount    int    `json:"offerCount"`
+	Availability  string `json:"availability"`
+	URL           string `json:"url,omitempty"`
+}
+
+var (
+	poundAmount = regexp.MustCompile(`£\s?(\d+(?:\.\d{1,2})?)`)
+	freeWord    = regexp.MustCompile(`(?i)\bfree\b`)
+)
+
+// buildOffers turns free-text cost into schema.org offers. It returns nil when
+// no price can be read: a guessed price is worse than none.
+func buildOffers(cost, sourceURL, eventURL string) any {
+	var amounts []float64
+	seen := map[string]bool{}
+	add := func(s string) {
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil || seen[s] {
+			return
+		}
+		seen[s] = true
+		amounts = append(amounts, f)
+	}
+	for _, m := range poundAmount.FindAllStringSubmatch(cost, -1) {
+		add(m[1])
+	}
+	if freeWord.MatchString(cost) {
+		add("0")
+	}
+	if len(amounts) == 0 {
+		return nil
+	}
+	sort.Float64s(amounts)
+	url := sourceURL
+	if url == "" {
+		url = eventURL
+	}
+	const inStock = "https://schema.org/InStock"
+	if len(amounts) == 1 {
+		return Offer{Type: "Offer", Price: formatPrice(amounts[0]), PriceCurrency: "GBP", Availability: inStock, URL: url}
+	}
+	return AggregateOffer{
+		Type: "AggregateOffer", LowPrice: formatPrice(amounts[0]), HighPrice: formatPrice(amounts[len(amounts)-1]),
+		PriceCurrency: "GBP", OfferCount: len(amounts), Availability: inStock, URL: url,
+	}
+}
+
+// formatPrice renders 5 -> "5", 14.3 -> "14.30", 0 -> "0".
+func formatPrice(f float64) string {
+	if f == float64(int64(f)) {
+		return strconv.FormatInt(int64(f), 10)
+	}
+	return strconv.FormatFloat(f, 'f', 2, 64)
+}
+
+// metaDescription is the plain-text description used for <meta name=description>,
+// og:description and JSON-LD. Short or missing descriptions get the date and
+// venue appended so the snippet is never empty or generic.
+func metaDescription(desc string, start time.Time, place, city string) string {
+	base := strings.TrimSpace(stripMarkdown(desc))
+	if len(base) >= 70 {
+		return truncateText(base, 160)
+	}
+	var parts []string
+	if !start.IsZero() {
+		parts = append(parts, shortDate(start))
+	}
+	if place != "" {
+		v := place
+		if city != "" && !strings.Contains(place, city) {
+			v += ", " + city
+		}
+		parts = append(parts, "at "+v)
+	}
+	if len(parts) == 0 {
+		return base
+	}
+	suffix := strings.Join(parts, " ") + "."
+	if base == "" {
+		return truncateText(suffix, 160)
+	}
+	return truncateText(base+" — "+suffix, 160)
 }

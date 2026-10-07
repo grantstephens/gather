@@ -24,7 +24,13 @@ func GenerateEventHTML(app core.App, event *core.Record, baseURL string) ([]byte
 
 	metaTags := GenerateMetaTags(app, event, baseURL)
 	eventURL := eventPageURL(baseURL, event)
-	description := truncateText(stripMarkdown(event.GetString("description")), 300)
+	placeName, placeCity := "", ""
+	if placeID := event.GetString("place"); placeID != "" {
+		if p, err := app.FindRecordById("places", placeID); err == nil {
+			placeName, placeCity = p.GetString("name"), p.GetString("city")
+		}
+	}
+	description := metaDescription(event.GetString("description"), event.GetDateTime("start_datetime").Time(), placeName, placeCity)
 
 	return []byte(buildEventHTML(
 		event.GetString("title"),

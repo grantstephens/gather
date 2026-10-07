@@ -18,7 +18,13 @@ func GenerateMetaTags(app core.App, event *core.Record, baseURL string) string {
 	}
 
 	title := event.GetString("title")
-	description := truncateText(stripMarkdown(event.GetString("description")), 200)
+	placeName, placeCity := "", ""
+	if placeID := event.GetString("place"); placeID != "" {
+		if p, err := app.FindRecordById("places", placeID); err == nil {
+			placeName, placeCity = p.GetString("name"), p.GetString("city")
+		}
+	}
+	description := metaDescription(event.GetString("description"), event.GetDateTime("start_datetime").Time(), placeName, placeCity)
 	eventURL := eventPageURL(baseURL, event)
 	imageURL := ""
 	if image := event.GetString("image"); image != "" {
