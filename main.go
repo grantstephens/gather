@@ -881,6 +881,7 @@ func main() {
 		hooks.RegisterEventHooks(se.App, baseURL)
 		hooks.RegisterTextHooks(se.App) // before slugs, so slugs come from decoded titles
 		hooks.RegisterSlugHooks(se.App)
+		hooks.RegisterPlaceSlugHooks(se.App)
 
 		// Defense-in-depth: strip ap_private_key from settings API responses for
 		// non-superusers. The field is already marked Hidden in the collection schema
@@ -970,13 +971,20 @@ func main() {
 			return re.Blob(200, "text/html", html)
 		})
 
-		// Place page: SSR for bots, 404 if place doesn't exist or has no upcoming events
+		// Place page: SSR for bots, 404 if place doesn't exist or has no upcoming events.
+		// Addressed by slug; the old record-id URLs 301 to the slug for everyone.
 		se.Router.GET("/place/{id}", func(re *core.RequestEvent) error {
+			place, redirectTo := seo.ResolvePlace(se.App, re.Request.PathValue("id"))
+			if redirectTo != "" {
+				return re.Redirect(http.StatusMovedPermanently, redirectTo)
+			}
 			if !seo.IsBot(re.Request.Header.Get("User-Agent")) {
 				return serveSPA(re)
 			}
-			id := re.Request.PathValue("id")
-			html, err := seo.GeneratePlaceHTML(se.App, id, baseURL)
+			if place == nil {
+				return re.NotFoundError("", nil)
+			}
+			html, err := seo.GeneratePlaceHTML(se.App, place.Id, baseURL)
 			if err != nil {
 				return re.NotFoundError("", nil)
 			}

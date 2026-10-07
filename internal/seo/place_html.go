@@ -31,7 +31,7 @@ func GeneratePlaceHTML(app core.App, placeID, baseURL string) ([]byte, error) {
 
 	placeName := place.GetString("name")
 	address := place.GetString("address")
-	placeURL := fmt.Sprintf("%s/place/%s", baseURL, placeID)
+	placeURL := fmt.Sprintf("%s/place/%s", baseURL, PlaceRef(place))
 	title := fmt.Sprintf("%s - %s", placeName, instanceName)
 	description := fmt.Sprintf("Upcoming events at %s", placeName)
 	if address != "" {
