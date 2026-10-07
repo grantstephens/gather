@@ -4,6 +4,7 @@ import { tagStyle } from '../lib/color'
 import { route } from 'preact-router'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
+import { hasEnded } from '../lib/lifecycle'
 import { pb, Event as EventType, getImageUrl, canModerate, recurrenceLabel, parseVirtualId } from '../lib/pocketbase'
 import { SkeletonEventDetailPage } from '../components/Skeleton'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -215,6 +216,9 @@ export function Event({ id }: Props) {
             <span class={`status-badge status-${event.status}`}>
               {event.status}
             </span>
+          )}
+          {!event.recurrence_rule && hasEnded(event.start_datetime, event.end_datetime) && (
+            <p class="event-ended-banner" role="status">This event has ended.</p>
           )}
           <h1>{event.title}</h1>
           <div class="event-meta">
