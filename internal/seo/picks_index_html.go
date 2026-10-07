@@ -17,6 +17,25 @@ type picksListItem struct {
 }
 
 // GeneratePicksIndexHTML creates a complete HTML page for the picks listing page.
+// picksIndexTitle: "What's on in Perthshire: weekend picks - Perthshire Events",
+// or "Weekend Picks - Gather" for an instance with no recognisable region.
+func picksIndexTitle(instanceName string) string {
+	if region := regionFromInstance(instanceName); region != strings.TrimSpace(instanceName) && region != "" {
+		return fmt.Sprintf("What's on in %s: weekend picks - %s", region, instanceName)
+	}
+	return fmt.Sprintf("Weekend Picks - %s", instanceName)
+}
+
+// PickIsRetired reports whether the visible picks post with this slug is over
+// (all its events ended more than a week ago). Unknown or hidden posts are not.
+func PickIsRetired(app core.App, slug string, now time.Time) bool {
+	post, err := app.FindFirstRecordByFilter("picks", "slug = {:slug} && hidden = false", map[string]any{"slug": slug})
+	if err != nil {
+		return false
+	}
+	return PickLifecycle(app, post, now) == Retired
+}
+
 func GeneratePicksIndexHTML(app core.App, baseURL string) ([]byte, error) {
 	instanceName := "Gather"
 	if settings, err := app.FindFirstRecordByFilter("settings", ""); err == nil {
@@ -26,7 +45,7 @@ func GeneratePicksIndexHTML(app core.App, baseURL string) ([]byte, error) {
 	}
 
 	picksURL := fmt.Sprintf("%s/picks", baseURL)
-	title := fmt.Sprintf("Weekend Picks - %s", instanceName)
+	title := picksIndexTitle(instanceName)
 	description := "Curated picks of the best events happening this weekend and beyond."
 
 	records, _ := app.FindRecordsByFilter("picks", "hidden = false", "-start_date", 50, 0)

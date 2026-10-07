@@ -198,6 +198,7 @@ export function App() {
           </button>
 
           <div id="primary-nav" class={`nav-links${mobileMenuOpen ? ' nav-links--open' : ''}`}>
+            <a href="/picks" class="nav-link" onClick={handleNavClick} data-umami-event="nav-picks">Weekend picks</a>
             <a href="/submit" class="nav-link nav-link--cta" onClick={handleNavClick} data-umami-event="nav-submit-event">Submit Event</a>
             {navPages.map(p => (
               <a key={p.id} href={`/${p.slug}`} class="nav-link" onClick={handleNavClick} data-umami-event={`nav-page-${p.slug}`}>{p.title}</a>
@@ -251,6 +252,7 @@ export function App() {
             {footerPages.map(page => (
               <a key={page.id} href={`/${page.slug}`} class="footer-link" data-umami-event={`footer-page-${page.slug}`}>{page.title}</a>
             ))}
+            <a href="/picks" class="footer-link" data-umami-event="footer-picks">Weekend picks</a>
             <a href="/feed.rss" class="footer-link" data-umami-event="feed-rss" data-native>RSS</a>
             <a href="/feed.ics" class="footer-link" data-umami-event="feed-ical" data-native>iCal</a>
             <button class="footer-link footer-fediverse-link" onClick={() => setFediverseDialogOpen(true)} data-umami-event="fediverse-follow">

@@ -1018,6 +1018,10 @@ func main() {
 			if err != nil {
 				return re.NotFoundError("", nil)
 			}
+			// A weekend that is over for more than a week stays reachable but leaves search.
+			if seo.PickIsRetired(se.App, slug, time.Now()) {
+				re.Response.Header().Set("X-Robots-Tag", "noindex, follow")
+			}
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 			re.Response.Header().Set("Cache-Control", "no-store")
 			return re.Blob(200, "text/html", html)
