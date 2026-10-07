@@ -2,6 +2,7 @@ package seo
 
 import (
 	"fmt"
+	"html"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -30,6 +31,12 @@ func GeneratePageHTML(app core.App, slug, baseURL string) ([]byte, error) {
 	title := page.GetString("title")
 	content := page.GetString("content")
 	pageURL := fmt.Sprintf("%s/%s", baseURL, slug)
+	// Editor content is HTML: reduce it to plain text (tags stripped, entities
+	// decoded) so it is escaped exactly once when written into an attribute.
+	description := truncateText(html.UnescapeString(stripMarkdown(content)), 160)
+	if description == "" {
+		description = title + " - " + instanceName
+	}
 
 	var b strings.Builder
 	b.WriteString("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n")
@@ -37,10 +44,12 @@ func GeneratePageHTML(app core.App, slug, baseURL string) ([]byte, error) {
 	b.WriteString("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n")
 	b.WriteString(fmt.Sprintf("  <title>%s - %s</title>\n", htmlEscape(title), htmlEscape(instanceName)))
 	b.WriteString(fmt.Sprintf("  <link rel=\"canonical\" href=\"%s\">\n", htmlEscape(pageURL)))
+	b.WriteString(fmt.Sprintf("  <meta name=\"description\" content=\"%s\">\n", htmlEscape(description)))
 	b.WriteString(fmt.Sprintf("  <meta property=\"og:type\" content=\"website\">\n"))
 	b.WriteString(fmt.Sprintf("  <meta property=\"og:site_name\" content=\"%s\">\n", htmlEscape(instanceName)))
 	b.WriteString(fmt.Sprintf("  <meta property=\"og:title\" content=\"%s - %s\">\n", htmlEscape(title), htmlEscape(instanceName)))
 	b.WriteString(fmt.Sprintf("  <meta property=\"og:url\" content=\"%s\">\n", htmlEscape(pageURL)))
+	b.WriteString(fmt.Sprintf("  <meta property=\"og:description\" content=\"%s\">\n", htmlEscape(description)))
 	b.WriteString("</head>\n<body>\n")
 	b.WriteString(fmt.Sprintf("  <h1>%s</h1>\n", htmlEscape(title)))
 	b.WriteString(content)

@@ -105,17 +105,18 @@ func buildHomeHTML(instanceName, description, ogImage, baseURL string, events []
 	b.WriteString(fmt.Sprintf("  <title>%s</title>\n", htmlEscape(title)))
 	b.WriteString(fmt.Sprintf(`  <link rel="canonical" href="%s/">`, htmlEscape(baseURL)) + "\n")
 
-	if description != "" {
-		b.WriteString(fmt.Sprintf(`  <meta name="description" content="%s">`, htmlEscape(truncateText(description, 160))) + "\n")
+	// Every page needs a snippet: fall back when the instance has no description.
+	metaDesc := description
+	if metaDesc == "" {
+		metaDesc = fmt.Sprintf("Upcoming events, venues and weekend picks on %s.", instanceName)
 	}
+	b.WriteString(fmt.Sprintf(`  <meta name="description" content="%s">`, htmlEscape(truncateText(metaDesc, 160))) + "\n")
 
 	b.WriteString(`  <meta property="og:type" content="website">` + "\n")
 	b.WriteString(fmt.Sprintf(`  <meta property="og:site_name" content="%s">`, htmlEscape(instanceName)) + "\n")
 	b.WriteString(fmt.Sprintf(`  <meta property="og:title" content="%s">`, htmlEscape(title)) + "\n")
 	b.WriteString(fmt.Sprintf(`  <meta property="og:url" content="%s/">`, htmlEscape(baseURL)) + "\n")
-	if description != "" {
-		b.WriteString(fmt.Sprintf(`  <meta property="og:description" content="%s">`, htmlEscape(truncateText(description, 200))) + "\n")
-	}
+	b.WriteString(fmt.Sprintf(`  <meta property="og:description" content="%s">`, htmlEscape(truncateText(metaDesc, 200))) + "\n")
 	if ogImage != "" {
 		b.WriteString(fmt.Sprintf(`  <meta property="og:image" content="%s">`, htmlEscape(ogImage)) + "\n")
 	}

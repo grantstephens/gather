@@ -163,3 +163,14 @@ func TestGenerateHomeHTMLBrowseListsOnlyLivePages(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildHomeHTMLAlwaysHasAMetaDescription(t *testing.T) {
+	result := buildHomeHTML("Perthshire Events", "", "", "https://example.com", nil, HomeBrowse{})
+	if !strings.Contains(result, `<meta name="description" content="Upcoming events, venues and weekend picks on Perthshire Events.">`) {
+		t.Errorf("an instance with no description still needs a meta description:\n%s", result)
+	}
+	custom := buildHomeHTML("Perthshire Events", "Our own words", "", "https://example.com", nil, HomeBrowse{})
+	if strings.Contains(custom, "Upcoming events, venues and weekend picks") || !strings.Contains(custom, `content="Our own words"`) {
+		t.Errorf("a configured description must win over the fallback")
+	}
+}
