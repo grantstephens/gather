@@ -192,3 +192,31 @@ Requires Go 1.25+, Node.js 18+, and `libwebp-dev`. Run `make build` from the rep
 
 - **GitHub Issues:** https://github.com/grantstephens/gather/issues
 - **PocketBase admin:** `http://your-instance.com/_/` for database inspection and log viewing
+
+## Reverse-proxy caching
+
+Gather serves different HTML to crawlers and to people (server-rendered pages for bots, the SPA for
+browsers), so every such response carries `Vary: User-Agent`. If a cache sits in front of Gather
+(nginx `proxy_cache`, Caddy cache module, a CDN rule) it must honour `Vary`, or **Googlebot will be
+served the cached empty SPA shell** after any human visit to the same URL.
+
+If your cache does not honour `Vary`, bypass it for crawlers. nginx example:
+
+```nginx
+map $http_user_agent $is_bot {
+    default 0;
+    ~*(bot|crawl|spider|slurp|facebookexternalhit|bingpreview) 1;
+}
+# in the location that proxies to Gather:
+proxy_cache_bypass $is_bot;
+proxy_no_cache     $is_bot;
+```
+
+Verify after every proxy or caching change:
+
+```bash
+scripts/check_bot_cache.sh https://your.domain /event/some-event-slug /tag/some-tag
+```
+
+It warms each URL as a browser, fetches it as Googlebot, and fails if the bot gets the SPA shell or
+the response lacks `Vary: User-Agent`.

@@ -156,6 +156,10 @@ func main() {
 			return e.Next()
 		})
 
+		// Bot/human HTML differs per route, so shared caches must key on User-Agent
+		// (otherwise Googlebot is served the cached SPA shell after any human visit).
+		se.Router.BindFunc(middleware.VaryUserAgent)
+
 		// Compression middleware (zstd, gzip, deflate via klauspost/compress)
 		// Skip in dev: compressWriter doesn't implement http.Hijacker, breaking Vite HMR WebSocket upgrades
 		if os.Getenv("DEV") == "" {
