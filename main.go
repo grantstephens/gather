@@ -940,15 +940,19 @@ func main() {
 			}
 
 			// Generate HTML with metadata
-			html, err := seo.GenerateEventHTML(se.App, event, baseURL)
+			page, err := seo.BuildEventPage(se.App, event, baseURL, time.Now())
 			if err != nil {
 				log.Println("Failed to generate SEO HTML:", err)
 				return re.NotFoundError("", nil)
 			}
 
+			// Events that ended more than a week ago stay reachable but drop out of search.
+			if page.NoIndex() {
+				re.Response.Header().Set("X-Robots-Tag", "noindex, follow")
+			}
 			re.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 			re.Response.Header().Set("Cache-Control", "no-store")
-			return re.Blob(200, "text/html", html)
+			return re.Blob(200, "text/html", []byte(seo.RenderEventHTML(page)))
 		})
 
 		// Tag page: SSR for bots, 404 if tag doesn't exist or has no upcoming events
