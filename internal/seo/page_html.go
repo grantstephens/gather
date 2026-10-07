@@ -8,7 +8,8 @@ import (
 )
 
 // GeneratePageHTML renders a custom page for bots.
-// Returns an error if the page doesn't exist or is hidden.
+// Returns an error if the page doesn't exist. (The pages collection has no
+// "hidden" field; filtering on one made every page 404 for bots.)
 func GeneratePageHTML(app core.App, slug, baseURL string) ([]byte, error) {
 	instanceName := "Gather"
 	if settings, err := app.FindFirstRecordByFilter("settings", ""); err == nil {
@@ -19,7 +20,7 @@ func GeneratePageHTML(app core.App, slug, baseURL string) ([]byte, error) {
 
 	page, err := app.FindFirstRecordByFilter(
 		"pages",
-		"slug = {:slug} && hidden = false",
+		"slug = {:slug}",
 		map[string]any{"slug": slug},
 	)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -15,124 +16,67 @@ type SitemapEntry struct {
 	LastMod string
 }
 
-// GenerateSitemap fetches all published events, approved tags/places, and
-// custom pages, then returns sitemap XML bytes.
+// GenerateSitemap lists every live URL: upcoming events and ones that ended
+// within the grace period (no cap), visible custom pages, places and tags that
+// have upcoming events, and picks posts that are not retired.
 func GenerateSitemap(app core.App, baseURL string) ([]byte, error) {
-	events, err := app.FindRecordsByFilter(
-		"events",
-		"status = 'published'",
-		"-start_datetime",
-		500,
-		0,
-	)
+	now := time.Now()
+	cutoff := now.Add(-(RetireAfter + 24*time.Hour)).UTC().Format("2006-01-02 15:04:05")
+	// Cheap SQL pre-filter (keeps long-running and recurring events), then the exact rule.
+	events, err := AllRecords(app, "events",
+		"status = 'published' && (start_datetime >= {:cut} || end_datetime >= {:cut} || recurrence_rule != '')",
+		"-start_datetime", dbx.Params{"cut": cutoff})
 	if err != nil {
 		return nil, err
 	}
 
-	entries := make([]SitemapEntry, 0, len(events)+50)
-	for _, event := range events {
-		lastMod := time.Now().Format("2006-01-02")
-		if t := event.GetDateTime("updated").Time(); t.Year() >= 2000 {
-			lastMod = t.Format("2006-01-02")
-		}
-		urlPath := event.GetString("slug")
-		if urlPath == "" {
-			urlPath = event.Id
-		}
-		entries = append(entries, SitemapEntry{
-			URL:     fmt.Sprintf("%s/event/%s", baseURL, urlPath),
-			LastMod: lastMod,
-		})
-	}
-
-	// Custom pages
-	pages, _ := app.FindRecordsByFilter("pages", "", "sort_order,title", 100, 0)
-	for _, page := range pages {
-		updatedTime := page.GetDateTime("updated").Time()
-		lastMod := time.Now().Format("2006-01-02")
-		if !updatedTime.IsZero() {
-			lastMod = updatedTime.Format("2006-01-02")
-		}
-		entries = append(entries, SitemapEntry{
-			URL:     fmt.Sprintf("%s/%s", baseURL, page.GetString("slug")),
-			LastMod: lastMod,
-		})
-	}
-
-	// Build sets of active place/tag IDs from upcoming events — one query instead of N+1.
-	today := time.Now().Format("2006-01-02 15:04:05")
-	upcoming, _ := app.FindRecordsByFilter(
-		"events",
-		"status = 'published' && start_datetime >= {:today}",
-		"",
-		1000,
-		0,
-		map[string]any{"today": today},
-	)
-	activePlaces := make(map[string]bool, len(upcoming))
-	activeTags := make(map[string]bool)
-	for _, ev := range upcoming {
-		if pid := ev.GetString("place"); pid != "" {
-			activePlaces[pid] = true
-		}
-		for _, tid := range ev.GetStringSlice("tags") {
-			activeTags[tid] = true
-		}
-	}
-
-	// Approved tags with at least one upcoming published event
-	tags, _ := app.FindRecordsByFilter("tags", "status = 'approved'", "name", 200, 0)
-	for _, tag := range tags {
-		if !activeTags[tag.Id] {
+	var entries []SitemapEntry
+	for _, ev := range events {
+		if EventLifecycle(ev, now) == Retired {
 			continue
 		}
-		lastMod := time.Now().Format("2006-01-02")
-		if t := tag.GetDateTime("updated").Time(); t.Year() >= 2000 {
-			lastMod = t.Format("2006-01-02")
+		path := ev.GetString("slug")
+		if path == "" {
+			path = ev.Id
 		}
-		entries = append(entries, SitemapEntry{
-			URL:     fmt.Sprintf("%s/tag/%s", baseURL, tag.GetString("name")),
-			LastMod: lastMod,
-		})
+		entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/event/%s", baseURL, path), LastMod: lastMod(ev)})
 	}
 
-	// Approved places with at least one upcoming published event
-	places, _ := app.FindRecordsByFilter("places", "status = 'approved'", "name", 200, 0)
-	for _, place := range places {
-		if !activePlaces[place.Id] {
-			continue
-		}
-		lastMod := time.Now().Format("2006-01-02")
-		if t := place.GetDateTime("updated").Time(); t.Year() >= 2000 {
-			lastMod = t.Format("2006-01-02")
-		}
-		entries = append(entries, SitemapEntry{
-			URL:     fmt.Sprintf("%s/place/%s", baseURL, place.Id),
-			LastMod: lastMod,
-		})
+	pages, _ := AllRecords(app, "pages", "", "sort_order,title")
+	for _, pg := range pages {
+		entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/%s", baseURL, pg.GetString("slug")), LastMod: lastMod(pg)})
+	}
+	for _, tag := range ActiveTags(app, now) {
+		entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/tag/%s", baseURL, tag.GetString("name")), LastMod: lastMod(tag)})
+	}
+	for _, place := range ActivePlaces(app, now) {
+		entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/place/%s", baseURL, PlaceRef(place)), LastMod: lastMod(place)})
 	}
 
-	// Picks archive + individual posts
-	picks, _ := app.FindRecordsByFilter("picks", "hidden = false", "-start_date", 200, 0)
-	picksIndexLastMod := time.Now().Format("2006-01-02")
-	if len(picks) > 0 {
-		if t := picks[0].GetDateTime("updated").Time(); t.Year() >= 2000 {
-			picksIndexLastMod = t.Format("2006-01-02")
-		}
-	}
-	entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/picks", baseURL), LastMod: picksIndexLastMod})
+	picks, _ := AllRecords(app, "picks", "hidden = false", "-start_date")
+	entries = append(entries, SitemapEntry{URL: baseURL + "/picks", LastMod: newestMod(picks, now)})
 	for _, post := range picks {
-		lastMod := time.Now().Format("2006-01-02")
-		if t := post.GetDateTime("updated").Time(); t.Year() >= 2000 {
-			lastMod = t.Format("2006-01-02")
+		if PickLifecycle(app, post, now) == Retired {
+			continue
 		}
-		entries = append(entries, SitemapEntry{
-			URL:     fmt.Sprintf("%s/picks/%s", baseURL, post.GetString("slug")),
-			LastMod: lastMod,
-		})
+		entries = append(entries, SitemapEntry{URL: fmt.Sprintf("%s/picks/%s", baseURL, post.GetString("slug")), LastMod: lastMod(post)})
 	}
 
 	return []byte(buildSitemapXML(baseURL, entries)), nil
+}
+
+func lastMod(r *core.Record) string {
+	if t := r.GetDateTime("updated").Time(); t.Year() >= 2000 {
+		return t.Format("2006-01-02")
+	}
+	return time.Now().Format("2006-01-02")
+}
+
+func newestMod(recs []*core.Record, now time.Time) string {
+	if len(recs) > 0 {
+		return lastMod(recs[0])
+	}
+	return now.Format("2006-01-02")
 }
 
 func buildSitemapXML(baseURL string, entries []SitemapEntry) string {
@@ -142,18 +86,17 @@ func buildSitemapXML(baseURL string, entries []SitemapEntry) string {
 
 	today := time.Now().Format("2006-01-02")
 
-	writeURL := func(loc, lastmod, changefreq, priority string) {
+	// Google ignores <changefreq> and <priority>; only an accurate <lastmod> is used.
+	writeURL := func(loc, lastmod string) {
 		b.WriteString("  <url>\n")
 		b.WriteString(fmt.Sprintf("    <loc>%s</loc>\n", html.EscapeString(loc)))
 		b.WriteString(fmt.Sprintf("    <lastmod>%s</lastmod>\n", lastmod))
-		b.WriteString(fmt.Sprintf("    <changefreq>%s</changefreq>\n", changefreq))
-		b.WriteString(fmt.Sprintf("    <priority>%s</priority>\n", priority))
 		b.WriteString("  </url>\n")
 	}
 
-	writeURL(baseURL+"/", today, "daily", "1.0")
+	writeURL(baseURL+"/", today)
 	for _, e := range entries {
-		writeURL(e.URL, e.LastMod, "weekly", "0.8")
+		writeURL(e.URL, e.LastMod)
 	}
 
 	b.WriteString("</urlset>\n")
