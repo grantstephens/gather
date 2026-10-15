@@ -72,6 +72,7 @@ export interface Settings extends BaseModel {
   instance_description: string
   allow_anonymous: boolean
   require_moderation: boolean
+  monday_as_start_of_week: boolean
   custom_css: string
   custom_head: string
   ap_enabled: boolean
