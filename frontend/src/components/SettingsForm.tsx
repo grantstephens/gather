@@ -276,7 +276,7 @@ export function SettingsForm() {
             <label>
               <input
                 type="checkbox"
-                checked={formData.monday_as_start_of_week}
+                checked={formData.require_moderation}
                 onChange={(e) => setFormData({ ...formData, require_moderation: (e.target as HTMLInputElement).checked })}
                 disabled={saving}
               />
