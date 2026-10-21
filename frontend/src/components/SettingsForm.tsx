@@ -10,6 +10,7 @@ interface FormData {
   favicon: File | null
   allow_anonymous: boolean
   require_moderation: boolean
+  monday_as_start_of_week: boolean
   custom_css: string
   custom_head: string
   ap_enabled: boolean
@@ -27,6 +28,7 @@ export function SettingsForm() {
     favicon: null,
     allow_anonymous: true,
     require_moderation: false,
+    monday_as_start_of_week: false,
     custom_css: '',
     custom_head: '',
     ap_enabled: false,
@@ -51,6 +53,7 @@ export function SettingsForm() {
           favicon: null,
           allow_anonymous: record.allow_anonymous ?? true,
           require_moderation: record.require_moderation ?? false,
+          monday_as_start_of_week: record.monday_as_start_of_week ?? false,
           custom_css: record.custom_css || '',
           custom_head: record.custom_head || '',
           ap_enabled: record.ap_enabled ?? false,
@@ -115,6 +118,7 @@ export function SettingsForm() {
         favicon: null,
         allow_anonymous: settings.allow_anonymous ?? true,
         require_moderation: settings.require_moderation ?? false,
+        monday_as_start_of_week: settings.monday_as_start_of_week ?? false,
         custom_css: settings.custom_css || '',
           custom_head: settings.custom_head || '',
         ap_enabled: settings.ap_enabled ?? false,
@@ -138,6 +142,7 @@ export function SettingsForm() {
       data.append('instance_description', formData.instance_description)
       data.append('allow_anonymous', formData.allow_anonymous.toString())
       data.append('require_moderation', formData.require_moderation.toString())
+      data.append('monday_as_start_of_week', formData.monday_as_start_of_week.toString())
       data.append('custom_css', formData.custom_css)
       data.append('custom_head', formData.custom_head)
       data.append('ap_enabled', formData.ap_enabled.toString())
@@ -276,6 +281,18 @@ export function SettingsForm() {
                 disabled={saving}
               />
               Require moderation for new events
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={formData.monday_as_start_of_week}
+                onChange={(e) => setFormData({ ...formData, monday_as_start_of_week: (e.target as HTMLInputElement).checked })}
+                disabled={saving}
+              />
+              Set monday as starting day of week
             </label>
           </div>
         </section>

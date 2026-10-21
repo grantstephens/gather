@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
 import { marked } from 'marked'
-import { pb, Event, Tag, PicksRecord } from '../lib/pocketbase'
+import { pb, Event, Settings, Tag, PicksRecord } from '../lib/pocketbase'
 import { usePageTitle } from '../lib/title'
 import { MiniCalendar } from '../components/MiniCalendar'
 import { tagStyle } from '../lib/color'
@@ -35,7 +35,8 @@ export function Home(_props: Props) {
   const today = new Date().toISOString().split('T')[0]
   const [currentPicks, setCurrentPicks] = useState<PicksRecord | null>(null)
   const [nextPicks, setNextPicks] = useState<PicksRecord | null>(null)
-
+  const mondayAsStartOfWeek = useState<Settings['monday_as_start_of_week']>(false)
+    
   // Reset all filters when the brand/logo link is clicked
   useEffect(() => {
     const reset = () => {
@@ -257,8 +258,9 @@ export function Home(_props: Props) {
   const sidebarContent = (
     <aside class="home-sidebar">
       <div class="sidebar-section">
-        <div class="sidebar-section-title">Browse by date</div>
+        <div class="sidebar-section-title">Browse by date{mondayAsStartOfWeek}</div>
         <MiniCalendar
+          weekStartsOn={mondayAsStartOfWeek ? 'monday' : 'sunday'}
           eventDates={eventDates}
           selectedDate={selectedDate ?? undefined}
           onDateSelect={handleDateSelect}
