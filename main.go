@@ -373,7 +373,7 @@ func main() {
 			if resource == "" {
 				return re.BadRequestError("Missing resource parameter", nil)
 			}
-			data, err := activitypub.HandleWebfinger(resource, baseURL)
+			data, err := activitypub.HandleWebfingerFor(se.App, resource, baseURL)
 			if err != nil {
 				return re.NotFoundError("Resource not found", err)
 			}
@@ -432,6 +432,70 @@ func main() {
 				return re.InternalServerError("Failed to process activity", err)
 			}
 			return re.NoContent(202)
+		})
+
+		// Relay actor: Mobilizon instances follow this to list our events
+		se.Router.GET("/ap/relay", func(re *core.RequestEvent) error {
+			b, err := activitypub.RelayActorJSON(se.App, baseURL)
+			if err != nil {
+				return re.InternalServerError("relay actor", err)
+			}
+			return re.Blob(200, "application/activity+json", b)
+		})
+		se.Router.POST("/ap/relay/inbox", func(re *core.RequestEvent) error {
+			if err := activitypub.HandleRelayInbox(se.App, baseURL, re.Request); err != nil {
+				if errors.Is(err, activitypub.ErrUnauthorized) {
+					return re.Error(http.StatusUnauthorized, "unauthorized", err)
+				}
+				return re.InternalServerError("relay inbox", err)
+			}
+			return re.NoContent(202)
+		})
+		// Place and town actors (Groups), created on first request
+		se.Router.GET("/ap/actor/{kind}/{ref}", func(re *core.RequestEvent) error {
+			data, err := activitypub.SubjectActorJSON(se.App, baseURL, re.Request.PathValue("kind"), re.Request.PathValue("ref"))
+			if err != nil {
+				if errors.Is(err, activitypub.ErrSubjectNotFound) {
+					return re.NotFoundError("Actor not found", nil)
+				}
+				return re.InternalServerError("Failed to get actor", err)
+			}
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-if-error=86400")
+			return re.Blob(200, "application/activity+json", data)
+		})
+		for _, which := range []string{"followers", "outbox"} {
+			which := which
+			se.Router.GET("/ap/actor/{kind}/{ref}/"+which, func(re *core.RequestEvent) error {
+				data, err := activitypub.SubjectCollection(se.App, baseURL, re.Request.PathValue("kind"), re.Request.PathValue("ref"), which)
+				if err != nil {
+					if errors.Is(err, activitypub.ErrSubjectNotFound) {
+						return re.NotFoundError("Actor not found", nil)
+					}
+					return re.InternalServerError("Failed to get collection", err)
+				}
+				re.Response.Header().Set("Cache-Control", "public, max-age=60, stale-if-error=3600")
+				return re.Blob(200, "application/activity+json", data)
+			})
+		}
+		se.Router.GET("/ap/actor/{kind}/{ref}/events/{id}", func(re *core.RequestEvent) error {
+			body, status := activitypub.SubjectEventObject(se.App, baseURL, re.Request.PathValue("kind"), re.Request.PathValue("ref"), re.Request.PathValue("id"))
+			return re.Blob(status, "application/activity+json", body)
+		})
+		se.Router.POST("/ap/actor/{kind}/{ref}/inbox", func(re *core.RequestEvent) error {
+			err := activitypub.HandleSubjectInbox(se.App, baseURL, re.Request.PathValue("kind"), re.Request.PathValue("ref"), re.Request)
+			switch {
+			case errors.Is(err, activitypub.ErrSubjectNotFound):
+				return re.NotFoundError("Actor not found", nil)
+			case errors.Is(err, activitypub.ErrUnauthorized):
+				return re.Error(http.StatusUnauthorized, "unauthorized", err)
+			case err != nil:
+				return re.InternalServerError("Failed to process activity", err)
+			}
+			return re.NoContent(202)
+		})
+		se.Router.GET("/ap/events/{id}", func(re *core.RequestEvent) error {
+			body, status := activitypub.EventObject(se.App, baseURL, re.Request.PathValue("id"))
+			return re.Blob(status, "application/activity+json", body)
 		})
 
 		// Favicon route - serves favicon from settings, with default SVG fallback

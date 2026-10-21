@@ -42,7 +42,11 @@ func ProcessDeliveryQueue(app core.App) {
 			continue
 		}
 
-		err := deliverActivityWithKey(privateKey, activity.Actor+"#main-key", activity, inboxURL)
+		signingKey := privateKey
+		if k, ok := subjectPrivateKey(app, activity.Actor); ok {
+			signingKey = k
+		}
+		err := deliverActivityWithKey(signingKey, activity.Actor+"#main-key", activity, inboxURL)
 		if err == nil {
 			app.Logger().Info("ap-delivery: delivered", "inbox", inboxURL)
 			if delErr := app.Delete(r); delErr != nil {

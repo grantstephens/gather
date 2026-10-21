@@ -1,0 +1,178 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://w3id.org/security/v1",
+    {
+      "@language": "und",
+      "Hashtag": "as:Hashtag",
+      "PostalAddress": "sc:PostalAddress",
+      "PropertyValue": "sc:PropertyValue",
+      "address": {
+        "@id": "sc:address",
+        "@type": "sc:PostalAddress"
+      },
+      "addressCountry": "sc:addressCountry",
+      "addressLocality": "sc:addressLocality",
+      "addressRegion": "sc:addressRegion",
+      "anonymousParticipationEnabled": {
+        "@id": "mz:anonymousParticipationEnabled",
+        "@type": "sc:Boolean"
+      },
+      "category": "sc:category",
+      "commentsEnabled": {
+        "@id": "pt:commentsEnabled",
+        "@type": "sc:Boolean"
+      },
+      "discoverable": "toot:discoverable",
+      "discussions": {
+        "@id": "mz:discussions",
+        "@type": "@id"
+      },
+      "events": {
+        "@id": "mz:events",
+        "@type": "@id"
+      },
+      "externalParticipationUrl": {
+        "@id": "mz:externalParticipationUrl",
+        "@type": "sc:URL"
+      },
+      "ical": "http://www.w3.org/2002/12/cal/ical#",
+      "inLanguage": "sc:inLanguage",
+      "isOnline": {
+        "@id": "mz:isOnline",
+        "@type": "sc:Boolean"
+      },
+      "joinMode": {
+        "@id": "mz:joinMode",
+        "@type": "mz:joinModeType"
+      },
+      "joinModeType": {
+        "@id": "mz:joinModeType",
+        "@type": "rdfs:Class"
+      },
+      "location": {
+        "@id": "sc:location",
+        "@type": "sc:Place"
+      },
+      "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
+      "maximumAttendeeCapacity": "sc:maximumAttendeeCapacity",
+      "memberCount": {
+        "@id": "mz:memberCount",
+        "@type": "sc:Integer"
+      },
+      "members": {
+        "@id": "mz:members",
+        "@type": "@id"
+      },
+      "mz": "https://mobilizon.org/ns#",
+      "openness": {
+        "@id": "mz:openness",
+        "@type": "@id"
+      },
+      "participantCount": {
+        "@id": "mz:participantCount",
+        "@type": "sc:Integer"
+      },
+      "participationMessage": {
+        "@id": "mz:participationMessage",
+        "@type": "sc:Text"
+      },
+      "postalCode": "sc:postalCode",
+      "posts": {
+        "@id": "mz:posts",
+        "@type": "@id"
+      },
+      "propertyID": "sc:propertyID",
+      "pt": "https://joinpeertube.org/ns#",
+      "remainingAttendeeCapacity": "sc:remainingAttendeeCapacity",
+      "repliesModerationOption": {
+        "@id": "mz:repliesModerationOption",
+        "@type": "mz:repliesModerationOptionType"
+      },
+      "repliesModerationOptionType": {
+        "@id": "mz:repliesModerationOptionType",
+        "@type": "rdfs:Class"
+      },
+      "resources": {
+        "@id": "mz:resources",
+        "@type": "@id"
+      },
+      "sc": "http://schema.org#",
+      "status": {
+        "@id": "ical:status",
+        "@type": "ical:status"
+      },
+      "streetAddress": "sc:streetAddress",
+      "timezone": {
+        "@id": "mz:timezone",
+        "@type": "sc:Text"
+      },
+      "todos": {
+        "@id": "mz:todos",
+        "@type": "@id"
+      },
+      "toot": "http://joinmastodon.org/ns#",
+      "uuid": "sc:identifier",
+      "value": "sc:value"
+    }
+  ],
+  "actor": "https://mobilizon.example/@golden",
+  "anonymousParticipationEnabled": false,
+  "attachment": [],
+  "attributedTo": "https://mobilizon.example/@golden",
+  "category": "MEETING",
+  "cc": [
+    "https://mobilizon.example/@golden/followers"
+  ],
+  "commentsEnabled": false,
+  "contacts": [],
+  "content": "<p>Sample.</p>",
+  "draft": false,
+  "endTime": "2026-12-01T22:00:00+00:00",
+  "externalParticipationUrl": "https://example.com/e",
+  "ical:status": "CONFIRMED",
+  "id": "https://mobilizon.example/events/169e0a3e-7e11-432d-9e06-d28609e53040",
+  "inLanguage": "nn",
+  "isOnline": false,
+  "joinMode": "external",
+  "location": {
+    "address": {
+      "addressCountry": "United Kingdom",
+      "addressLocality": "Perth",
+      "addressRegion": null,
+      "postalCode": "PH1 1AA",
+      "streetAddress": "1 Test St",
+      "type": "PostalAddress"
+    },
+    "id": "https://mobilizon.example/address/3979fab8-4767-4d92-8dd9-55cca9a0f1a4",
+    "latitude": 56.39,
+    "longitude": -3.43,
+    "name": "Golden Hall",
+    "type": "Place"
+  },
+  "maximumAttendeeCapacity": null,
+  "mediaType": "text/html",
+  "name": "Golden sample",
+  "participantCount": 0,
+  "published": "2026-10-21T07:18:12Z",
+  "remainingAttendeeCapacity": null,
+  "repliesModerationOption": null,
+  "startTime": "2026-12-01T19:30:00+00:00",
+  "status": "CONFIRMED",
+  "summary": "1. desember 2026 kl. 19:30:00 GMT (Storbritannia) - GMT - Golden Hall, PH1 1AA, Perth, United Kingdom",
+  "tag": [
+    {
+      "href": "https://mobilizon.example/tags/gig",
+      "name": "#gig",
+      "type": "Hashtag"
+    }
+  ],
+  "timezone": "Europe/London",
+  "to": [
+    "https://www.w3.org/ns/activitystreams#Public"
+  ],
+  "type": "Event",
+  "updated": "2026-10-21T07:18:12Z",
+  "url": "https://mobilizon.example/events/169e0a3e-7e11-432d-9e06-d28609e53040",
+  "uuid": "169e0a3e-7e11-432d-9e06-d28609e53040"
+}

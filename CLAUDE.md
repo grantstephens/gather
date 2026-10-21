@@ -60,6 +60,10 @@ make prod          # Build, setup admin, seed, and start server
   - `moderation.go`: Auto-set status, cascade blocking (events can't publish if place/tags pending)
   - Event hooks registered in main.go for AP publishing
 - `activitypub/`: Federation support (actor, inbox, outbox, delivery, keys, webfinger)
+  - `event.go`: Mobilizon-shaped `Event` serializer and `/ap/events/{id}` (golden-tested against `testdata/mobilizon_event.json`)
+  - `relay.go`: `relay@host` actor; Mobilizon follows it to list our events (needs an `Announce`)
+  - `subject*.go`: lazily-created `Group` actors per approved place and per town, each with its own keypair
+  - See API.md "ActivityPub Federation" for shapes, lifecycle rules and why each piece exists
 - `rss/`, `ical/`: Feed generation
 - `recurrence/`: Recurring event logic
 
@@ -91,6 +95,7 @@ make prod          # Build, setup admin, seed, and start server
 - `tags`: Has `status` (pending/approved)
 - `settings`: Singleton for instance config
 - `ap_followers`, `ap_delivery_queue`: ActivityPub infrastructure
+- `ap_relay_followers`, `ap_subject_followers`, `ap_actors`: Mobilizon relay followers, place/town actor followers, and those actors' keypairs
 
 **Access Control:**
 - Published events visible to all
@@ -109,6 +114,6 @@ make prod          # Build, setup admin, seed, and start server
 
 **Moderation Workflow**: Places and tags have approval status; events are blocked from publishing if dependencies aren't approved
 
-**ActivityPub Integration**: Events can federate via ActivityPub when published; hooks in main.go trigger AP delivery
+**ActivityPub Integration**: Events can federate via ActivityPub when published; event hooks (`internal/hooks/events.go`) queue Notes for Fediverse followers and the Mobilizon `Event` shape for relay and place/town followers. Inbox signature checks and the delivery worker are shared by all actors.
 
 **Authentication**: PocketBase handles auth; frontend checks user role for conditional UI/features
