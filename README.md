@@ -14,6 +14,7 @@ Built with Go ([PocketBase](https://pocketbase.io)) and [Preact](https://preactj
 - Role-based access control (user / editor / admin)
 - Recurring events with per-occurrence cancellation (RRULE)
 - ActivityPub federation — follow your calendar from Mastodon and other Fediverse apps
+- Mobilizon federation — events appear on [Mobilizon](https://joinmobilizon.org) instances, and Mobilizon users can follow a single venue or town
 - RSS and iCal feeds (global, per-tag, per-venue, per-event)
 - Location-based events with OpenStreetMap — no Google Maps
 - Proximity search ("events near me")
@@ -138,15 +139,32 @@ Your instance automatically provides:
 
 - **RSS** at `/feed.rss` (all events), `/feed/tag/{tagname}` (by tag)
 - **iCal** at `/feed.ics` (all events), `/ics/tag/{tagname}` (by tag), `/ics/event/{id}` (single event)
-- **ActivityPub** actor at `/ap/actor` (when federation is enabled)
+- **ActivityPub** actor at `/ap/actor`, plus a relay and per-venue / per-town actors (see below)
 
-### Mobilizon
+### Fediverse and Mobilizon
 
-Events can appear on [Mobilizon](https://joinmobilizon.org) instances. Mobilizon only lists remote events announced by an instance it follows, so Gather exposes a relay actor at `relay@your-domain`.
+Gather publishes events as ActivityPub. Three kinds of actor exist, each for a different audience:
 
-A Mobilizon admin follows it from **Administration > Federation > Followings** by entering your domain (e.g. `gather.example.org`). Once Mobilizon shows the follow as approved, every event you publish afterwards is sent there as a Mobilizon event, including edits, cancellations (shown as cancelled) and removals. Events published before the follow are not backfilled.
+| Actor | Handle | Who follows it | What they receive |
+|---|---|---|---|
+| Instance | `events@your-domain` | Mastodon and other Fediverse apps | Every event, as a post |
+| Relay | `relay@your-domain` | A Mobilizon instance (its admin) | Every event, as a Mobilizon event, listed in Explore |
+| Venue | `{venue-slug}@your-domain` | Mobilizon users | Events at that venue |
+| Town | `town-{town-slug}@your-domain` | Mobilizon users | Events at any approved venue in that town |
 
-Set the `TZ` environment variable (e.g. `Europe/London`, which is also the default) to the zone your events happen in, so Mobilizon shows the right local time. Mobilizon links back to the Gather event page for details and registration. Only approved places and tags are sent. Events are delivered by the same queue as other ActivityPub traffic, so allow a few minutes.
+Venue and town handles are the venue's slug (the last part of its `/place/...` URL) and `town-` plus the lower-cased, hyphenated town name (`town-pitlochry`). Only approved venues resolve, so the normal venue approval is what controls this. The actors are created the first time someone looks them up, so there is nothing to set up.
+
+**Getting your events onto a Mobilizon instance.** Mobilizon only lists remote events that were announced by an instance it follows. A Mobilizon admin follows your instance from the *Instances* page of the admin area, entering your domain (e.g. `gather.example.org`). Once the follow shows as approved, every event you publish afterwards is sent there, including edits, cancellations (shown as cancelled) and removals. Events published before the follow are not sent.
+
+**Following one venue or town.** On Mobilizon, search for `town-pitlochry@gather.example.org` (or a venue handle) and follow the group. Its events show on the group's page, owned by that group. Venue and town actors are built for Mobilizon; following them from Mastodon is untested and may not deliver anything, so Mastodon users should follow `events@your-domain`.
+
+**What Mobilizon shows.** Title, description, start and end time, venue with address and map, approved tags, and the event image. Registration is external: Mobilizon links back to the Gather event page. The `Cost:` and `Source:` lines Gather adds to descriptions are removed, and a link to the Gather page is added instead, so price is not shown on Mobilizon.
+
+**Timezone.** Set the `TZ` environment variable (e.g. `Europe/London`, the default) to the zone your events happen in, or Mobilizon will show the wrong local time.
+
+**Timing.** Activities go through the delivery queue, which runs every 5 minutes, so allow a few minutes for changes to appear.
+
+See [API.md](API.md#activitypub-federation) for the endpoints and the exact rules for each status change.
 
 ### Custom Pages
 
