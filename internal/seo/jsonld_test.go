@@ -174,8 +174,8 @@ func TestStripMarkdownInline(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := stripMarkdownInline(tt.input); got != tt.want {
-				t.Errorf("stripMarkdownInline() = %q, want %q", got, tt.want)
+			if got := StripMarkdownInline(tt.input); got != tt.want {
+				t.Errorf("StripMarkdownInline() = %q, want %q", got, tt.want)
 			}
 		})
 	}

@@ -56,7 +56,7 @@ func GeneratePicksIndexHTML(app core.App, baseURL string) ([]byte, error) {
 		if slug == "" {
 			slug = p.Id
 		}
-		blurb := truncateText(stripMarkdownInline(p.GetString("blurb")), 160)
+		blurb := truncateText(StripMarkdownInline(p.GetString("blurb")), 160)
 		dateStr := ""
 		if sd := p.GetString("start_date"); sd != "" {
 			if t, err := time.Parse("2006-01-02", sd); err == nil {

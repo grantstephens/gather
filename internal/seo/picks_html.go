@@ -38,7 +38,7 @@ func GeneratePicksHTML(app core.App, slug, baseURL string) ([]byte, error) {
 	title := picks.GetString("title")
 	blurb := picks.GetString("blurb")
 	blurbHTML := renderMarkdownHTML(blurb, baseURL)
-	description := truncateText(stripMarkdownInline(blurb), 160)
+	description := truncateText(StripMarkdownInline(blurb), 160)
 	picksURL := fmt.Sprintf("%s/picks/%s", baseURL, slug)
 
 	published := picks.GetDateTime("created").Time()

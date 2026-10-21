@@ -10,7 +10,7 @@ import (
 func TestBuildPicksHTML_LongBlurb(t *testing.T) {
 	const base = "https://example.com"
 	blurbHTML := renderMarkdownHTML(sampleLongBlurb, base)
-	description := truncateText(stripMarkdownInline(sampleLongBlurb), 160)
+	description := truncateText(StripMarkdownInline(sampleLongBlurb), 160)
 	out := buildPicksHTML(
 		"Weekend picks", "Gather", blurbHTML, description, base+"/picks/x", base,
 		"", "image/webp", time.Now(), time.Now(),
