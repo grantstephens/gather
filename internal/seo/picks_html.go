@@ -36,8 +36,9 @@ func GeneratePicksHTML(app core.App, slug, baseURL string) ([]byte, error) {
 	}
 
 	title := picks.GetString("title")
-	fullBlurb := stripMarkdown(picks.GetString("blurb"))
-	description := truncateText(fullBlurb, 160)
+	blurb := picks.GetString("blurb")
+	blurbHTML := renderMarkdownHTML(blurb, baseURL)
+	description := truncateText(stripMarkdownInline(blurb), 160)
 	picksURL := fmt.Sprintf("%s/picks/%s", baseURL, slug)
 
 	published := picks.GetDateTime("created").Time()
@@ -103,13 +104,13 @@ func GeneratePicksHTML(app core.App, slug, baseURL string) ([]byte, error) {
 	}
 
 	return []byte(buildPicksHTML(
-		title, instanceName, fullBlurb, description, picksURL, baseURL,
+		title, instanceName, blurbHTML, description, picksURL, baseURL,
 		imageURL, imageType, published, modified, events,
 	)), nil
 }
 
 func buildPicksHTML(
-	title, instanceName, fullBlurb, description, picksURL, baseURL,
+	title, instanceName, blurbHTML, description, picksURL, baseURL,
 	imageURL, imageType string,
 	published, modified time.Time,
 	events []picksEvent,
@@ -192,8 +193,9 @@ func buildPicksHTML(
 
 	b.WriteString("</head>\n<body>\n")
 	b.WriteString(fmt.Sprintf("  <h1>%s</h1>\n", htmlEscape(title)))
-	if fullBlurb != "" {
-		b.WriteString(fmt.Sprintf("  <p>%s</p>\n", htmlEscape(fullBlurb)))
+	if blurbHTML != "" {
+		b.WriteString(blurbHTML)
+		b.WriteString("\n")
 	}
 	if len(events) > 0 {
 		b.WriteString("  <h2>This weekend's picks</h2>\n  <ul>\n")
