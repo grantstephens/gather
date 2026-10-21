@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
+import { blurbToPlainText } from '../lib/plainText'
 import { pb, PicksRecord, getImageUrl } from '../lib/pocketbase'
 import { usePageTitle } from '../lib/title'
 import { EventCard } from '../components/EventCard'
@@ -39,7 +40,7 @@ export function PicksPost({ slug }: Props) {
         )
         setPost(record)
 
-        const plainBlurb = (marked.parse(record.blurb) as string).replace(/<[^>]*>/g, '').slice(0, 160)
+        const plainBlurb = blurbToPlainText(record.blurb)
         const pageUrl = window.location.href
 
         setMetaTag('name', 'description', plainBlurb)
