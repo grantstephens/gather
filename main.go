@@ -449,11 +449,8 @@ func main() {
 			return re.NoContent(202)
 		})
 		se.Router.GET("/ap/events/{id}", func(re *core.RequestEvent) error {
-			e, ok := activitypub.SpikeEvent(re.Request.PathValue("id"))
-			if !ok {
-				return re.Blob(410, "application/activity+json", []byte(`{"type":"Tombstone","id":"`+baseURL+`/ap/events/`+re.Request.PathValue("id")+`"}`))
-			}
-			return re.Blob(200, "application/activity+json", e)
+			body, status := activitypub.EventObject(se.App, baseURL, re.Request.PathValue("id"))
+			return re.Blob(status, "application/activity+json", body)
 		})
 		se.Router.GET("/spike/test.webp", func(re *core.RequestEvent) error {
 			b, err := os.ReadFile("/tmp/claude-1000/-home-grant-sync-Code-gather/e9fbb87f-da75-4282-8f7b-11426c4143f9/scratchpad/test.webp")
