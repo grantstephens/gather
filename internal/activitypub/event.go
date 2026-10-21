@@ -70,6 +70,7 @@ type APEvent struct {
 	ID                       string         `json:"id"`
 	URL                      string         `json:"url"`
 	AttributedTo             string         `json:"attributedTo"`
+	Actor                    string         `json:"actor,omitempty"` // organizer, only on group-owned copies
 	To                       []string       `json:"to"`
 	Cc                       []string       `json:"cc,omitempty"`
 	Name                     string         `json:"name"`
@@ -136,6 +137,23 @@ func eventURL(event *core.Record, baseURL string) string {
 }
 
 func eventToAPEvent(app core.App, event *core.Record, baseURL string) (APEvent, error) {
+	return eventToAPEventAs(app, event, baseURL, nil)
+}
+
+// eventToAPEventAs renders the event owned by the instance actor, or, when owner is set, the
+// copy owned by that place/town Group. Mobilizon only surfaces a group's events when
+// attributedTo is the group, so each group gets its own object id.
+func eventToAPEventAs(app core.App, event *core.Record, baseURL string, owner *Subject) (APEvent, error) {
+	ownerID := baseURL + "/ap/actor"
+	objectID := fmt.Sprintf("%s/ap/events/%s", baseURL, event.Id)
+	followers := baseURL + "/ap/actor/followers"
+	organizer := ""
+	if owner != nil {
+		organizer = baseURL + "/ap/actor"
+		ownerID = subjectActorID(baseURL, owner.Kind, owner.Ref)
+		objectID = ownerID + "/events/" + event.Id
+		followers = ownerID + "/followers"
+	}
 	loc := instanceTimezone()
 	pageURL := eventURL(event, baseURL)
 
@@ -162,11 +180,12 @@ func eventToAPEvent(app core.App, event *core.Record, baseURL string) (APEvent, 
 	out := APEvent{
 		Context:                  eventContext,
 		Type:                     "Event",
-		ID:                       fmt.Sprintf("%s/ap/events/%s", baseURL, event.Id),
+		ID:                       objectID,
 		URL:                      pageURL,
-		AttributedTo:             baseURL + "/ap/actor",
+		AttributedTo:             ownerID,
+		Actor:                    organizer,
 		To:                       []string{"https://www.w3.org/ns/activitystreams#Public"},
-		Cc:                       []string{baseURL + "/ap/actor/followers"},
+		Cc:                       []string{followers},
 		Name:                     event.GetString("title"),
 		Content:                  content,
 		MediaType:                "text/html",

@@ -477,6 +477,10 @@ func main() {
 				return re.Blob(200, "application/activity+json", data)
 			})
 		}
+		se.Router.GET("/ap/actor/{kind}/{ref}/events/{id}", func(re *core.RequestEvent) error {
+			body, status := activitypub.SubjectEventObject(se.App, baseURL, re.Request.PathValue("kind"), re.Request.PathValue("ref"), re.Request.PathValue("id"))
+			return re.Blob(status, "application/activity+json", body)
+		})
 		se.Router.POST("/ap/actor/{kind}/{ref}/inbox", func(re *core.RequestEvent) error {
 			err := activitypub.HandleSubjectInbox(se.App, baseURL, re.Request.PathValue("kind"), re.Request.PathValue("ref"), re.Request)
 			switch {

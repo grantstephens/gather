@@ -253,6 +253,22 @@ reuse that code.
   serve 410 and send `Delete` to its followers.
 - **Abuse.** Rate-limit WebFinger and actor routes; only existing approved entities resolve, so
   nothing can be minted by guessing names.
+- **Built (2026-10-21), places and towns only (tags dropped).** Differences from the plan above:
+  - Storage is `ap_actors` (keypair per `place:{id}` / `town:{citySlug}`) and a separate
+    `ap_subject_followers`, not an `actor` relation on `ap_followers`. Towns have no record, so their
+    identity is the slugified city name. WebFinger handles are the place slug and `town-{citySlug}`.
+  - **Group-owned copies, not Announces.** Mobilizon links events to groups through `attributed_to_id`;
+    Shares only feed instance-level Explore. So each group serves its own copy of the event at
+    `/ap/actor/{kind}/{ref}/events/{eventId}` with `attributedTo` = the group and `actor` = the instance
+    actor. Mobilizon sets the group as owner only when `actor` and `attributedTo` differ; with
+    `attributedTo` alone it makes the group the organizer and leaves `attributed_to` empty. The instance
+    actor sends Create/Update/Delete; an inbox following both place and town gets the place copy only.
+  - Verified live: Mobilizon discovers and follows the town group, the event appears on the group's page
+    (`organizedEvents`) attributed to it, and drafting the event removes it. `followedGroupEvents` stayed
+    empty for a plain follower; it looks membership-based, so a follower sees events on the group page
+    rather than in that feed.
+  - Not done: 410 + Delete when a place is un-approved or deleted; rate-limiting WebFinger/actor routes;
+    unverified against Mastodon.
 - **Tests.** WebFinger found/not-found/pending; lazy keygen race; follow a place and receive only its
   events; event with place+town followers in common is delivered once; rename keeps the actor ID;
   delete sends Tombstone/410.

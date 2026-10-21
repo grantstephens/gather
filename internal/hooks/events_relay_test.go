@@ -200,8 +200,8 @@ func TestEventHooks_PlaceFollowersGetTheEventToo(t *testing.T) {
 	}
 
 	got := queuedTypes(t, app)
-	if got["Create"] != 1 || got["Announce"] != 1 {
-		t.Errorf("queued = %v, want a Create and an Announce for the place follower", got)
+	if got["Create"] != 1 || got["Announce"] != 0 {
+		t.Errorf("queued = %v, want just a Create (from the place) for the place follower", got)
 	}
 }
 
