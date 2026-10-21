@@ -145,3 +145,38 @@ func TestEventJSONLDStructure(t *testing.T) {
 		t.Errorf("name = %v, want Test Event", result["name"])
 	}
 }
+
+const sampleLongBlurb = `Birnam Book Festival turns five this weekend, with poetry and a pastry on Saturday and a Hogmanay ghost story on Sunday.
+
+### Poetry Brunch, Birnam Arts, Birnam
+
+Saturday morning at Birnam Arts, you get a free cuppa and a pastry. [Poetry Brunch](/event/poetry-brunch-l9lbpw21) is led by Perthshire poet Morag Anderson.
+
+**Also on:** [Swan Lake](/event/swan-lake-hmruxf7x) is in Pitlochry on Sunday night.`
+
+func TestStripMarkdownInline(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "long structured blurb",
+			input: sampleLongBlurb,
+			want: "Birnam Book Festival turns five this weekend, with poetry and a pastry on Saturday and a Hogmanay ghost story on Sunday. " +
+				"Poetry Brunch, Birnam Arts, Birnam " +
+				"Saturday morning at Birnam Arts, you get a free cuppa and a pastry. Poetry Brunch is led by Perthshire poet Morag Anderson. " +
+				"Also on: Swan Lake is in Pitlochry on Sunday night.",
+		},
+		{name: "single paragraph unchanged", input: "Just **plain** text", want: "Just plain text"},
+		{name: "empty", input: "  \n\n ", want: ""},
+		{name: "heading then blank line", input: "## Heading\n\nContent", want: "Heading Content"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := stripMarkdownInline(tt.input); got != tt.want {
+				t.Errorf("stripMarkdownInline() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
