@@ -140,6 +140,14 @@ Your instance automatically provides:
 - **iCal** at `/feed.ics` (all events), `/ics/tag/{tagname}` (by tag), `/ics/event/{id}` (single event)
 - **ActivityPub** actor at `/ap/actor` (when federation is enabled)
 
+### Mobilizon
+
+Events can appear on [Mobilizon](https://joinmobilizon.org) instances. Mobilizon only lists remote events announced by an instance it follows, so Gather exposes a relay actor at `relay@your-domain`.
+
+A Mobilizon admin follows it from **Administration > Federation > Followings** by entering your domain (e.g. `gather.example.org`). Once Mobilizon shows the follow as approved, every event you publish afterwards is sent there as a Mobilizon event, including edits, cancellations (shown as cancelled) and removals. Events published before the follow are not backfilled.
+
+Set the **timezone** setting (default `Europe/London`) to the zone your events happen in, so Mobilizon shows the right local time. Mobilizon links back to the Gather event page for details and registration. Only approved places and tags are sent. Events are delivered by the same queue as other ActivityPub traffic, so allow a few minutes.
+
 ### Custom Pages
 
 Create static pages (About, FAQ, Code of Conduct, etc.) from the Admin > Pages tab. Pages can appear in the navigation bar, footer, or both, and support Markdown content.
