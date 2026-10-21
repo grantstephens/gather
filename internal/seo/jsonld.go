@@ -300,8 +300,6 @@ func metaDescription(desc string, start time.Time, place, city string) string {
 	return truncateText(base+" — "+suffix, 160)
 }
 
-// stripMarkdownInline is stripMarkdown with every run of whitespace, newlines
-
 // StripMarkdownInline is stripMarkdown with every run of whitespace, newlines
 // included, collapsed to one space so paragraph and heading boundaries read as
 // separate sentences in meta descriptions.
