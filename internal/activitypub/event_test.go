@@ -2,6 +2,7 @@ package activitypub
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -271,11 +272,102 @@ func TestEventToAPEvent_ContextHasMobilizonTerms(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(b)
-	for _, want := range []string{`https://www.w3.org/ns/activitystreams`, `https://joinmobilizon.org/ns#`, `mz:joinMode`} {
+	for _, want := range []string{`https://www.w3.org/ns/activitystreams`, `https://mobilizon.org/ns#`, `mz:joinMode`} {
 		if !strings.Contains(s, want) {
 			t.Errorf("serialised event missing %q: %s", want, s)
 		}
 	}
+}
+
+// jsonKind names the JSON type of a decoded value so shapes can be compared
+// without caring about the values themselves.
+func jsonKind(v any) string {
+	switch v.(type) {
+	case string:
+		return "string"
+	case float64:
+		return "number"
+	case bool:
+		return "bool"
+	case []any:
+		return "array"
+	case map[string]any:
+		return "object"
+	}
+	return "null"
+}
+
+// subsetOf fails the test for every key in got that a real Mobilizon object
+// (want) does not have, or that has a different JSON type. Mobilizon emits some
+// keys as null; those are not compared by type.
+func subsetOf(t *testing.T, path string, got, want map[string]any) {
+	t.Helper()
+	for k, gv := range got {
+		wv, ok := want[k]
+		if !ok {
+			t.Errorf("%s.%s is not a key a real Mobilizon object has", path, k)
+			continue
+		}
+		if wv != nil && jsonKind(gv) != jsonKind(wv) {
+			t.Errorf("%s.%s is a %s, real Mobilizon sends a %s", path, k, jsonKind(gv), jsonKind(wv))
+		}
+	}
+}
+
+func TestEventToAPEvent_MatchesRealMobilizonShape(t *testing.T) {
+	raw, err := os.ReadFile("testdata/mobilizon_event.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var golden map[string]any
+	if err := json.Unmarshal(raw, &golden); err != nil {
+		t.Fatal(err)
+	}
+
+	app := newTestApp(t)
+	defer app.Cleanup()
+	setTimezone(t, app, "Europe/London")
+	place := createPlace(t, app, "Golden Hall", "1 Test St", "Perth", 56.39, -3.43, "approved")
+	tag := createTag(t, app, "gig", "approved")
+	ev := createPublishedEvent(t, app, "Golden sample", time.Now().Add(time.Hour))
+	ev.Set("place", place.Id)
+	ev.Set("tags", []string{tag.Id})
+	ev.Set("end_datetime", time.Now().Add(2*time.Hour))
+
+	b, err := json.Marshal(apEvent(t, app, ev))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ours map[string]any
+	if err := json.Unmarshal(b, &ours); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := func(m map[string]any) map[string]any {
+		for _, e := range m["@context"].([]any) {
+			if obj, ok := e.(map[string]any); ok {
+				return obj
+			}
+		}
+		t.Fatal("@context has no term-definition object")
+		return nil
+	}
+	gctx, octx := ctx(golden), ctx(ours)
+	if octx["mz"] != gctx["mz"] {
+		t.Errorf("mz namespace = %v, real Mobilizon uses %v", octx["mz"], gctx["mz"])
+	}
+	if j, ok := octx["joinMode"].(map[string]any); !ok || j["@id"] != "mz:joinMode" {
+		t.Errorf("joinMode term = %v", octx["joinMode"])
+	}
+
+	delete(ours, "@context")
+	subsetOf(t, "event", ours, golden)
+
+	subsetOf(t, "location", ours["location"].(map[string]any), golden["location"].(map[string]any))
+	subsetOf(t, "location.address",
+		ours["location"].(map[string]any)["address"].(map[string]any),
+		golden["location"].(map[string]any)["address"].(map[string]any))
+	subsetOf(t, "tag[0]", ours["tag"].([]any)[0].(map[string]any), golden["tag"].([]any)[0].(map[string]any))
 }
 
 func TestEventObject_PublishedEventIsServedAsEvent(t *testing.T) {

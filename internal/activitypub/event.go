@@ -89,11 +89,29 @@ type APEvent struct {
 	Attachment               []APAttachment `json:"attachment,omitempty"`
 }
 
+// eventContext defines the extension terms Mobilizon's own Events use, copied
+// from a real Mobilizon 5.2.2 Event (testdata/mobilizon_event.json). Note the
+// mz namespace is mobilizon.org, not the joinmobilizon.org the docs mention.
 var eventContext = []any{
 	"https://www.w3.org/ns/activitystreams",
 	map[string]any{
-		"mz":       "https://joinmobilizon.org/ns#",
-		"joinMode": map[string]string{"@id": "mz:joinMode", "@type": "mz:joinModeType"},
+		"sc":                       "http://schema.org#",
+		"mz":                       "https://mobilizon.org/ns#",
+		"ical":                     "http://www.w3.org/2002/12/cal/ical#",
+		"Hashtag":                  "as:Hashtag",
+		"PostalAddress":            "sc:PostalAddress",
+		"streetAddress":            "sc:streetAddress",
+		"addressLocality":          "sc:addressLocality",
+		"addressCountry":           "sc:addressCountry",
+		"inLanguage":               "sc:inLanguage",
+		"address":                  map[string]string{"@id": "sc:address", "@type": "sc:PostalAddress"},
+		"location":                 map[string]string{"@id": "sc:location", "@type": "sc:Place"},
+		"status":                   map[string]string{"@id": "ical:status", "@type": "ical:status"},
+		"timezone":                 map[string]string{"@id": "mz:timezone", "@type": "sc:Text"},
+		"isOnline":                 map[string]string{"@id": "mz:isOnline", "@type": "sc:Boolean"},
+		"joinModeType":             map[string]string{"@id": "mz:joinModeType", "@type": "rdfs:Class"},
+		"joinMode":                 map[string]string{"@id": "mz:joinMode", "@type": "mz:joinModeType"},
+		"externalParticipationUrl": map[string]string{"@id": "mz:externalParticipationUrl", "@type": "sc:URL"},
 	},
 }
 

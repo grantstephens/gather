@@ -38,7 +38,8 @@ Mobilizon can follow the actor but gets nothing useful.
 - Signatures are draft-cavage HTTP Signatures (draft 12), same family as the current code. No LD signatures.
 - Mobilizon has an internal `relay@instance` actor; instances subscribe to each other and the relay
   `Announce`s content. Whether the relay follows non-Mobilizon instances is not confirmed.
-- Context: `mz` = `https://joinmobilizon.org/ns#` with `joinMode` and `repliesModerationOption` mapped.
+- Context: **`mz` = `https://mobilizon.org/ns#`** (the docs page says `joinmobilizon.org`, which is wrong;
+  caught by capturing a real Event, saved as `internal/activitypub/testdata/mobilizon_event.json`).
   The converter does not interpret `mz:` terms itself; they're for JSON-LD correctness.
 
 Sources: docs.mobilizon.org (Interoperability / ActivityPub), Mobilizon `lib/federation/activity_stream/converter/{event,address,actor}.ex`
@@ -133,7 +134,7 @@ disagrees with the field table below, the capture wins and this spec gets correc
 
 | AP field | Source |
 |---|---|
-| `@context` | `[ "https://www.w3.org/ns/activitystreams", {"mz": "https://joinmobilizon.org/ns#", "joinMode": {"@id":"mz:joinMode","@type":"mz:joinModeType"}} ]` |
+| `@context` | ActivityStreams plus the term definitions Mobilizon itself uses for the properties we emit (`eventContext` in `event.go`, copied from the captured Event; `mz` = `https://mobilizon.org/ns#`) |
 | `type` | `Event` |
 | `id`, `url` | `{base}/ap/events/{id}`, public event URL |
 | `attributedTo` | actor ID |
