@@ -162,6 +162,49 @@ func TestEventHooks_DeletingCancelledEventSendsDelete(t *testing.T) {
 	}
 }
 
+func TestEventHooks_PlaceFollowersGetTheEventToo(t *testing.T) {
+	app := relayFixture(t)
+	defer app.Cleanup()
+	// drop the relay follower so only the place follower can explain the queue
+	relays, _ := app.FindRecordsByFilter("ap_relay_followers", "id != ''", "", 0, 0)
+	for _, r := range relays {
+		if err := app.Delete(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	places, _ := app.FindCollectionByNameOrId("places")
+	p := core.NewRecord(places)
+	p.Set("name", "Theatre")
+	p.Set("city", "Pitlochry")
+	p.Set("status", "approved")
+	if err := app.Save(p); err != nil {
+		t.Fatal(err)
+	}
+	col, _ := app.FindCollectionByNameOrId("ap_subject_followers")
+	f := core.NewRecord(col)
+	f.Set("subject", "place:"+p.Id)
+	f.Set("actor_url", "https://mz.example/u")
+	f.Set("inbox_url", "https://mz.example/u/inbox")
+	if err := app.Save(f); err != nil {
+		t.Fatal(err)
+	}
+
+	events, _ := app.FindCollectionByNameOrId("events")
+	e := core.NewRecord(events)
+	e.Set("title", "Gig")
+	e.Set("start_datetime", time.Now().Add(48*time.Hour))
+	e.Set("status", "published")
+	e.Set("place", p.Id)
+	if err := app.Save(e); err != nil {
+		t.Fatal(err)
+	}
+
+	got := queuedTypes(t, app)
+	if got["Create"] != 1 || got["Announce"] != 1 {
+		t.Errorf("queued = %v, want a Create and an Announce for the place follower", got)
+	}
+}
+
 func TestEventHooks_DraftIsNotFederated(t *testing.T) {
 	app := relayFixture(t)
 	defer app.Cleanup()

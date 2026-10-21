@@ -17,6 +17,13 @@ type WebfingerLink struct {
 	Href string `json:"href,omitempty"`
 }
 
+func marshalWebfinger(resource, actorURL string) ([]byte, error) {
+	return json.MarshalIndent(WebfingerResponse{
+		Subject: resource,
+		Links:   []WebfingerLink{{Rel: "self", Type: "application/activity+json", Href: actorURL}},
+	}, "", "  ")
+}
+
 func HandleWebfinger(resource string, baseURL string) ([]byte, error) {
 	// Parse resource (format: acct:events@domain)
 	if !strings.HasPrefix(resource, "acct:") {

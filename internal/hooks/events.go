@@ -6,11 +6,15 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// queueRelay sends the event to relay followers (Mobilizon) in the Event shape.
+// queueRelay sends the event in the Event shape to relay followers (Mobilizon) and to
+// followers of the event's place and town actors.
 func queueRelay(app core.App, baseURL string, event *core.Record, activityType string) {
 	go func() {
 		if err := activitypub.QueueRelayEvent(app, baseURL, event, activityType); err != nil {
 			app.Logger().Error("ap-relay: failed to queue "+activityType, "event_id", event.Id, "error", err)
+		}
+		if err := activitypub.QueueSubjectEvent(app, baseURL, event, activityType); err != nil {
+			app.Logger().Error("ap-subject: failed to queue "+activityType, "event_id", event.Id, "error", err)
 		}
 	}()
 }

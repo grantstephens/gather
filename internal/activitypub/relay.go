@@ -141,7 +141,23 @@ func QueueRelayEvent(app core.App, baseURL string, event *core.Record, activityT
 		}
 		inboxes[inbox] = true
 	}
-	if len(inboxes) == 0 {
+	targets := make([]eventTarget, 0, len(inboxes))
+	for inbox := range inboxes {
+		targets = append(targets, eventTarget{inbox: inbox, announcer: relayID(baseURL)})
+	}
+	return queueEventTargets(app, baseURL, event, activityType, targets)
+}
+
+// eventTarget is one inbox to send an event to, and the actor that Announces it there.
+type eventTarget struct {
+	inbox     string
+	announcer string
+}
+
+// queueEventTargets queues the owner's activity (Create/Update/Delete from the instance actor)
+// to each target inbox, plus, for Create, an Announce from the target's announcer actor.
+func queueEventTargets(app core.App, baseURL string, event *core.Record, activityType string, targets []eventTarget) error {
+	if len(targets) == 0 {
 		return nil
 	}
 
@@ -163,22 +179,22 @@ func QueueRelayEvent(app core.App, baseURL string, event *core.Record, activityT
 		To:      []string{publicAudience},
 		Object:  object,
 	}
-	announce := Activity{
-		Context: "https://www.w3.org/ns/activitystreams",
-		Type:    "Announce",
-		ID:      fmt.Sprintf("%s/ap/relay/announce/%d", baseURL, now.UnixNano()),
-		Actor:   relayID(baseURL),
-		To:      []string{publicAudience},
-		Cc:      []string{relayID(baseURL) + "/followers"},
-		Object:  eventID,
-	}
 
-	for inbox := range inboxes {
-		if err := queueDeliveryAt(app, activity, inbox, now); err != nil {
+	for _, t := range targets {
+		if err := queueDeliveryAt(app, activity, t.inbox, now); err != nil {
 			return err
 		}
 		if activityType == "Create" {
-			if err := queueDeliveryAt(app, announce, inbox, now.Add(announceDelay)); err != nil {
+			announce := Activity{
+				Context: "https://www.w3.org/ns/activitystreams",
+				Type:    "Announce",
+				ID:      fmt.Sprintf("%s/announce/%d", t.announcer, now.UnixNano()),
+				Actor:   t.announcer,
+				To:      []string{publicAudience},
+				Cc:      []string{t.announcer + "/followers"},
+				Object:  eventID,
+			}
+			if err := queueDeliveryAt(app, announce, t.inbox, now.Add(announceDelay)); err != nil {
 				return err
 			}
 		}
