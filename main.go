@@ -843,9 +843,7 @@ func main() {
 			}
 
 			var body struct {
-				TargetInbox string         `json:"target_inbox"`
-				Object      map[string]any `json:"object"` // PHASE0 SPIKE: override test object
-				Type        string         `json:"type"`   // PHASE0 SPIKE: override activity type
+				TargetInbox string `json:"target_inbox"`
 			}
 			if err := re.BindBody(&body); err != nil || body.TargetInbox == "" {
 				return re.BadRequestError("Missing target_inbox", nil)
@@ -874,12 +872,6 @@ func main() {
 				},
 			}
 
-			if body.Type != "" { // PHASE0 SPIKE
-				testActivity.Type = body.Type
-			}
-			if body.Object != nil { // PHASE0 SPIKE
-				testActivity.Object = body.Object
-			}
 			err = activitypub.DeliverActivity(se.App, testActivity, body.TargetInbox)
 			if err != nil {
 				return re.InternalServerError("Delivery failed: "+err.Error(), err)
