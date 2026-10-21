@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -115,17 +116,14 @@ var eventContext = []any{
 	},
 }
 
-func instanceTimezone(app core.App) *time.Location {
-	name := defaultTimezone
-	if s, err := app.FindFirstRecordByFilter("settings", "id != ''"); err == nil {
-		if tz := s.GetString("timezone"); tz != "" {
-			name = tz
+// instanceTimezone is the zone events happen in: the TZ env var, else Europe/London.
+func instanceTimezone() *time.Location {
+	if name := os.Getenv("TZ"); name != "" {
+		if loc, err := time.LoadLocation(name); err == nil {
+			return loc
 		}
 	}
-	loc, err := time.LoadLocation(name)
-	if err != nil {
-		loc, _ = time.LoadLocation(defaultTimezone)
-	}
+	loc, _ := time.LoadLocation(defaultTimezone)
 	return loc
 }
 
@@ -138,7 +136,7 @@ func eventURL(event *core.Record, baseURL string) string {
 }
 
 func eventToAPEvent(app core.App, event *core.Record, baseURL string) (APEvent, error) {
-	loc := instanceTimezone(app)
+	loc := instanceTimezone()
 	pageURL := eventURL(event, baseURL)
 
 	content := textutil.StripBoilerplate(event.GetString("description"))

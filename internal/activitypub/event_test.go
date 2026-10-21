@@ -50,10 +50,33 @@ func createTag(t *testing.T, app *tests.TestApp, name, status string) *core.Reco
 
 func setTimezone(t *testing.T, app *tests.TestApp, tz string) {
 	t.Helper()
-	s := createSettings(t, app, "Test Instance", "")
-	s.Set("timezone", tz)
-	if err := app.Save(s); err != nil {
-		t.Fatalf("save timezone: %v", err)
+	createSettings(t, app, "Test Instance", "")
+	t.Setenv("TZ", tz)
+}
+
+func TestEventToAPEvent_TimezoneDefaultsToLondonWhenTZUnsetOrInvalid(t *testing.T) {
+	for _, tz := range []string{"", "Not/AZone"} {
+		app := newTestApp(t)
+		t.Setenv("TZ", tz)
+		ev := createPublishedEvent(t, app, "Gig", time.Date(2026, 7, 4, 18, 30, 0, 0, time.UTC))
+
+		got := apEvent(t, app, ev)
+		if got.Timezone != "Europe/London" || got.StartTime != "2026-07-04T19:30:00+01:00" {
+			t.Errorf("TZ=%q: timezone %q, startTime %q", tz, got.Timezone, got.StartTime)
+		}
+		app.Cleanup()
+	}
+}
+
+func TestEventToAPEvent_TimezoneComesFromTZEnv(t *testing.T) {
+	app := newTestApp(t)
+	defer app.Cleanup()
+	t.Setenv("TZ", "America/New_York")
+	ev := createPublishedEvent(t, app, "Gig", time.Date(2026, 7, 4, 18, 30, 0, 0, time.UTC))
+
+	got := apEvent(t, app, ev)
+	if got.Timezone != "America/New_York" || got.StartTime != "2026-07-04T14:30:00-04:00" {
+		t.Errorf("timezone %q, startTime %q", got.Timezone, got.StartTime)
 	}
 }
 

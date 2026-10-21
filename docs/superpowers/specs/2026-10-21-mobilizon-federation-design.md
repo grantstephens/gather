@@ -112,7 +112,7 @@ disagrees with the field table below, the capture wins and this spec gets correc
 4. **Object IDs.** The Event keeps the same ID as the current Note (`{base}/ap/events/{id}`) so
    existing Update/Delete history stays coherent. A follower never receives both shapes for one event.
 
-5. **Timezone is a setting.** New `timezone` field on `settings` (IANA name, default `Europe/London`).
+5. **Timezone is the `TZ` env var** (IANA name, default `Europe/London`; invalid values fall back to the default). Not a settings field.
    Needs a migration and an admin UI field.
 6. **Subset actors: places and towns only** in Phase 4. Tags get no actors for now.
 7. **No backfill.** A new follower only receives events published after they follow. (Interpreted
@@ -143,7 +143,7 @@ disagrees with the field table below, the capture wins and this spec gets correc
 | `content` | description as HTML (reuse the Note's sanitiser/markdown render) |
 | `mediaType` | `text/html` |
 | `startTime` / `endTime` | RFC 3339 with offset. If no end, **omit** `endTime`. |
-| `timezone` | IANA zone from settings (Gather is single-region; add a `timezone` setting if absent) |
+| `timezone` | IANA zone from the `TZ` env var (Gather is single-region) |
 | `published` / `updated` | `created` / `updated` |
 | `status` | `CONFIRMED`, or `CANCELLED` when `status = cancelled` |
 | `joinMode` | `external` + `externalParticipationUrl` = event page URL. Gather has no RSVP, so never `free`. |
@@ -270,7 +270,7 @@ reuse that code.
 - **Object dereferencing** — Mobilizon may refetch `/ap/events/{id}`; the endpoint must return an `Event` to it.
 - **Mobilizon version drift** — the converter code was read from `main`; the version on target instances may differ. Test against a released image, not just `main`.
 - **Mastodon double-post** — avoided by per-follower shape; verify no follower gets both.
-- **Timezone** — if Gather stores UTC without a configured zone, `startTime` offsets will look wrong in Mobilizon. Needs a `timezone` setting (default `Europe/London`).
+- **Timezone** — if Gather stores UTC without a configured zone, `startTime` offsets will look wrong in Mobilizon. Uses the `TZ` env var (default `Europe/London`).
 - **Moderation** — Mobilizon admins can block a domain; nothing to do on our side.
 
 ## Out of scope
