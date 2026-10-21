@@ -49,7 +49,12 @@ func RegisterEventHooks(app core.App, baseURL string) {
 					app.Logger().Error("ap: failed to queue Create activity", "event_id", e.Record.Id, "error", err)
 				}
 			}()
-			queueRelay(app, baseURL, e.Record, "Create")
+			// a cancelled event is already on Mobilizon, so republishing is an update
+			if oldStatus == "cancelled" {
+				queueRelay(app, baseURL, e.Record, "Update")
+			} else {
+				queueRelay(app, baseURL, e.Record, "Create")
+			}
 		} else if oldStatus == "published" && newStatus == "published" {
 			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Update")
 			go func() {
@@ -70,6 +75,9 @@ func RegisterEventHooks(app core.App, baseURL string) {
 			} else {
 				queueRelay(app, baseURL, e.Record, "Delete")
 			}
+		} else if oldStatus == "cancelled" && newStatus != "cancelled" {
+			// cancelled events stay visible on Mobilizon until deleted
+			queueRelay(app, baseURL, e.Record, "Delete")
 		}
 
 		return e.Next()
@@ -83,6 +91,8 @@ func RegisterEventHooks(app core.App, baseURL string) {
 					app.Logger().Error("ap: failed to queue Delete activity", "event_id", e.Record.Id, "error", err)
 				}
 			}()
+			queueRelay(app, baseURL, e.Record, "Delete")
+		} else if e.Record.GetString("status") == "cancelled" {
 			queueRelay(app, baseURL, e.Record, "Delete")
 		}
 		return e.Next()

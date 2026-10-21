@@ -212,6 +212,19 @@ rejected, add the `Group` actor (Decision 2) before Phase 1.
 Event (export one from the local instance to compare shape), float-coordinate test, no-place test,
 cancelled test, no-end-time test.
 
+**Phase 1b — relay actor (done, 2026-10-21).** `relay.go`: `relay@host` (type `Application`), followers in
+`ap_relay_followers`, inbox verifies HTTP signatures, Follow → persist + Accept, Undo Follow → remove.
+`QueueRelayEvent` sends Create (+ Announce 10s later), Update or Delete to relay followers, deduped by
+inbox. Hook rules: published→cancelled is an `Update` (`/ap/events/{id}` still serves cancelled events, so
+a Delete would be ignored); anything else leaving published, and deleting or un-cancelling-to-draft a
+cancelled event, is a `Delete`; cancelled→published is an `Update`. Reuses the instance keypair rather
+than a separate relay key (the relay actor publishes the same public key under its own `keyId`).
+Verified live: follow → Accept → listed in public search → rename → cancel → delete, and follower
+persistence across a Gather restart. Live testing found two bugs in the *existing* inbox verifier, both
+fixed with tests: (1) Mobilizon publishes PKCS#1 public keys (`BEGIN RSA PUBLIC KEY`), which
+`fetchPublicKey` rejected; (2) the `host` header was read from `r.Header`, where Go never puts it, so
+every signature covering `host` failed. Neither existing Follow path could have verified a real remote.
+
 **Phase 2 — per-follower shape.** Migration, NodeInfo lookup, delivery split, dedupe fix.
 
 **Phase 3 — real-world test.** Follow from a public Mobilizon instance, publish, edit, cancel, delete.

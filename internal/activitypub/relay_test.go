@@ -1,7 +1,11 @@
 package activitypub
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
@@ -241,6 +245,56 @@ func TestQueueRelayEvent_NoFollowersQueuesNothing(t *testing.T) {
 	}
 	if n, _ := app.CountRecords("ap_delivery_queue"); n != 0 {
 		t.Errorf("queue = %d, want 0", n)
+	}
+}
+
+func TestFetchPublicKey_AcceptsPKCS1KeysLikeMobilizonPublishes(t *testing.T) {
+	app := newTestApp(t)
+	defer app.Cleanup()
+	createSettingsWithKeys(t, app)
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkcs1 := string(pem.EncodeToMemory(&pem.Block{Type: "RSA PUBLIC KEY", Bytes: x509.MarshalPKCS1PublicKey(&priv.PublicKey)}))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"publicKey": map[string]any{"publicKeyPem": pkcs1}})
+	}))
+	defer srv.Close()
+
+	got, err := fetchPublicKey(app, testBase, srv.URL+"/relay#main-key")
+	if err != nil {
+		t.Fatalf("fetchPublicKey: %v", err)
+	}
+	if got.N.Cmp(priv.N) != 0 {
+		t.Error("parsed key differs from the published one")
+	}
+}
+
+func TestVerifyHTTPSignature_HostHeaderComesFromRequestHost(t *testing.T) {
+	app := newTestApp(t)
+	defer app.Cleanup()
+	settings := createSettingsWithKeys(t, app)
+	priv, err := ParsePrivateKey(settings.GetString("ap_private_key"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"publicKey": map[string]any{"publicKeyPem": settings.GetString("ap_public_key")}})
+	}))
+	defer srv.Close()
+
+	body := []byte(`{"type":"Follow"}`)
+	req := httptest.NewRequest("POST", "https://example.com/ap/relay/inbox", strings.NewReader(string(body)))
+	if err := signRequest(req, priv, srv.URL+"#main-key", body); err != nil {
+		t.Fatal(err)
+	}
+	// net/http never puts Host in r.Header on the server side; only r.Host carries it.
+	req.Header.Del("Host")
+
+	if err := verifyHTTPSignature(app, testBase, req, body); err != nil {
+		t.Fatalf("verifyHTTPSignature: %v", err)
 	}
 }
 

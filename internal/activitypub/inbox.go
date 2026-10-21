@@ -114,6 +114,9 @@ func verifyHTTPSignature(app core.App, baseURL string, r *http.Request, body []b
 				}
 			}
 			parts = append(parts, fmt.Sprintf("digest: %s", digest))
+		case "host":
+			// net/http moves Host out of r.Header into r.Host
+			parts = append(parts, fmt.Sprintf("host: %s", r.Host))
 		default:
 			parts = append(parts, fmt.Sprintf("%s: %s", h, r.Header.Get(http.CanonicalHeaderKey(h))))
 		}
@@ -272,13 +275,21 @@ func fetchPublicKey(app core.App, baseURL, keyID string) (*rsa.PublicKey, error)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode PEM block from %s", keyID)
 	}
-	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("parse public key from %s: %w", keyID, err)
-	}
-	rsaKey, ok := pubKey.(*rsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("public key from %s is not RSA", keyID)
+	var rsaKey *rsa.PublicKey
+	if block.Type == "RSA PUBLIC KEY" { // PKCS#1, as published by Mobilizon
+		rsaKey, err = x509.ParsePKCS1PublicKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("parse public key from %s: %w", keyID, err)
+		}
+	} else {
+		pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("parse public key from %s: %w", keyID, err)
+		}
+		var ok bool
+		if rsaKey, ok = pubKey.(*rsa.PublicKey); !ok {
+			return nil, fmt.Errorf("public key from %s is not RSA", keyID)
+		}
 	}
 
 	keyCache.Store(keyID, &cachedKey{key: rsaKey, fetchedAt: time.Now()})

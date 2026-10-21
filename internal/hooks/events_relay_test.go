@@ -120,6 +120,48 @@ func TestEventHooks_UnpublishingToDraftSendsDelete(t *testing.T) {
 	}
 }
 
+func TestEventHooks_CancelledThenDraftedSendsDelete(t *testing.T) {
+	app := relayFixture(t)
+	defer app.Cleanup()
+	e := saveEvent(t, app, "cancelled")
+	e.Set("status", "draft")
+	if err := app.Save(e); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := queuedTypes(t, app); got["Delete"] != 1 {
+		t.Errorf("queued = %v, want a Delete (Mobilizon still has the cancelled event)", got)
+	}
+}
+
+func TestEventHooks_CancelledThenRepublishedSendsUpdate(t *testing.T) {
+	app := relayFixture(t)
+	defer app.Cleanup()
+	e := saveEvent(t, app, "cancelled")
+	e.Set("status", "published")
+	if err := app.Save(e); err != nil {
+		t.Fatal(err)
+	}
+
+	got := queuedTypes(t, app)
+	if got["Update"] != 1 || got["Create"] != 0 {
+		t.Errorf("queued = %v, want one Update and no Create", got)
+	}
+}
+
+func TestEventHooks_DeletingCancelledEventSendsDelete(t *testing.T) {
+	app := relayFixture(t)
+	defer app.Cleanup()
+	e := saveEvent(t, app, "cancelled")
+	if err := app.Delete(e); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := queuedTypes(t, app); got["Delete"] != 1 {
+		t.Errorf("queued = %v, want a Delete", got)
+	}
+}
+
 func TestEventHooks_DraftIsNotFederated(t *testing.T) {
 	app := relayFixture(t)
 	defer app.Cleanup()
