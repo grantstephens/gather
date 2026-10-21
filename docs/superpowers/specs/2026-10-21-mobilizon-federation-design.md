@@ -267,8 +267,9 @@ reuse that code.
     (`organizedEvents`) attributed to it, and drafting the event removes it. `followedGroupEvents` stayed
     empty for a plain follower; it looks membership-based, so a follower sees events on the group page
     rather than in that feed.
-  - Not done: 410 + Delete when a place is un-approved or deleted; rate-limiting WebFinger/actor routes;
-    unverified against Mastodon.
+  - Deliberately not built: moderation handling (only approved places resolve, so venue approval is the
+    gate; an un-approved place's actor just 404s) and rate-limiting (keygen is one-off and bounded by the
+    number of approved places/towns; invented names never mint a key). Unverified against Mastodon.
 - **Tests.** WebFinger found/not-found/pending; lazy keygen race; follow a place and receive only its
   events; event with place+town followers in common is delivered once; rename keeps the actor ID;
   delete sends Tombstone/410.
