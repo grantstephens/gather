@@ -434,7 +434,7 @@ func main() {
 			return re.NoContent(202)
 		})
 
-		// PHASE0 SPIKE: relay actor, event dereference, announce trigger
+		// Relay actor: Mobilizon instances follow this to list our events
 		se.Router.GET("/ap/relay", func(re *core.RequestEvent) error {
 			b, err := activitypub.RelayActorJSON(se.App, baseURL)
 			if err != nil {
@@ -444,6 +444,9 @@ func main() {
 		})
 		se.Router.POST("/ap/relay/inbox", func(re *core.RequestEvent) error {
 			if err := activitypub.HandleRelayInbox(se.App, baseURL, re.Request); err != nil {
+				if errors.Is(err, activitypub.ErrUnauthorized) {
+					return re.Error(http.StatusUnauthorized, "unauthorized", err)
+				}
 				return re.InternalServerError("relay inbox", err)
 			}
 			return re.NoContent(202)
@@ -451,27 +454,6 @@ func main() {
 		se.Router.GET("/ap/events/{id}", func(re *core.RequestEvent) error {
 			body, status := activitypub.EventObject(se.App, baseURL, re.Request.PathValue("id"))
 			return re.Blob(status, "application/activity+json", body)
-		})
-		se.Router.GET("/spike/test.webp", func(re *core.RequestEvent) error {
-			b, err := os.ReadFile("/tmp/claude-1000/-home-grant-sync-Code-gather/e9fbb87f-da75-4282-8f7b-11426c4143f9/scratchpad/test.webp")
-			if err != nil {
-				return re.NotFoundError("no file", err)
-			}
-			return re.Blob(200, "image/webp", b)
-		})
-		se.Router.POST("/api/ap/spike/announce", func(re *core.RequestEvent) error {
-			info, _ := re.RequestInfo()
-			if info == nil || info.Auth == nil || info.Auth.Collection().Name != "_superusers" {
-				return re.UnauthorizedError("superuser required", nil)
-			}
-			body, err := io.ReadAll(re.Request.Body)
-			if err != nil {
-				return re.BadRequestError("body", err)
-			}
-			if err := activitypub.SpikeAnnounce(se.App, baseURL, body); err != nil {
-				return re.InternalServerError("announce: "+err.Error(), err)
-			}
-			return re.JSON(200, map[string]any{"success": true})
 		})
 
 		// Favicon route - serves favicon from settings, with default SVG fallback

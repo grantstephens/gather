@@ -6,6 +6,15 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
+// queueRelay sends the event to relay followers (Mobilizon) in the Event shape.
+func queueRelay(app core.App, baseURL string, event *core.Record, activityType string) {
+	go func() {
+		if err := activitypub.QueueRelayEvent(app, baseURL, event, activityType); err != nil {
+			app.Logger().Error("ap-relay: failed to queue "+activityType, "event_id", event.Id, "error", err)
+		}
+	}()
+}
+
 func RegisterEventHooks(app core.App, baseURL string) {
 	app.OnRecordAfterCreateSuccess("events").BindFunc(func(e *core.RecordEvent) error {
 		sendModeratorAlert(app, *e.Record, baseURL)
@@ -16,6 +25,7 @@ func RegisterEventHooks(app core.App, baseURL string) {
 					app.Logger().Error("ap: failed to queue Create activity", "event_id", e.Record.Id, "error", err)
 				}
 			}()
+			queueRelay(app, baseURL, e.Record, "Create")
 		}
 		return e.Next()
 	})
@@ -39,6 +49,7 @@ func RegisterEventHooks(app core.App, baseURL string) {
 					app.Logger().Error("ap: failed to queue Create activity", "event_id", e.Record.Id, "error", err)
 				}
 			}()
+			queueRelay(app, baseURL, e.Record, "Create")
 		} else if oldStatus == "published" && newStatus == "published" {
 			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Update")
 			go func() {
@@ -46,6 +57,7 @@ func RegisterEventHooks(app core.App, baseURL string) {
 					app.Logger().Error("ap: failed to queue Update activity", "event_id", e.Record.Id, "error", err)
 				}
 			}()
+			queueRelay(app, baseURL, e.Record, "Update")
 		} else if oldStatus == "published" && newStatus != "published" {
 			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Delete")
 			go func() {
@@ -53,6 +65,11 @@ func RegisterEventHooks(app core.App, baseURL string) {
 					app.Logger().Error("ap: failed to queue Delete activity", "event_id", e.Record.Id, "error", err)
 				}
 			}()
+			if newStatus == "cancelled" {
+				queueRelay(app, baseURL, e.Record, "Update")
+			} else {
+				queueRelay(app, baseURL, e.Record, "Delete")
+			}
 		}
 
 		return e.Next()
@@ -66,6 +83,7 @@ func RegisterEventHooks(app core.App, baseURL string) {
 					app.Logger().Error("ap: failed to queue Delete activity", "event_id", e.Record.Id, "error", err)
 				}
 			}()
+			queueRelay(app, baseURL, e.Record, "Delete")
 		}
 		return e.Next()
 	})

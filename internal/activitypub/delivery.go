@@ -132,6 +132,11 @@ func signGetRequest(privateKey *rsa.PrivateKey, req *http.Request, keyID string)
 
 // QueueDelivery enqueues a single delivery to the given inbox.
 func QueueDelivery(app core.App, activity Activity, inboxURL string) error {
+	return queueDeliveryAt(app, activity, inboxURL, time.Now())
+}
+
+// queueDeliveryAt enqueues a delivery that is not attempted before the given time.
+func queueDeliveryAt(app core.App, activity Activity, inboxURL string, at time.Time) error {
 	collection, err := app.FindCollectionByNameOrId("ap_delivery_queue")
 	if err != nil {
 		return err
@@ -142,7 +147,7 @@ func QueueDelivery(app core.App, activity Activity, inboxURL string) error {
 	record.Set("activity", string(activityJSON))
 	record.Set("inbox_url", inboxURL)
 	record.Set("attempts", 0)
-	record.Set("next_retry", time.Now())
+	record.Set("next_retry", at)
 	return app.Save(record)
 }
 

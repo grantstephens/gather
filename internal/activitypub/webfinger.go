@@ -29,7 +29,7 @@ func HandleWebfinger(resource string, baseURL string) ([]byte, error) {
 	}
 
 	username := parts[0]
-	if username == "relay" { // PHASE0 SPIKE
+	if username == "relay" {
 		return json.MarshalIndent(WebfingerResponse{
 			Subject: resource,
 			Links:   []WebfingerLink{{Rel: "self", Type: "application/activity+json", Href: baseURL + "/ap/relay"}},
