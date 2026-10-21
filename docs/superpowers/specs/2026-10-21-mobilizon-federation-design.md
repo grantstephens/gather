@@ -57,8 +57,11 @@ POSTed to Mobilizon's shared inbox (`/inbox`).
 | Integer coordinates | **Dropped silently** (no geometry stored). Floats work. The float-marshalling test in Phase 1 is required. |
 | `Update` with `status: CANCELLED` | **Works.** Event shows as `cancelled`. |
 | `Delete` with a bare `Tombstone` | **Not applied.** Mobilizon re-fetches the object URL to confirm it's gone and failed with `content_not_json`, because Gather has no `/ap/events/{id}` route and the SPA fallback returned HTML. |
-| WebP image attachment | **Not tested** (no hosted image in the spike). Still a Phase 1 check. |
-| Anonymous visibility | Event is stored and visible to a logged-in Mobilizon user, but **anonymous visitors get "not found" and it is absent from Explore/search.** |
+| `Delete` once `/ap/events/{id}` returns `410` | **Works.** Mobilizon logs "410 Gone ... object is really gone", records a tombstone, and removes the event. |
+| WebP image attachment | **Works**, with one trap: the attachment **must have a `name`** (we used `"Banner"`) or Mobilizon crashes the whole `Create` with a `FunctionClauseError` and the event is not created at all. `type: Document` + `url` + `name` is enough; Mobilizon downloaded the file and stored it as `image/webp` (400x300) as the event picture. `mediaType` is ignored. |
+| Anonymous visibility after a bare `Create` | Event is stored and visible to a logged-in Mobilizon user, but **anonymous visitors get "not found" and it is absent from Explore/search.** |
+| Relay: admin adds Gather as an instance | **Works.** Mobilizon resolved WebFinger `relay@host`, fetched the actor (`type: Application`), sent a Follow, and the follow was approved (`followers.approved = t`) after our Accept. NodeInfo `application_actor` was not needed. |
+| Relay: `Announce` of an Event URL | **Works.** Mobilizon dereferenced `/ap/events/{id}`, created the event, and wrote a `Share` row. The event then appears in **Explore (`events`), search (`searchEvents`), and anonymously by UUID.** |
 
 Consequences, which change the design:
 
@@ -68,8 +71,16 @@ Consequences, which change the design:
    tries NodeInfo's application-actor URL first, then WebFinger `relay@host`, and the target must be a
    `Group` or instance-type actor (a `Person` is rejected). Gather therefore needs a relay actor
    (`relay@host`, type `Application`) that accepts the Follow and `Announce`s each event to its followers.
-   **Not yet tested; the handling of incoming `Announce` into `Share` rows was not located in the source.**
-   Promote this from "out of scope" to a new **Phase 1b** before Phase 2.
+   **Verified end to end in the spike:** WebFinger `relay@host` -> `Application` actor -> Follow ->
+   Accept -> `Announce` (object = the event's `/ap/events/{id}` URL) -> event listed in Explore/search.
+   The spike reused the instance key for the relay actor (publicKey id `/ap/relay#main-key`, owner
+   `/ap/relay`), skipped inbox signature verification, and kept followers in memory.
+   Promote this from "out of scope" to a new **Phase 1b** before Phase 2. It needs: a persisted relay
+   follower list, signature verification on `/ap/relay/inbox`, `Undo Follow` handling, and an
+   `Announce` for each Create/Update (and a `Delete` to the same followers).
+   Delivery model: **Mobilizon instances that follow the relay get `Announce`; per-user follows
+   are not needed.** This also makes Decision 1 (per-follower `Event` vs `Note`) simpler: relay
+   followers always get the Event shape.
 2. **`/ap/events/{id}` must exist now.** Return the `Event` JSON for live events and `410` with a
    `Tombstone` for deleted ones. Mobilizon dereferences it on `Delete`. Move this from Phase 4 to Phase 1.
 3. Decision 2 (add a `Group` actor if the `Service` is rejected) is **resolved: not needed for ingestion.**

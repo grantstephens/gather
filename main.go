@@ -434,6 +434,49 @@ func main() {
 			return re.NoContent(202)
 		})
 
+		// PHASE0 SPIKE: relay actor, event dereference, announce trigger
+		se.Router.GET("/ap/relay", func(re *core.RequestEvent) error {
+			b, err := activitypub.RelayActorJSON(se.App, baseURL)
+			if err != nil {
+				return re.InternalServerError("relay actor", err)
+			}
+			return re.Blob(200, "application/activity+json", b)
+		})
+		se.Router.POST("/ap/relay/inbox", func(re *core.RequestEvent) error {
+			if err := activitypub.HandleRelayInbox(se.App, baseURL, re.Request); err != nil {
+				return re.InternalServerError("relay inbox", err)
+			}
+			return re.NoContent(202)
+		})
+		se.Router.GET("/ap/events/{id}", func(re *core.RequestEvent) error {
+			e, ok := activitypub.SpikeEvent(re.Request.PathValue("id"))
+			if !ok {
+				return re.Blob(410, "application/activity+json", []byte(`{"type":"Tombstone","id":"`+baseURL+`/ap/events/`+re.Request.PathValue("id")+`"}`))
+			}
+			return re.Blob(200, "application/activity+json", e)
+		})
+		se.Router.GET("/spike/test.webp", func(re *core.RequestEvent) error {
+			b, err := os.ReadFile("/tmp/claude-1000/-home-grant-sync-Code-gather/e9fbb87f-da75-4282-8f7b-11426c4143f9/scratchpad/test.webp")
+			if err != nil {
+				return re.NotFoundError("no file", err)
+			}
+			return re.Blob(200, "image/webp", b)
+		})
+		se.Router.POST("/api/ap/spike/announce", func(re *core.RequestEvent) error {
+			info, _ := re.RequestInfo()
+			if info == nil || info.Auth == nil || info.Auth.Collection().Name != "_superusers" {
+				return re.UnauthorizedError("superuser required", nil)
+			}
+			body, err := io.ReadAll(re.Request.Body)
+			if err != nil {
+				return re.BadRequestError("body", err)
+			}
+			if err := activitypub.SpikeAnnounce(se.App, baseURL, body); err != nil {
+				return re.InternalServerError("announce: "+err.Error(), err)
+			}
+			return re.JSON(200, map[string]any{"success": true})
+		})
+
 		// Favicon route - serves favicon from settings, with default SVG fallback
 		se.Router.GET("/favicon.ico", func(re *core.RequestEvent) error {
 			settings, err := se.App.FindFirstRecordByFilter("settings", "")
@@ -821,7 +864,9 @@ func main() {
 			}
 
 			var body struct {
-				TargetInbox string `json:"target_inbox"`
+				TargetInbox string         `json:"target_inbox"`
+				Object      map[string]any `json:"object"` // PHASE0 SPIKE: override test object
+				Type        string         `json:"type"`   // PHASE0 SPIKE: override activity type
 			}
 			if err := re.BindBody(&body); err != nil || body.TargetInbox == "" {
 				return re.BadRequestError("Missing target_inbox", nil)
@@ -850,6 +895,12 @@ func main() {
 				},
 			}
 
+			if body.Type != "" { // PHASE0 SPIKE
+				testActivity.Type = body.Type
+			}
+			if body.Object != nil { // PHASE0 SPIKE
+				testActivity.Object = body.Object
+			}
 			err = activitypub.DeliverActivity(se.App, testActivity, body.TargetInbox)
 			if err != nil {
 				return re.InternalServerError("Delivery failed: "+err.Error(), err)
