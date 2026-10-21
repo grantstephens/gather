@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"gather/internal/testutil"
+
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
-
-	_ "gather/migrations"
 )
 
 // TestMain disables the SSRF guard and HTTP signature verification for the
@@ -22,19 +23,18 @@ import (
 func TestMain(m *testing.M) {
 	ssrfCheck = func(string) error { return nil }
 	signatureVerifier = func(_ core.App, _ string, _ *http.Request, _ []byte) error { return nil }
-	m.Run()
+	code := m.Run()
+	testutil.Cleanup()
+	os.Exit(code)
 }
 
 // ---- test helpers ----
 
 func newTestApp(t *testing.T) *tests.TestApp {
 	t.Helper()
-	app, err := tests.NewTestApp()
+	app, err := testutil.NewApp()
 	if err != nil {
 		t.Fatalf("create test app: %v", err)
-	}
-	if err := app.RunAllMigrations(); err != nil {
-		t.Fatalf("run migrations: %v", err)
 	}
 	return app
 }

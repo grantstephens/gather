@@ -2,24 +2,27 @@ package hooks_test
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 	"time"
 
 	"gather/internal/hooks"
+	"gather/internal/testutil"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
-
-	_ "gather/migrations"
 )
+
+func TestMain(m *testing.M) {
+	code := m.Run()
+	testutil.Cleanup()
+	os.Exit(code)
+}
 
 func relayFixture(t *testing.T) *tests.TestApp {
 	t.Helper()
-	app, err := tests.NewTestApp()
+	app, err := testutil.NewApp()
 	if err != nil {
-		t.Fatal(err)
-	}
-	if err := app.RunAllMigrations(); err != nil {
 		t.Fatal(err)
 	}
 	settings, _ := app.FindCollectionByNameOrId("settings")
