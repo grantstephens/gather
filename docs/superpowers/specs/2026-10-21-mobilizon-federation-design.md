@@ -44,6 +44,40 @@ Mobilizon can follow the actor but gets nothing useful.
 Sources: docs.mobilizon.org (Interoperability / ActivityPub), Mobilizon `lib/federation/activity_stream/converter/{event,address,actor}.ex`
 and `lib/federation/activity_pub/types/events.ex` on framagit.
 
+## Phase 0 results (2026-10-21, Mobilizon 5.2.2 vs a Gather dev instance, over two public tunnels)
+
+Hand-built `Create`/`Update`/`Delete` activities were signed by Gather's existing delivery code and
+POSTed to Mobilizon's shared inbox (`/inbox`).
+
+| Question | Result |
+|---|---|
+| Does Mobilizon accept our HTTP signatures? | **Yes.** "Got something with valid signature inside inbox". Actor was fetched and stored. |
+| Is the existing `Service` actor accepted as organiser? | **Yes.** Stored as actor type `Service`; event created with it as organiser. **No `Group` actor needed for ingestion.** |
+| Event fields | `name`, `startTime`/`endTime`, `timezone`, `joinMode: external` + `externalParticipationUrl`, `status`, `tag`, and `location` (`Place` + `PostalAddress` + `latitude`/`longitude`) all landed correctly. Geometry stored as `POINT(-3.7344 56.7012)`. |
+| Integer coordinates | **Dropped silently** (no geometry stored). Floats work. The float-marshalling test in Phase 1 is required. |
+| `Update` with `status: CANCELLED` | **Works.** Event shows as `cancelled`. |
+| `Delete` with a bare `Tombstone` | **Not applied.** Mobilizon re-fetches the object URL to confirm it's gone and failed with `content_not_json`, because Gather has no `/ap/events/{id}` route and the SPA fallback returned HTML. |
+| WebP image attachment | **Not tested** (no hosted image in the spike). Still a Phase 1 check. |
+| Anonymous visibility | Event is stored and visible to a logged-in Mobilizon user, but **anonymous visitors get "not found" and it is absent from Explore/search.** |
+
+Consequences, which change the design:
+
+1. **The relay is required, not optional.** Mobilizon's Explore/search only list remote events that have a
+   `Share` row from an instance its relay actor follows (`filter_local_or_from_followed_instances_events`).
+   A bare `Create` is stored but not discoverable. Admins follow an instance via a bare host: Mobilizon
+   tries NodeInfo's application-actor URL first, then WebFinger `relay@host`, and the target must be a
+   `Group` or instance-type actor (a `Person` is rejected). Gather therefore needs a relay actor
+   (`relay@host`, type `Application`) that accepts the Follow and `Announce`s each event to its followers.
+   **Not yet tested; the handling of incoming `Announce` into `Share` rows was not located in the source.**
+   Promote this from "out of scope" to a new **Phase 1b** before Phase 2.
+2. **`/ap/events/{id}` must exist now.** Return the `Event` JSON for live events and `410` with a
+   `Tombstone` for deleted ones. Mobilizon dereferences it on `Delete`. Move this from Phase 4 to Phase 1.
+3. Decision 2 (add a `Group` actor if the `Service` is rejected) is **resolved: not needed for ingestion.**
+   Phase 4 subset actors remain `Group` because users follow Groups.
+
+Spike code (not for merge): `POST /api/ap/test-delivery` temporarily accepts `object` and `type`
+overrides on branch `worktree-mobilizon-phase0`.
+
 ## Source of truth
 
 There is no formal Mobilizon federation spec (the docs page is a dev note; the real behaviour is in
@@ -216,5 +250,5 @@ reuse that code.
 
 ## Out of scope
 
-Relay/`Application` actor, accepting `Join` (RSVP), Mobilizon groups/posts/resources, importing events
+Accepting `Join` (RSVP), Mobilizon groups/posts/resources, importing events
 *from* Mobilizon, pre-created actors for every place/tag, `mz:` extras like capacity or comment moderation.
