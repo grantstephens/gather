@@ -56,6 +56,33 @@ func TestRoutesConfig(t *testing.T) {
 	}).Test(t)
 }
 
+func TestRoutesLocalBaseURL(t *testing.T) {
+	prepLocal := func(mutate func(t testing.TB, app *tests.TestApp)) func(testing.TB, *tests.TestApp, *core.ServeEvent) {
+		return func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+			Register(e, "http://127.0.0.1:8090")
+			if mutate != nil {
+				mutate(t, app)
+			}
+		}
+	}
+	(&tests.ApiScenario{
+		Name: "public config is disabled while the base URL is localhost", Method: http.MethodGet, URL: "/api/newsletter/config",
+		TestAppFactory: factory, ExpectedStatus: 200, ExpectedContent: []string{`"enabled":false`},
+		BeforeTestFunc: prepLocal(enabled),
+	}).Test(t)
+
+	hdr := map[string]string{}
+	(&tests.ApiScenario{
+		Name: "admin endpoint tells the operator", Method: http.MethodGet, URL: "/api/newsletter/admin",
+		Headers: hdr, TestAppFactory: factory, ExpectedStatus: 200,
+		ExpectedContent: []string{`"base_url_local":true`, `"enabled":false`},
+		BeforeTestFunc: prepLocal(func(t testing.TB, app *tests.TestApp) {
+			enable(t, app)
+			hdr["Authorization"] = api.CreateTestUser(t, app, "admin@example.com", "password12345", "admin").Token
+		}),
+	}).Test(t)
+}
+
 func TestRoutesSubscribe(t *testing.T) {
 	(&tests.ApiScenario{
 		Name: "invalid email", Method: http.MethodPost, URL: "/api/newsletter/subscribe",

@@ -5,6 +5,7 @@ import { pb, User, Settings, PageRecord } from './lib/pocketbase'
 import { getTheme, toggleTheme } from './lib/theme'
 import { setInstanceName } from './lib/title'
 import { SearchBar } from './components/SearchBar'
+import { configureUmamiScript } from './lib/umami'
 import './style.css'
 import './components/Navigation.css'
 
@@ -101,12 +102,7 @@ export function App() {
 
           if (record.umami_src && record.umami_website_id) {
             const script = document.createElement('script')
-            script.defer = true
-            script.src = record.umami_src
-            script.setAttribute('data-website-id', record.umami_website_id)
-            if (record.umami_host_url) {
-              script.setAttribute('data-host-url', record.umami_host_url)
-            }
+            configureUmamiScript(script, record)
             document.head.appendChild(script)
           }
 

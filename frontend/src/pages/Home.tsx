@@ -424,6 +424,11 @@ export function Home(_props: Props) {
             ))}
           </div>
         )}
+        {/* The sidebar is hidden below 900px, so phones get the signup here, above the
+            list: placed after the infinite-scroll sentinel it is never reached. */}
+        <div class="newsletter-mobile">
+          <NewsletterSignup />
+        </div>
         {events.length === 0 ? (
           <p class="no-events">
             {hasActiveFilters ? 'No events matching your filters' : 'No upcoming events'}
@@ -433,10 +438,6 @@ export function Home(_props: Props) {
         )}
         <div ref={sentinelRef} />
         {loadingMore && <p class="loading-more">Loading more events...</p>}
-        {/* The sidebar is hidden below 900px, so phones get the signup here instead. */}
-        <div class="newsletter-mobile">
-          <NewsletterSignup />
-        </div>
       </div>
       {sidebarContent}
 

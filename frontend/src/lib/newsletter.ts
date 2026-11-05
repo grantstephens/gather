@@ -15,6 +15,7 @@ export interface NewsletterAdminInfo {
   enabled: boolean
   toggle_on: boolean
   mail_configured: boolean
+  base_url_local: boolean
   confirmed: number
   pending: number
   timezone: string
@@ -28,6 +29,7 @@ export const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'
 // if not, why. Missing mail config outranks the toggle: it forces the feature off.
 export function statusLine(i: NewsletterAdminInfo): string {
   if (!i.mail_configured) return "Mail isn't configured in PocketBase, so the newsletter is off."
+  if (i.base_url_local) return "The Application URL is still localhost, so emails would carry dead links and sending is off. Set it in PocketBase (Settings > Application) or via BASE_URL."
   if (!i.toggle_on) return 'Switched off.'
   if (!i.send_time) return 'No send time set, so nothing will be sent.'
   return `Sending every ${DAY_NAMES[i.send_day] ?? 'week'} at ${i.send_time} (${i.timezone}).`

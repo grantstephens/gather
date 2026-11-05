@@ -107,7 +107,7 @@ stop:
 # Testing
 test-unit:
 	@echo "Running Go unit tests..."
-	@go test ./internal/... -v 2>/dev/null || echo "No unit tests found or tests failed"
+	@go test ./internal/... -timeout 20m -v 2>/dev/null || echo "No unit tests found or tests failed"
 
 test-frontend:
 	@echo "Running frontend unit tests..."
@@ -135,7 +135,7 @@ test-watch:
 
 test-coverage:
 	@echo "Running tests with coverage..."
-	@go test -coverprofile=coverage.out ./...
+	@go test -timeout 20m -coverprofile=coverage.out ./...
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
 

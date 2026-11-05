@@ -270,3 +270,18 @@ func TestSendConfirmationContent(t *testing.T) {
 		t.Error("privacy link should appear when set")
 	}
 }
+
+func TestSubscribeRefusedWhenBaseURLIsLocal(t *testing.T) {
+	app := api.NewTestApp(t)
+	defer app.Cleanup()
+	enable(t, app)
+	for _, base := range []string{"http://localhost:8090", "http://127.0.0.1:8090", ""} {
+		pc, err := Subscribe(app, "a@example.com", "", base, time.Now())
+		if err != ErrUnavailable || pc != nil {
+			t.Errorf("base %q: want ErrUnavailable (confirmation links would point at localhost), got %v, %v", base, pc, err)
+		}
+	}
+	if n := len(allSubscribers(t, app)); n != 0 {
+		t.Errorf("no record should be created, got %d", n)
+	}
+}

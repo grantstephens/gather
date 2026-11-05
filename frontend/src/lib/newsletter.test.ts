@@ -21,7 +21,7 @@ describe('tokenFromHash', () => {
 import { statusLine, type NewsletterAdminInfo } from './newsletter'
 
 const info = (over: Partial<NewsletterAdminInfo> = {}): NewsletterAdminInfo => ({
-  enabled: true, toggle_on: true, mail_configured: true,
+  enabled: true, toggle_on: true, mail_configured: true, base_url_local: false,
   confirmed: 12, pending: 3, timezone: 'Europe/London', send_day: 4, send_time: '09:00',
   ...over,
 })
@@ -41,5 +41,11 @@ describe('statusLine', () => {
   })
   it('puts missing mail ahead of the toggle', () => {
     expect(statusLine(info({ mail_configured: false, toggle_on: false, enabled: false }))).toMatch(/mail isn't configured/i)
+  })
+  it('tells the operator to set the application URL when it is localhost', () => {
+    expect(statusLine(info({ base_url_local: true, enabled: false }))).toMatch(/application url|base_url/i)
+  })
+  it('reports missing mail before the localhost warning', () => {
+    expect(statusLine(info({ mail_configured: false, base_url_local: true, enabled: false }))).toMatch(/mail isn't configured/i)
   })
 })

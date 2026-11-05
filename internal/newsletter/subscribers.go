@@ -73,7 +73,8 @@ func findByEmail(app core.App, email string) *core.Record {
 // still inside the resend cooldown). Callers must answer identically in every
 // non-error case so the response never reveals whether an address is known.
 func Subscribe(app core.App, rawEmail, honeypot, baseURL string, now time.Time) (*PendingConfirmation, error) {
-	if !LoadConfig(app).Enabled() {
+	// A localhost/empty base URL would mail strangers dead confirmation links.
+	if !LoadConfig(app).Enabled() || localOnly(baseURL) {
 		return nil, ErrUnavailable
 	}
 	if strings.TrimSpace(honeypot) != "" {

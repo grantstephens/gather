@@ -37,11 +37,15 @@ func localOnly(baseURL string) bool {
 // eligible picks post exists. It returns the number of emails sent.
 func Tick(app core.App, now time.Time, loc *time.Location, baseURL string) (int, error) {
 	cfg := LoadConfig(app)
-	if !cfg.Enabled() || localOnly(baseURL) {
+	if !cfg.Enabled() {
 		return 0, nil
 	}
 	local := now.In(loc)
 	if int(local.Weekday()) != cfg.SendDay || local.Format("15:04") != cfg.SendTime {
+		return 0, nil
+	}
+	if localOnly(baseURL) {
+		app.Logger().Warn("newsletter: send time reached but the base URL is localhost; set the Application URL (or BASE_URL) so email links work", "base_url", baseURL)
 		return 0, nil
 	}
 	pick, err := EligiblePick(app, local)

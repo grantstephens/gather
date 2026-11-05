@@ -33,7 +33,7 @@ func Register(se *core.ServeEvent, baseURL string) {
 			privacy = p
 		}
 		return re.JSON(http.StatusOK, map[string]any{
-			"enabled":     LoadConfig(app).Enabled(),
+			"enabled":     LoadConfig(app).Enabled() && !localOnly(baseURL),
 			"privacy_url": privacy,
 		})
 	})
@@ -94,7 +94,8 @@ func Register(se *core.ServeEvent, baseURL string) {
 		confirmed, _ := app.CountRecords(subscribersCol, dbx.HashExp{"status": "confirmed"})
 		pending, _ := app.CountRecords(subscribersCol, dbx.HashExp{"status": "pending"})
 		return re.JSON(http.StatusOK, map[string]any{
-			"enabled":         cfg.Enabled(),
+			"enabled":         cfg.Enabled() && !localOnly(baseURL),
+			"base_url_local":  localOnly(baseURL),
 			"toggle_on":       cfg.ToggleOn,
 			"mail_configured": cfg.MailConfigured,
 			"confirmed":       confirmed,
