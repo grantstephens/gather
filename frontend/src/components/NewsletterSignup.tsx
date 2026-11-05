@@ -48,7 +48,7 @@ export function NewsletterSignup() {
 
   return (
     <section class="sidebar-section newsletter-signup">
-      <div class="sidebar-section-title">Get the weekend picks by email</div>
+      <div class="sidebar-section-title">Get What’s on this weekend by email</div>
       {status === 'done' ? (
         <p class="newsletter-message" role="status">{message}</p>
       ) : (
@@ -85,7 +85,7 @@ export function NewsletterSignup() {
         </form>
       )}
       <p class="newsletter-note">
-        Weekend picks by email. Unsubscribe any time.
+        One short email a week. Unsubscribe any time.
         {config.privacy_url && <> <a href={config.privacy_url}>Privacy policy</a></>}
       </p>
     </section>

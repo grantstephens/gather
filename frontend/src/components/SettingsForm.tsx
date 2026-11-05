@@ -306,7 +306,7 @@ export function SettingsForm() {
 
         {/* Newsletter Section */}
         <section class="settings-section">
-          <h2>Weekly picks newsletter</h2>
+          <h2>What’s on this weekend email</h2>
 
           <NewsletterAdminPanel info={newsletter.info} />
 
@@ -318,7 +318,7 @@ export function SettingsForm() {
                 onChange={(e) => setFormData({ ...formData, newsletter_enabled: (e.target as HTMLInputElement).checked })}
                 disabled={saving}
               />
-              Email the weekend picks to subscribers
+              Email What’s on this weekend (the weekend picks) to subscribers
             </label>
             <small class="field-hint">Only works while PocketBase mail (SMTP and sender address) is configured. If there is no picks post for the coming weekend, nothing is sent.</small>
           </div>

@@ -32,6 +32,12 @@ func localOnly(baseURL string) bool {
 	return false
 }
 
+// Available reports whether signups are open: feature on, mail working and a
+// real (non-localhost) base URL.
+func Available(app core.App, baseURL string) bool {
+	return LoadConfig(app).Enabled() && !localOnly(baseURL)
+}
+
 // Tick is called every minute by cron. It sends only when the newsletter is
 // enabled, the clock (in loc) is exactly the configured day and HH:MM, and an
 // eligible picks post exists. It returns the number of emails sent.

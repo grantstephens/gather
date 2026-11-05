@@ -174,3 +174,14 @@ func TestBuildHomeHTMLAlwaysHasAMetaDescription(t *testing.T) {
 		t.Errorf("a configured description must win over the fallback")
 	}
 }
+
+func TestHomeHTMLLinksToEmailOnlyWhenOffered(t *testing.T) {
+	on := buildHomeHTML("Perthshire Events", "", "", "https://example.com", nil, HomeBrowse{Newsletter: true})
+	if !strings.Contains(on, `<a href="https://example.com/picks">What&#39;s on this weekend</a>`) || !strings.Contains(on, "by email") {
+		t.Errorf("home should link to /picks with the email name:\n%s", on)
+	}
+	off := buildHomeHTML("Perthshire Events", "", "", "https://example.com", nil, HomeBrowse{})
+	if strings.Contains(off, "by email") {
+		t.Error("no email line when unavailable")
+	}
+}

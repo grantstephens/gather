@@ -78,10 +78,10 @@ export function NewsletterConfirm(_props: Props) {
     <NewsletterAction
       endpoint="/api/newsletter/confirm"
       heading="Confirm your subscription"
-      intro="One more click and you'll get the weekend picks by email, once a week."
+      intro="One more click and you'll get What’s on this weekend by email, once a week."
       button="Confirm my subscription"
       doneHeading="You're subscribed"
-      doneBody="Thanks! The next weekend picks email will land in your inbox. You can unsubscribe from any email."
+      doneBody="Thanks! The next What’s on this weekend email will land in your inbox. You can unsubscribe from any email."
       invalidBody="This confirmation link has expired or was already used. Please sign up again from the home page."
     />
   )
@@ -91,11 +91,11 @@ export function NewsletterUnsubscribe(_props: Props) {
   return (
     <NewsletterAction
       endpoint="/api/newsletter/unsubscribe"
-      heading="Unsubscribe from the weekend picks"
+      heading="Unsubscribe from What’s on this weekend"
       intro="You'll stop getting the weekly email and we'll delete your address."
       button="Unsubscribe"
       doneHeading="You're unsubscribed"
-      doneBody="We've deleted your email address and you won't get any more weekend picks emails."
+      doneBody="We've deleted your email address and you won't get any more What’s on this weekend emails."
       invalidBody="This unsubscribe link isn't valid. If you still get emails, use the link in the latest one."
     />
   )

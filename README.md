@@ -19,7 +19,7 @@ Built with Go ([PocketBase](https://pocketbase.io)) and [Preact](https://preactj
 - Proximity search ("events near me")
 - Real-time updates via SSE subscriptions
 - Editorial Picks — curated weekly roundups with home page teaser
-- Weekly picks newsletter — double opt-in email signup, sent only when there's a picks post for the coming weekend
+- "What’s on this weekend" email — double opt-in email signup, sent only when there's a picks post for the coming weekend
 - Custom pages (About, FAQ, Code of Conduct) with Markdown support
 - OAuth2 social login (configurable via PocketBase)
 - API keys for external integrations
@@ -141,12 +141,12 @@ Your instance automatically provides:
 - **iCal** at `/feed.ics` (all events), `/ics/tag/{tagname}` (by tag), `/ics/event/{id}` (single event)
 - **ActivityPub** actor at `/ap/actor` (when federation is enabled)
 
-### Weekly Picks Newsletter
+### "What’s on this weekend" email
 
 Subscribers get the coming weekend's Editorial Picks post by email, once a week, and only if such a post exists.
 
 1. Configure outgoing mail in the PocketBase dashboard (**Settings > Mail settings**): enable SMTP and set a sender address. The newsletter reuses this config and is forced off without it.
-2. In **Admin > Settings > Weekly picks newsletter**, switch it on and choose the day and time. The schedule uses the server's time zone, which comes from the `TZ` environment variable (Docker defaults to `UTC`, so set it to your own zone, e.g. `Europe/London`).
+2. In **Admin > Settings > What’s on this weekend email**, switch it on and choose the day and time. The schedule uses the server's time zone, which comes from the `TZ` environment variable (Docker defaults to `UTC`, so set it to your own zone, e.g. `Europe/London`).
 3. A signup box appears under the calendar (and at the end of the page on phones). Sign-ups confirm by email (double opt-in) and every email has a one-click unsubscribe that deletes the address.
 
 Things worth knowing:

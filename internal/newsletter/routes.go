@@ -33,7 +33,7 @@ func Register(se *core.ServeEvent, baseURL string) {
 			privacy = p
 		}
 		return re.JSON(http.StatusOK, map[string]any{
-			"enabled":     LoadConfig(app).Enabled() && !localOnly(baseURL),
+			"enabled":     Available(app, baseURL),
 			"privacy_url": privacy,
 		})
 	})

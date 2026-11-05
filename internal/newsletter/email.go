@@ -129,7 +129,7 @@ func RenderCampaign(c Campaign) (subject, htmlBody, textBody string, headers map
 	slug := c.Pick.GetString("slug")
 	title := oneLine(c.Pick.GetString("title"))
 	if title == "" {
-		title = "Weekend picks"
+		title = "What's on this weekend"
 	}
 	subject = title
 	site := oneLine(c.SiteName)
@@ -179,7 +179,7 @@ func RenderCampaign(c Campaign) (subject, htmlBody, textBody string, headers map
 		fmt.Fprintf(&textEvents, "\n  %s\n\n", link)
 	}
 
-	footerHTML := fmt.Sprintf(`You are receiving this because you subscribed to the weekend picks from %s. <a href="%s" style="color:#64748b;">Unsubscribe</a>`, html.EscapeString(site), html.EscapeString(unsubPage))
+	footerHTML := fmt.Sprintf(`You are receiving this because you subscribed to What&#39;s on this weekend from %s. <a href="%s" style="color:#64748b;">Unsubscribe</a>`, html.EscapeString(site), html.EscapeString(unsubPage))
 	if c.PrivacyURL != "" {
 		footerHTML += fmt.Sprintf(` &middot; <a href="%s" style="color:#64748b;">Privacy policy</a>`, html.EscapeString(c.PrivacyURL))
 	}
@@ -218,7 +218,7 @@ func RenderCampaign(c Campaign) (subject, htmlBody, textBody string, headers map
 		tb.WriteString(blurb + "\n\n")
 	}
 	tb.WriteString(textEvents.String())
-	fmt.Fprintf(&tb, "View on the web: %s\n\n--\nYou are receiving this because you subscribed to the weekend picks from %s.\nUnsubscribe: %s\n", webURL, site, unsubPage)
+	fmt.Fprintf(&tb, "View on the web: %s\n\n--\nYou are receiving this because you subscribed to What's on this weekend from %s.\nUnsubscribe: %s\n", webURL, site, unsubPage)
 	if c.PrivacyURL != "" {
 		fmt.Fprintf(&tb, "Privacy policy: %s\n", c.PrivacyURL)
 	}

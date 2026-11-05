@@ -209,11 +209,11 @@ func SendConfirmation(app core.App, pc *PendingConfirmation) error {
 	}
 	htmlBody := fmt.Sprintf(`<div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0f172a;">
 <h2 style="margin:0 0 12px;">Confirm your subscription</h2>
-<p>You asked to get the weekend picks from %s by email, once a week.</p>
+<p>You asked to get What's on this weekend from %s by email, once a week.</p>
 <p><a href=%q style="display:inline-block;background:#0d9488;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Confirm my subscription</a></p>
 <p style="font-size:13px;color:#64748b;">If that wasn't you, ignore this email and nothing will happen. The link expires in 48 hours.</p>
 %s</div>`, html.EscapeString(name), pc.ConfirmURL, privacyHTML)
-	textBody := fmt.Sprintf("You asked to get the weekend picks from %s by email, once a week.\n\nConfirm your subscription:\n%s\n\nIf that wasn't you, ignore this email and nothing will happen. The link expires in 48 hours.\n%s", name, pc.ConfirmURL, privacyText)
+	textBody := fmt.Sprintf("You asked to get What's on this weekend from %s by email, once a week.\n\nConfirm your subscription:\n%s\n\nIf that wasn't you, ignore this email and nothing will happen. The link expires in 48 hours.\n%s", name, pc.ConfirmURL, privacyText)
 
 	msg := &mailer.Message{
 		From:    mail.Address{Name: app.Settings().Meta.SenderName, Address: app.Settings().Meta.SenderAddress},

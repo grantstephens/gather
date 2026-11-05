@@ -813,6 +813,7 @@ func main() {
 		cron.Register(se.App, baseURL)
 
 		// Weekly picks newsletter: signup/confirm/unsubscribe routes, open pixel, schedule tick
+		seo.NewsletterOffered = newsletter.Available
 		newsletter.Register(se, baseURL)
 		newsletter.RegisterCron(se.App, baseURL)
 

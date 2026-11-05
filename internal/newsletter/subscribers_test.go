@@ -285,3 +285,39 @@ func TestSubscribeRefusedWhenBaseURLIsLocal(t *testing.T) {
 		t.Errorf("no record should be created, got %d", n)
 	}
 }
+
+func TestAvailable(t *testing.T) {
+	app := api.NewTestApp(t)
+	defer app.Cleanup()
+	if Available(app, testBase) {
+		t.Error("off by default")
+	}
+	enable(t, app)
+	if !Available(app, testBase) {
+		t.Error("enabled + real base URL should be available")
+	}
+	if Available(app, "http://localhost:8090") {
+		t.Error("localhost base URL must not be advertised")
+	}
+}
+
+func TestEmailsUseTheProductName(t *testing.T) {
+	app := api.NewTestApp(t)
+	defer app.Cleanup()
+	enable(t, app)
+	if err := SendConfirmation(app, &PendingConfirmation{To: "a@example.com", ConfirmURL: testBase + "/newsletter/confirm#token=abc"}); err != nil {
+		t.Fatal(err)
+	}
+	m := app.TestMailer.LastMessage()
+	if !strings.Contains(m.HTML, "What's on this weekend") || !strings.Contains(m.Text, "What's on this weekend") {
+		t.Errorf("confirmation should name the product:\n%s", m.Text)
+	}
+	c := campaignFixture(t, app, "Picks", "Hi")
+	_, h, tx, _ := RenderCampaign(c)
+	if !strings.Contains(h, "What&#39;s on this weekend") && !strings.Contains(h, "What's on this weekend") {
+		t.Error("campaign footer html should name the product")
+	}
+	if !strings.Contains(tx, "What's on this weekend") {
+		t.Error("campaign footer text should name the product")
+	}
+}

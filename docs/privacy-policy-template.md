@@ -13,7 +13,7 @@ personal data described below. You can contact us at [contact email or postal ad
 
 ## What we collect
 
-If you subscribe to the weekly picks email we store:
+If you subscribe to the "What’s on this weekend" email we store:
 
 - your **email address**;
 - the **date and time you confirmed** your subscription (our record of your consent);
@@ -23,7 +23,7 @@ We do not store your IP address or browser details with your subscription.
 
 ## Why we collect it and our legal basis
 
-We use your email address only to send you the weekly picks email: a short roundup of
+We use your email address only to send you the "What’s on this weekend" email: a short roundup of
 events for the coming weekend. We do this **with your consent**, which you give by
 confirming your subscription. We do not use it for anything else and we never sell or
 share it.
