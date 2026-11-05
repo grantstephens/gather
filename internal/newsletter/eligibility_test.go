@@ -56,7 +56,7 @@ type pickSpec struct {
 	events []string
 }
 
-func mkEvent(t *testing.T, app core.App, start, end time.Time, status, rule string) string {
+func mkEvent(t testing.TB, app core.App, start, end time.Time, status, rule string) string {
 	t.Helper()
 	col, _ := app.FindCollectionByNameOrId("events")
 	ev := core.NewRecord(col)
@@ -75,7 +75,7 @@ func mkEvent(t *testing.T, app core.App, start, end time.Time, status, rule stri
 	return ev.Id
 }
 
-func mkPick(t *testing.T, app core.App, s pickSpec) *core.Record {
+func mkPick(t testing.TB, app core.App, s pickSpec) *core.Record {
 	t.Helper()
 	col, _ := app.FindCollectionByNameOrId("picks")
 	p := core.NewRecord(col)

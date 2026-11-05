@@ -34,7 +34,7 @@ type AuthRecord struct {
 }
 
 // CreateTestUser creates a user and returns auth token
-func CreateTestUser(t *testing.T, app *tests.TestApp, email, password, role string) AuthRecord {
+func CreateTestUser(t testing.TB, app *tests.TestApp, email, password, role string) AuthRecord {
 	collection, err := app.FindCollectionByNameOrId("users")
 	if err != nil {
 		t.Fatalf("Failed to find users collection: %v", err)
