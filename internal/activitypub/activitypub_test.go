@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -851,5 +852,71 @@ func TestQueueDeliveryToFollowers_DeduplicatesSharedInbox(t *testing.T) {
 	}
 	if queue[0].GetString("inbox_url") != "https://mastodon.example/inbox" {
 		t.Errorf("should use shared inbox URL, got %q", queue[0].GetString("inbox_url"))
+	}
+}
+
+// Remote servers retry Follows, and HandleInbox handles each in its own
+// goroutine, so concurrent Follows from one actor must still make one follower.
+func TestHandleFollow_ConcurrentFollowsMakeOneFollower(t *testing.T) {
+	app := newTestApp(t)
+	defer app.Cleanup()
+	createSettingsWithKeys(t, app)
+
+	acceptSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer acceptSrv.Close()
+	actorSrv := mockActorServer(t, acceptSrv.URL)
+	defer actorSrv.Close()
+
+	activity := IncomingActivity{Type: "Follow", ID: "https://remote.example/follows/1", Actor: actorSrv.URL, Object: json.RawMessage(`"https://example.com/ap/actor"`)}
+
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			_ = handleFollow(app, "https://example.com", activity)
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	followers, err := app.FindRecordsByFilter("ap_followers", "id != ''", "", 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(followers) != 1 {
+		t.Errorf("8 concurrent Follows from one actor made %d followers, want 1", len(followers))
+	}
+}
+
+func TestSaveRelayFollower_ConcurrentCallsMakeOneFollower(t *testing.T) {
+	app := newTestApp(t)
+	defer app.Cleanup()
+
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := 0; i < 16; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			if err := saveRelayFollower(app, "https://remote.example/actor", &ActorInfo{Inbox: "https://remote.example/inbox"}); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	recs, err := app.FindRecordsByFilter("ap_relay_followers", "id != ''", "", 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recs) != 1 {
+		t.Errorf("16 concurrent follows made %d relay followers, want 1", len(recs))
 	}
 }

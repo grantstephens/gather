@@ -296,6 +296,9 @@ func fetchPublicKey(app core.App, baseURL, keyID string) (*rsa.PublicKey, error)
 	return rsaKey, nil
 }
 
+// followMu serialises the find-or-create of a follower row.
+var followMu sync.Mutex
+
 func handleFollow(app core.App, baseURL string, activity IncomingActivity) error {
 	actorInfo, err := fetchActor(app, baseURL, activity.Actor)
 	if err != nil {
@@ -307,8 +310,14 @@ func handleFollow(app core.App, baseURL string, activity IncomingActivity) error
 		return err
 	}
 
+	// Follows are handled in goroutines and remote servers retry them, so the
+	// find-or-create must be atomic or the same actor gets two follower rows
+	// (and every post is then delivered twice). One process owns the database,
+	// so a mutex is enough; it is held only for the DB work, never the fetch.
+	followMu.Lock()
 	existing, _ := app.FindFirstRecordByFilter("ap_followers", "actor_url = {:url}", map[string]any{"url": activity.Actor})
 	if existing != nil {
+		followMu.Unlock()
 		app.Logger().Info("ap-inbox: already following, re-sending Accept", "actor", activity.Actor)
 	} else {
 		record := core.NewRecord(collection)
@@ -316,7 +325,9 @@ func handleFollow(app core.App, baseURL string, activity IncomingActivity) error
 		record.Set("inbox_url", actorInfo.Inbox)
 		record.Set("shared_inbox_url", actorInfo.SharedInbox)
 
-		if err := app.Save(record); err != nil {
+		err := app.Save(record)
+		followMu.Unlock()
+		if err != nil {
 			return fmt.Errorf("save follower: %w", err)
 		}
 		app.Logger().Info("ap-inbox: saved new follower", "actor", activity.Actor, "inbox", actorInfo.Inbox)

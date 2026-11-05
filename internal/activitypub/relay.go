@@ -84,19 +84,8 @@ func handleRelayFollow(app core.App, baseURL string, a IncomingActivity, raw []b
 		return fmt.Errorf("fetchActor %s: %w", a.Actor, err)
 	}
 
-	existing, _ := app.FindFirstRecordByFilter("ap_relay_followers", "actor_url = {:u}", map[string]any{"u": a.Actor})
-	if existing == nil {
-		col, err := app.FindCollectionByNameOrId("ap_relay_followers")
-		if err != nil {
-			return err
-		}
-		rec := core.NewRecord(col)
-		rec.Set("actor_url", a.Actor)
-		rec.Set("inbox_url", info.Inbox)
-		rec.Set("shared_inbox_url", info.SharedInbox)
-		if err := app.Save(rec); err != nil {
-			return fmt.Errorf("save relay follower: %w", err)
-		}
+	if err := saveRelayFollower(app, a.Actor, info); err != nil {
+		return err
 	}
 
 	accept := Activity{
@@ -108,6 +97,29 @@ func handleRelayFollow(app core.App, baseURL string, a IncomingActivity, raw []b
 		Object:  json.RawMessage(raw),
 	}
 	return QueueDelivery(app, accept, info.Inbox)
+}
+
+// saveRelayFollower is find-or-create under followMu: Follows are retried and
+// handled concurrently, and two inserts for one actor would double every delivery.
+func saveRelayFollower(app core.App, actorURL string, info *ActorInfo) error {
+	followMu.Lock()
+	defer followMu.Unlock()
+
+	if existing, _ := app.FindFirstRecordByFilter("ap_relay_followers", "actor_url = {:u}", map[string]any{"u": actorURL}); existing != nil {
+		return nil
+	}
+	col, err := app.FindCollectionByNameOrId("ap_relay_followers")
+	if err != nil {
+		return err
+	}
+	rec := core.NewRecord(col)
+	rec.Set("actor_url", actorURL)
+	rec.Set("inbox_url", info.Inbox)
+	rec.Set("shared_inbox_url", info.SharedInbox)
+	if err := app.Save(rec); err != nil {
+		return fmt.Errorf("save relay follower: %w", err)
+	}
+	return nil
 }
 
 func handleRelayUndo(app core.App, a IncomingActivity) error {
