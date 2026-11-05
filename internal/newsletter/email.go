@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -142,7 +143,8 @@ func RenderCampaign(c Campaign) (subject, htmlBody, textBody string, headers map
 	webURL := addUTM(base+"/picks/"+slug, c.BaseURL, slug)
 	unsubPage := UnsubscribePageURL(c.BaseURL, c.UnsubscribeToken)
 
-	var cards, textEvents strings.Builder
+	cardRows := map[string]string{} // event id -> <tr> card
+	var textEvents strings.Builder
 	for _, ev := range c.Events {
 		link := eventLink(c, ev, slug)
 		when := eventWhen(ev, c.Now)
@@ -156,6 +158,7 @@ func RenderCampaign(c Campaign) (subject, htmlBody, textBody string, headers map
 		}
 		evTitle := oneLine(ev.GetString("title"))
 
+		var cards strings.Builder
 		cards.WriteString(`<tr><td style="padding:12px 0;border-top:1px solid #e2e8f0;"><table width="100%" cellpadding="0" cellspacing="0"><tr>`)
 		if thumb != "" {
 			fmt.Fprintf(&cards, `<td width="120" valign="top" style="padding-right:12px;"><a href="%s"><img src="%s" width="120" alt="" style="display:block;border-radius:6px;max-width:120px;height:auto;"></a></td>`, html.EscapeString(link), html.EscapeString(thumb))
@@ -168,6 +171,7 @@ func RenderCampaign(c Campaign) (subject, htmlBody, textBody string, headers map
 			fmt.Fprintf(&cards, `<div style="font-size:14px;color:#64748b;">%s</div>`, html.EscapeString(place))
 		}
 		cards.WriteString(`</td></tr></table></td></tr>`)
+		cardRows[ev.Id] = cards.String()
 
 		fmt.Fprintf(&textEvents, "- %s", evTitle)
 		if when != "" {
@@ -177,6 +181,14 @@ func RenderCampaign(c Campaign) (subject, htmlBody, textBody string, headers map
 			fmt.Fprintf(&textEvents, "\n  %s", place)
 		}
 		fmt.Fprintf(&textEvents, "\n  %s\n\n", link)
+	}
+
+	blurbHTML, leftover := weaveCards(blurbHTML, c, cardRows)
+	var cards strings.Builder
+	for _, ev := range c.Events {
+		if row, ok := leftover[ev.Id]; ok {
+			cards.WriteString(row)
+		}
 	}
 
 	footerHTML := fmt.Sprintf(`You are receiving this because you subscribed to What&#39;s on this weekend from %s. <a href="%s" style="color:#64748b;">Unsubscribe</a>`, html.EscapeString(site), html.EscapeString(unsubPage))
@@ -233,4 +245,55 @@ func RenderCampaign(c Campaign) (subject, htmlBody, textBody string, headers map
 		"Precedence":            "bulk",
 	}
 	return subject, htmlBody, textBody, headers
+}
+
+var (
+	blockEndRe = regexp.MustCompile(`(?is)</(?:p|h[1-6])>`)
+	hrefAttrRe = regexp.MustCompile(`(?i)href="([^"]+)"`)
+)
+
+// weaveCards drops each event's card straight after the first paragraph or
+// heading of the blurb that links to that event, so the email reads as one
+// piece. It returns the new blurb HTML and the cards that were not placed
+// (events the blurb never links to), keyed by event id.
+func weaveCards(blurbHTML string, c Campaign, cardRows map[string]string) (string, map[string]string) {
+	leftover := make(map[string]string, len(cardRows))
+	for id, row := range cardRows {
+		leftover[id] = row
+	}
+	byRef := map[string]*core.Record{}
+	for _, ev := range c.Events {
+		byRef[ev.Id] = ev
+		if slug := ev.GetString("slug"); slug != "" {
+			byRef[slug] = ev
+		}
+	}
+	base, err := url.Parse(c.BaseURL)
+	if err != nil {
+		return blurbHTML, leftover
+	}
+
+	var out strings.Builder
+	prev := 0
+	for _, loc := range blockEndRe.FindAllStringIndex(blurbHTML, -1) {
+		block := blurbHTML[prev:loc[1]]
+		out.WriteString(block)
+		prev = loc[1]
+		for _, m := range hrefAttrRe.FindAllStringSubmatch(block, -1) {
+			u, err := url.Parse(html.UnescapeString(m[1]))
+			if err != nil || !strings.EqualFold(u.Host, base.Host) || !strings.HasPrefix(u.Path, "/event/") {
+				continue
+			}
+			ev := byRef[strings.TrimPrefix(u.Path, "/event/")]
+			if ev == nil {
+				continue
+			}
+			if row, ok := leftover[ev.Id]; ok {
+				fmt.Fprintf(&out, `<table width="100%%" cellpadding="0" cellspacing="0" style="margin:4px 0 16px;">%s</table>`, row)
+				delete(leftover, ev.Id)
+			}
+		}
+	}
+	out.WriteString(blurbHTML[prev:])
+	return out.String(), leftover
 }

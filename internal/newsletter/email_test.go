@@ -216,3 +216,80 @@ func TestRenderCampaignSize(t *testing.T) {
 		t.Errorf("html is %d bytes; Gmail clips at ~102KB", len(htmlBody))
 	}
 }
+
+// cardTitleMarker matches an event card's title link (the blurb's own links
+// don't carry this style), so tests can find where each card landed.
+func cardTitleMarker(title string) string {
+	return `font-size:16px;font-weight:600;color:#0f766e;text-decoration:none;">` + title + `</a>`
+}
+
+// inlineFixture builds a campaign whose events are titled Alpha and Beta and
+// whose blurb is produced from their ids.
+func inlineFixture(t *testing.T, app core.App, blurb func(alpha, beta string) string) Campaign {
+	t.Helper()
+	c := campaignFixture(t, app, "Picks", "")
+	c.Events[0].Set("title", "Alpha")
+	c.Events[1].Set("title", "Beta")
+	c.Pick.Set("blurb", blurb(c.Events[0].Id, c.Events[1].Id))
+	return c
+}
+
+func TestEventCardsSitInlineAfterTheirParagraph(t *testing.T) {
+	app := api.NewTestApp(t)
+	defer app.Cleanup()
+	c := inlineFixture(t, app, func(a, b string) string {
+		return "Intro.\n\nSee [Alpha](/event/" + a + ") tonight.\n\nThen [Beta](/event/" + b + ") on Sunday.\n\nThe end."
+	})
+
+	_, h, _, _ := RenderCampaign(c)
+
+	alpha, beta := strings.Index(h, cardTitleMarker("Alpha")), strings.Index(h, cardTitleMarker("Beta"))
+	if alpha < 0 || beta < 0 {
+		t.Fatalf("both cards expected:\n%s", h)
+	}
+	if !(strings.Index(h, "tonight.") < alpha && alpha < strings.Index(h, "Then ")) {
+		t.Error("Alpha's card should come right after the paragraph that links to it")
+	}
+	if !(strings.Index(h, "on Sunday.") < beta && beta < strings.Index(h, "The end.")) {
+		t.Error("Beta's card should come right after the paragraph that links to it")
+	}
+	for _, title := range []string{"Alpha", "Beta"} {
+		if n := strings.Count(h, cardTitleMarker(title)); n != 1 {
+			t.Errorf("%s card appears %d times, want 1", title, n)
+		}
+	}
+}
+
+func TestEventsTheBlurbNeverLinksStayAtTheBottom(t *testing.T) {
+	app := api.NewTestApp(t)
+	defer app.Cleanup()
+	c := inlineFixture(t, app, func(a, _ string) string {
+		return "Intro.\n\nSee [Alpha](/event/" + a + ") tonight.\n\nThe end."
+	})
+
+	_, h, _, _ := RenderCampaign(c)
+
+	if beta := strings.Index(h, cardTitleMarker("Beta")); beta < strings.Index(h, "The end.") {
+		t.Error("an event the blurb doesn't link to should be listed after the blurb")
+	}
+	if n := strings.Count(h, cardTitleMarker("Beta")); n != 1 {
+		t.Errorf("Beta card appears %d times, want 1", n)
+	}
+}
+
+func TestEventLinkedTwiceGetsOneCardAfterFirstMention(t *testing.T) {
+	app := api.NewTestApp(t)
+	defer app.Cleanup()
+	c := inlineFixture(t, app, func(a, _ string) string {
+		return "First [Alpha](/event/" + a + ") mention.\n\nSecond [Alpha](/event/" + a + ") mention."
+	})
+
+	_, h, _, _ := RenderCampaign(c)
+
+	if n := strings.Count(h, cardTitleMarker("Alpha")); n != 1 {
+		t.Fatalf("Alpha card appears %d times, want 1", n)
+	}
+	if !(strings.Index(h, "First ") < strings.Index(h, cardTitleMarker("Alpha")) && strings.Index(h, cardTitleMarker("Alpha")) < strings.Index(h, "Second ")) {
+		t.Error("card belongs after the first mention")
+	}
+}
