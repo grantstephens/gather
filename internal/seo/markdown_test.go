@@ -3,6 +3,7 @@ package seo
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRenderMarkdownHTML(t *testing.T) {
@@ -65,5 +66,30 @@ func TestRenderMarkdownHTML(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRenderMarkdownHTMLWithRewrite(t *testing.T) {
+	var seen []string
+	got := RenderMarkdownHTMLWith("[a](/event/x) and [b](https://other.example/y)", "https://example.com", func(dest string) string {
+		seen = append(seen, dest)
+		return dest + "?rewritten=1"
+	})
+	if len(seen) != 2 || seen[0] != "https://example.com/event/x" || seen[1] != "https://other.example/y" {
+		t.Errorf("rewrite should see absolute destinations, saw %v", seen)
+	}
+	if !strings.Contains(got, `href="https://example.com/event/x?rewritten=1"`) {
+		t.Errorf("rewritten destination not rendered: %s", got)
+	}
+	if plain := RenderMarkdownHTML("[a](/event/x)", "https://example.com"); !strings.Contains(plain, `href="https://example.com/event/x"`) || strings.Contains(plain, "rewritten") {
+		t.Errorf("RenderMarkdownHTML must stay a plain wrapper: %s", plain)
+	}
+}
+
+func TestLongDateTimeExported(t *testing.T) {
+	// 19:30 UTC on 10 Oct 2026 is 20:30 in London (BST).
+	got := LongDateTime(time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
+	if got != "Saturday 10 October 2026, 8:30 PM" {
+		t.Errorf("LongDateTime = %q", got)
 	}
 }

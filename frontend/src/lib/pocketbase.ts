@@ -81,6 +81,10 @@ export interface Settings extends BaseModel {
   umami_src: string
   umami_website_id: string
   umami_host_url: string
+  newsletter_enabled: boolean
+  newsletter_send_day: number
+  newsletter_send_time: string
+  newsletter_footer: string
 }
 
 export interface PageRecord extends BaseModel {

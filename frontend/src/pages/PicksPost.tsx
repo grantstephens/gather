@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
+import { NewsletterBand } from '../components/NewsletterSignup'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { blurbToPlainText } from '../lib/plainText'
@@ -105,6 +106,7 @@ export function PicksPost({ slug }: Props) {
             ))}
         </div>
       )}
+      <NewsletterBand />
     </article>
   )
 }

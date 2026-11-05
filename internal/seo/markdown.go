@@ -24,6 +24,19 @@ var blurbPolicy = func() *bluemonday.Policy {
 // links ("/event/x") are made absolute with baseURL; protocol-relative, javascript:
 // and any other non-http(s)/mailto links lose their href. Raw HTML is dropped.
 func renderMarkdownHTML(md, baseURL string) string {
+	return RenderMarkdownHTMLWith(md, baseURL, nil)
+}
+
+// RenderMarkdownHTML is renderMarkdownHTML for other packages (e.g. the
+// newsletter) that need the same sanitised output.
+func RenderMarkdownHTML(md, baseURL string) string {
+	return RenderMarkdownHTMLWith(md, baseURL, nil)
+}
+
+// RenderMarkdownHTMLWith is RenderMarkdownHTML with a hook that can rewrite each
+// link destination after site-relative links have been made absolute (the
+// newsletter uses it to add UTM parameters). A nil rewrite leaves links alone.
+func RenderMarkdownHTMLWith(md, baseURL string, rewrite func(dest string) string) string {
 	if strings.TrimSpace(md) == "" {
 		return ""
 	}
@@ -35,6 +48,9 @@ func renderMarkdownHTML(md, baseURL string) string {
 			dest := string(l.Destination)
 			if strings.HasPrefix(dest, "/") && !strings.HasPrefix(dest, "//") {
 				l.Destination = []byte(strings.TrimRight(baseURL, "/") + dest)
+			}
+			if rewrite != nil {
+				l.Destination = []byte(rewrite(string(l.Destination)))
 			}
 		}
 		return ast.WalkContinue, nil

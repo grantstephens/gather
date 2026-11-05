@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
+import { NewsletterBand } from '../components/NewsletterSignup'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { pb, PicksRecord, Event } from '../lib/pocketbase'
@@ -96,6 +97,7 @@ export function Picks(_props: Props) {
           })}
         </div>
       )}
+      <NewsletterBand />
     </div>
   )
 }

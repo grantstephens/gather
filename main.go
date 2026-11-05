@@ -26,6 +26,7 @@ import (
 	"gather/internal/hooks"
 	"gather/internal/ical"
 	"gather/internal/middleware"
+	"gather/internal/newsletter"
 	"gather/internal/recurrence"
 	"gather/internal/rss"
 	"gather/internal/seo"
@@ -65,12 +66,15 @@ func main() {
 			// trailing-slash prefix matches /feed/tag/<name> and /ics/tag/<name>
 			{Label: "/feed/tag/", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
 			{Label: "/ics/tag/", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			// newsletter signup: stops bots using us to mail confirmation emails to strangers
+			{Label: "/api/newsletter/subscribe", MaxRequests: 5, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
 			// Authenticated users: very high limits — effectively no restriction
 			{Label: "*:auth", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "*:create", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "/api/search", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "/feed/tag/", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "/ics/tag/", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/api/newsletter/subscribe", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 		}
 		// Note: these rules are written to the DB on every startup, so any changes
 		// made via the admin dashboard will be reverted on restart.
@@ -125,7 +129,13 @@ func main() {
 			h.Set("X-Frame-Options", "DENY")
 			h.Set("X-Permitted-Cross-Domain-Policies", "none")
 			h.Set("Cross-Origin-Opener-Policy", "same-origin")
-			h.Set("Cross-Origin-Resource-Policy", "same-origin")
+			// Event images and the newsletter open pixel are loaded straight from email
+			// clients (webmail that doesn't proxy images), so they must be cross-origin.
+			if strings.HasPrefix(path, "/api/files/") || strings.HasPrefix(path, "/newsletter/open/") {
+				h.Set("Cross-Origin-Resource-Policy", "cross-origin")
+			} else {
+				h.Set("Cross-Origin-Resource-Policy", "same-origin")
+			}
 			h.Set("Permissions-Policy", "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), usb=(), web-share=()")
 
 			// CSP only for frontend routes — skip admin UI and API
@@ -865,6 +875,11 @@ func main() {
 
 		// Register cron jobs
 		cron.Register(se.App, baseURL)
+
+		// Weekly picks newsletter: signup/confirm/unsubscribe routes, open pixel, schedule tick
+		seo.NewsletterOffered = newsletter.Available
+		newsletter.Register(se, baseURL)
+		newsletter.RegisterCron(se.App, baseURL)
 
 		// ActivityPub delivery worker — every 5 minutes
 		se.App.Cron().Add("ap-delivery", "*/5 * * * *", func() {
