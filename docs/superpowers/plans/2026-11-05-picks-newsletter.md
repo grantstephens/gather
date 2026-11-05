@@ -44,7 +44,7 @@ Failure modes the spec implies that no obvious task covers, most likely first:
 
 ## File Structure
 
-- Create `migrations/1709300028_newsletter.go`: collection and field additions.
+- Create `migrations/1709300031_newsletter.go`: collection and field additions.
 - Create `internal/newsletter/{config,subscribers,eligibility,email,send,tracking,routes}.go` and one `_test.go` for each.
 - Modify `internal/seo/markdown.go`: export `RenderMarkdownHTML` and `RenderMarkdownHTMLWith` (link rewrite hook).
 - Modify `internal/api/testhelpers.go`: `NewTestApp` takes `testing.TB`.
@@ -58,7 +58,7 @@ Failure modes the spec implies that no obvious task covers, most likely first:
 ### Task 1: Migration
 
 **Files:**
-- Create: `migrations/1709300028_newsletter.go`
+- Create: `migrations/1709300031_newsletter.go`
 - Test: `internal/newsletter/migration_test.go`
 
 **Interfaces:**
