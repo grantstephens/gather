@@ -72,6 +72,14 @@ make prod          # Build, setup admin, seed, and start server
 - `1709300001_user_role.go`: User role field
 - `1709300002_places_tags_moderation.go`: Status fields for moderation
 
+**Migration numbering rules (MUST follow; this has gone wrong before):**
+- Migrations run in filename order, and production has already applied everything on `origin/main`. A new migration must therefore be numbered **higher than every migration on `origin/main`**, never just higher than the ones on your branch. A branch cut before another PR merged will otherwise sort *before* migrations production has already run (this shipped broken numbering in v1.3.0 and has happened before).
+- Pick the number only after `git fetch origin`, as one more than the highest on `origin/main`: `git ls-tree --name-only origin/main migrations/ | sort | tail -3`. Prefix is `17093000NN_`, contiguous, no gaps, no duplicates.
+- Re-check before merging and before cutting a release: `git fetch origin`, list `origin/main` migrations again, and if anyone else landed one, **rename yours to the next free number** (and any references to the filename in docs/plans). Do this on every merge of a long-lived branch, not just at creation.
+- Never renumber or edit a migration that has shipped in a release. Fix forward with a new, higher-numbered migration instead.
+- Migrations must be idempotent (check that a collection/field exists before adding it, and that it is gone before removing it), so a renumber or re-run is a no-op.
+- Quick duplicate check: `ls migrations | awk -F_ '{print $1}' | sort | uniq -d` must print nothing.
+
 ### Frontend Structure
 
 **Preact SPA** with TypeScript, Vite bundler, and client-side routing (preact-router).
