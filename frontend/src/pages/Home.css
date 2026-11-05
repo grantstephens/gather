@@ -10,6 +10,12 @@
   .home-sidebar { display: none; }
 }
 
+/* Mobile-only copy of the newsletter signup (the sidebar one is hidden there). */
+.newsletter-mobile { display: none; }
+@media (max-width: 900px) {
+  .newsletter-mobile { display: block; margin-top: var(--space-6); }
+}
+
 /* ── Page header ──────────────────────────────── */
 .events-header {
   display: flex;

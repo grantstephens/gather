@@ -3,6 +3,7 @@ import { marked } from 'marked'
 import { pb, Event, Tag, PicksRecord } from '../lib/pocketbase'
 import { usePageTitle } from '../lib/title'
 import { MiniCalendar } from '../components/MiniCalendar'
+import { NewsletterSignup } from '../components/NewsletterSignup'
 import { tagStyle } from '../lib/color'
 import { EventTimeline } from '../components/EventTimeline'
 import { SkeletonTimeline } from '../components/Skeleton'
@@ -264,6 +265,7 @@ export function Home(_props: Props) {
           onDateSelect={handleDateSelect}
         />
       </div>
+      <NewsletterSignup />
       <div class="sidebar-section">
         <div class="sidebar-section-title">Browse by tag</div>
         <div class="tag-cloud">
@@ -431,6 +433,10 @@ export function Home(_props: Props) {
         )}
         <div ref={sentinelRef} />
         {loadingMore && <p class="loading-more">Loading more events...</p>}
+        {/* The sidebar is hidden below 900px, so phones get the signup here instead. */}
+        <div class="newsletter-mobile">
+          <NewsletterSignup />
+        </div>
       </div>
       {sidebarContent}
 

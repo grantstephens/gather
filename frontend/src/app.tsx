@@ -29,6 +29,8 @@ const Page = lazy(() => import('./pages/Page').then(m => ({ default: m.Page })))
 const Picks = lazy(() => import('./pages/Picks').then(m => ({ default: m.Picks })))
 const PicksPost = lazy(() => import('./pages/PicksPost').then(m => ({ default: m.PicksPost })))
 const Submitted = lazy(() => import('./pages/Submitted').then(m => ({ default: m.Submitted })))
+const NewsletterConfirm = lazy(() => import('./pages/Newsletter').then(m => ({ default: m.NewsletterConfirm })))
+const NewsletterUnsubscribe = lazy(() => import('./pages/Newsletter').then(m => ({ default: m.NewsletterUnsubscribe })))
 const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
 
 export function App() {
@@ -235,6 +237,8 @@ export function App() {
             <Picks path="/picks" />
             <PicksPost path="/picks/:slug" />
             <Submitted path="/submitted" />
+            <NewsletterConfirm path="/newsletter/confirm" />
+            <NewsletterUnsubscribe path="/newsletter/unsubscribe" />
             <NotFound default />
             <Page path="/:slug" />
           </Router>
