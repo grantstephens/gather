@@ -148,10 +148,12 @@ Gather publishes events as ActivityPub. Three kinds of actor exist, each for a d
 
 | Actor | Handle | Who follows it | What they receive |
 |---|---|---|---|
-| Instance | `events@your-domain` | Mastodon and other Fediverse apps | Every event, as a post |
+| Instance | `events@your-domain` | Mastodon and other Fediverse apps | Every event, as a post, a few days before it happens (see below) |
 | Relay | `relay@your-domain` | A Mobilizon instance (its admin) | Every event, as a Mobilizon event, listed in Explore |
 | Venue | `{venue-slug}@your-domain` | Mobilizon users | Events at that venue |
 | Town | `town-{town-slug}@your-domain` | Mobilizon users | Events at any approved venue in that town |
+
+**When events are posted to the Fediverse.** Not the moment they are published: each event is posted once, at 09:00 server time (`TZ`), a set number of days before it starts, so followers see it when it is useful. Set the number of days in **Admin > Settings > Advanced** (default 3; `0` posts as soon as an event is published). An event already inside that window posts straight away. Edits and cancellations go out immediately, but only for events followers have actually been sent; an event that was never posted and then cancelled sends nothing. Recurring events are timed from their next occurrence. Mobilizon (the relay, venue and town actors) still receives events as soon as they are published.
 
 Venue and town handles are the venue's slug (the last part of its `/place/...` URL) and `town-` plus the lower-cased, hyphenated town name (`town-pitlochry`). Only approved venues resolve, so the normal venue approval is what controls this. The actors are created the first time someone looks them up, so there is nothing to set up.
 

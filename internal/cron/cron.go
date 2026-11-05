@@ -31,6 +31,17 @@ func Register(app core.App, baseURL string) {
 		app.Logger().Info("ap-queue-cleanup: pruned exhausted records", "count", len(records))
 	})
 
+	// Post events to Fediverse followers N days before they happen (settings.ap_event_lead_days).
+	// Posting is stamped on the event, so a tick can never post one twice.
+	app.Cron().Add("ap-event-schedule", "*/15 * * * *", func() {
+		if baseURL == "" {
+			return
+		}
+		if _, err := activitypub.PostDueEvents(app, baseURL, time.Now(), time.Local); err != nil {
+			app.Logger().Error("ap-event-schedule: failed", "error", err)
+		}
+	})
+
 	// Announce this weekend's picks Mon-Wed; ap_announced flag prevents double-posting
 	app.Cron().Add("picks-ap-announcement", "0 9 * * 1-3", func() {
 		if baseURL == "" {

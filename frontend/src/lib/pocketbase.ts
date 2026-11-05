@@ -75,6 +75,7 @@ export interface Settings extends BaseModel {
   custom_css: string
   custom_head: string
   ap_enabled: boolean
+  ap_event_lead_days?: number
   ap_private_key: string
   ap_public_key: string
   favicon?: string

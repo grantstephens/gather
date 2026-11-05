@@ -15,6 +15,7 @@ interface FormData {
   custom_css: string
   custom_head: string
   ap_enabled: boolean
+  ap_event_lead_days: number
   umami_src: string
   umami_website_id: string
   umami_host_url: string
@@ -36,6 +37,7 @@ export function SettingsForm() {
     custom_css: '',
     custom_head: '',
     ap_enabled: false,
+    ap_event_lead_days: 3,
     umami_src: '',
     umami_website_id: '',
     umami_host_url: '',
@@ -65,6 +67,7 @@ export function SettingsForm() {
           custom_css: record.custom_css || '',
           custom_head: record.custom_head || '',
           ap_enabled: record.ap_enabled ?? false,
+          ap_event_lead_days: record.ap_event_lead_days ?? 3,
           umami_src: record.umami_src || '',
           umami_website_id: record.umami_website_id || '',
           umami_host_url: record.umami_host_url || '',
@@ -133,6 +136,7 @@ export function SettingsForm() {
         custom_css: settings.custom_css || '',
           custom_head: settings.custom_head || '',
         ap_enabled: settings.ap_enabled ?? false,
+        ap_event_lead_days: settings.ap_event_lead_days ?? 3,
         umami_src: settings.umami_src || '',
         umami_website_id: settings.umami_website_id || '',
         umami_host_url: settings.umami_host_url || '',
@@ -160,6 +164,7 @@ export function SettingsForm() {
       data.append('custom_css', formData.custom_css)
       data.append('custom_head', formData.custom_head)
       data.append('ap_enabled', formData.ap_enabled.toString())
+      data.append('ap_event_lead_days', String(formData.ap_event_lead_days))
       data.append('umami_src', formData.umami_src)
       data.append('umami_website_id', formData.umami_website_id)
       data.append('umami_host_url', formData.umami_host_url)
@@ -420,6 +425,20 @@ export function SettingsForm() {
               />
               Enable ActivityPub federation
             </label>
+          </div>
+
+          <div class="form-group">
+            <label for="ap_event_lead_days">Post events to the Fediverse this many days before</label>
+            <input
+              id="ap_event_lead_days"
+              type="number"
+              min={0}
+              max={60}
+              value={formData.ap_event_lead_days}
+              onInput={(e) => setFormData({ ...formData, ap_event_lead_days: Math.max(0, Math.min(60, Number((e.target as HTMLInputElement).value) || 0)) })}
+              disabled={saving}
+            />
+            <small class="field-hint">Posted once, at 09:00 server time, this many days before the event starts. Edits and cancellations go out straight away. 0 posts as soon as an event is published. Mobilizon is not affected.</small>
           </div>
 
           <div class="form-group">

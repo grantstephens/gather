@@ -218,3 +218,157 @@ func TestEventHooks_DraftIsNotFederated(t *testing.T) {
 		t.Errorf("queued = %v, want nothing", got)
 	}
 }
+
+// apFixture has one ordinary ActivityPub follower and the given lead time.
+func apFixture(t *testing.T, lead int) *tests.TestApp {
+	t.Helper()
+	app, err := testutil.NewApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings, _ := app.FindCollectionByNameOrId("settings")
+	s := core.NewRecord(settings)
+	s.Set("instance_name", "Test")
+	s.Set("ap_event_lead_days", lead)
+	if err := app.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	col, _ := app.FindCollectionByNameOrId("ap_followers")
+	f := core.NewRecord(col)
+	f.Set("actor_url", "https://remote.example/users/a")
+	f.Set("inbox_url", "https://remote.example/inbox")
+	if err := app.Save(f); err != nil {
+		t.Fatal(err)
+	}
+	hooks.RegisterEventHooks(app, "https://example.com")
+	return app
+}
+
+func saveEventAt(t *testing.T, app core.App, status string, start time.Time) *core.Record {
+	t.Helper()
+	col, _ := app.FindCollectionByNameOrId("events")
+	e := core.NewRecord(col)
+	e.Set("title", "Gig")
+	e.Set("start_datetime", start)
+	e.Set("status", status)
+	if err := app.Save(e); err != nil {
+		t.Fatal(err)
+	}
+	got, err := app.FindRecordById("events", e.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+// laterEdit simulates a separate, later request: let the background post
+// finish, then load the record fresh (a stale copy would write the old,
+// empty ap_posted_at back over the stamp).
+func laterEdit(t *testing.T, app core.App, id string) *core.Record {
+	t.Helper()
+	time.Sleep(300 * time.Millisecond)
+	rec, err := app.FindRecordById("events", id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rec
+}
+
+func posted(t *testing.T, app core.App, id string) bool {
+	t.Helper()
+	rec, err := app.FindRecordById("events", id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return !rec.GetDateTime("ap_posted_at").IsZero()
+}
+
+func TestEventHooks_FarOffEventIsNotPostedOnPublish(t *testing.T) {
+	app := apFixture(t, 3)
+	defer app.Cleanup()
+	ev := saveEventAt(t, app, "published", time.Now().Add(10*24*time.Hour))
+	if got := queuedTypes(t, app); len(got) != 0 {
+		t.Errorf("an event 10 days away must wait for its post time, queued %v", got)
+	}
+	if posted(t, app, ev.Id) {
+		t.Error("must not be marked posted")
+	}
+}
+
+func TestEventHooks_EventInsideTheWindowIsPostedOnPublish(t *testing.T) {
+	app := apFixture(t, 3)
+	defer app.Cleanup()
+	ev := saveEventAt(t, app, "published", time.Now().Add(36*time.Hour))
+	if got := queuedTypes(t, app); got["Create"] != 1 {
+		t.Errorf("want one Create, got %v", got)
+	}
+	if !posted(t, app, ev.Id) {
+		t.Error("should be marked posted")
+	}
+}
+
+func TestEventHooks_ZeroLeadPostsImmediately(t *testing.T) {
+	app := apFixture(t, 0)
+	defer app.Cleanup()
+	saveEventAt(t, app, "published", time.Now().Add(30*24*time.Hour))
+	if got := queuedTypes(t, app); got["Create"] != 1 {
+		t.Errorf("lead 0 keeps the old behaviour, got %v", got)
+	}
+}
+
+func TestEventHooks_EditOfUnpostedEventIsSilent(t *testing.T) {
+	app := apFixture(t, 3)
+	defer app.Cleanup()
+	ev := saveEventAt(t, app, "published", time.Now().Add(10*24*time.Hour))
+	ev.Set("title", "Renamed")
+	if err := app.Save(ev); err != nil {
+		t.Fatal(err)
+	}
+	if got := queuedTypes(t, app); len(got) != 0 {
+		t.Errorf("nothing to update on the Fediverse yet, queued %v", got)
+	}
+}
+
+func TestEventHooks_EditOfPostedEventSendsUpdate(t *testing.T) {
+	app := apFixture(t, 3)
+	defer app.Cleanup()
+	ev := saveEventAt(t, app, "published", time.Now().Add(36*time.Hour))
+	ev = laterEdit(t, app, ev.Id)
+	ev.Set("title", "Renamed")
+	if err := app.Save(ev); err != nil {
+		t.Fatal(err)
+	}
+	if got := queuedTypes(t, app); got["Update"] != 1 {
+		t.Errorf("want one Update, got %v", got)
+	}
+}
+
+func TestEventHooks_UnpublishingAPostedEventSendsDeleteAndClearsTheMarker(t *testing.T) {
+	app := apFixture(t, 3)
+	defer app.Cleanup()
+	ev := saveEventAt(t, app, "published", time.Now().Add(36*time.Hour))
+	ev = laterEdit(t, app, ev.Id)
+	ev.Set("status", "cancelled")
+	if err := app.Save(ev); err != nil {
+		t.Fatal(err)
+	}
+	if got := queuedTypes(t, app); got["Delete"] != 1 {
+		t.Errorf("want one Delete, got %v", got)
+	}
+	if posted(t, app, ev.Id) {
+		t.Error("followers no longer have it, so it must read as not posted")
+	}
+}
+
+func TestEventHooks_UnpublishingAnUnpostedEventIsSilent(t *testing.T) {
+	app := apFixture(t, 3)
+	defer app.Cleanup()
+	ev := saveEventAt(t, app, "published", time.Now().Add(10*24*time.Hour))
+	ev.Set("status", "cancelled")
+	if err := app.Save(ev); err != nil {
+		t.Fatal(err)
+	}
+	if got := queuedTypes(t, app); len(got) != 0 {
+		t.Errorf("followers never saw it, so no Delete: queued %v", got)
+	}
+}
