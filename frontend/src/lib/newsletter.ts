@@ -10,3 +10,25 @@ export interface NewsletterConfig {
   enabled: boolean
   privacy_url: string | null
 }
+
+export interface NewsletterAdminInfo {
+  enabled: boolean
+  toggle_on: boolean
+  mail_configured: boolean
+  confirmed: number
+  pending: number
+  timezone: string
+  send_day: number
+  send_time: string
+}
+
+export const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+// One plain-English line saying whether the newsletter will actually send, and
+// if not, why. Missing mail config outranks the toggle: it forces the feature off.
+export function statusLine(i: NewsletterAdminInfo): string {
+  if (!i.mail_configured) return "Mail isn't configured in PocketBase, so the newsletter is off."
+  if (!i.toggle_on) return 'Switched off.'
+  if (!i.send_time) return 'No send time set, so nothing will be sent.'
+  return `Sending every ${DAY_NAMES[i.send_day] ?? 'week'} at ${i.send_time} (${i.timezone}).`
+}

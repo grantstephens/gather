@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'preact/hooks'
 import { pb } from '../lib/pocketbase'
 import type { Settings } from '../lib/pocketbase'
+import { NewsletterAdminPanel, useNewsletterAdmin } from './NewsletterAdminPanel'
+import { DAY_NAMES } from '../lib/newsletter'
 import './SettingsForm.css'
 
 interface FormData {
@@ -16,6 +18,10 @@ interface FormData {
   umami_src: string
   umami_website_id: string
   umami_host_url: string
+  newsletter_enabled: boolean
+  newsletter_send_day: number
+  newsletter_send_time: string
+  newsletter_footer: string
 }
 
 export function SettingsForm() {
@@ -32,12 +38,17 @@ export function SettingsForm() {
     ap_enabled: false,
     umami_src: '',
     umami_website_id: '',
-    umami_host_url: ''
+    umami_host_url: '',
+    newsletter_enabled: false,
+    newsletter_send_day: 4,
+    newsletter_send_time: '',
+    newsletter_footer: ''
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const newsletter = useNewsletterAdmin()
 
   useEffect(() => {
     async function loadSettings() {
@@ -56,7 +67,11 @@ export function SettingsForm() {
           ap_enabled: record.ap_enabled ?? false,
           umami_src: record.umami_src || '',
           umami_website_id: record.umami_website_id || '',
-          umami_host_url: record.umami_host_url || ''
+          umami_host_url: record.umami_host_url || '',
+          newsletter_enabled: record.newsletter_enabled ?? false,
+          newsletter_send_day: record.newsletter_send_day ?? 4,
+          newsletter_send_time: record.newsletter_send_time || '',
+          newsletter_footer: record.newsletter_footer || ''
         })
       } catch (err: any) {
         if (err.status === 404) {
@@ -120,7 +135,11 @@ export function SettingsForm() {
         ap_enabled: settings.ap_enabled ?? false,
         umami_src: settings.umami_src || '',
         umami_website_id: settings.umami_website_id || '',
-        umami_host_url: settings.umami_host_url || ''
+        umami_host_url: settings.umami_host_url || '',
+        newsletter_enabled: settings.newsletter_enabled ?? false,
+        newsletter_send_day: settings.newsletter_send_day ?? 4,
+        newsletter_send_time: settings.newsletter_send_time || '',
+        newsletter_footer: settings.newsletter_footer || ''
       })
     }
     setError(null)
@@ -144,6 +163,10 @@ export function SettingsForm() {
       data.append('umami_src', formData.umami_src)
       data.append('umami_website_id', formData.umami_website_id)
       data.append('umami_host_url', formData.umami_host_url)
+      data.append('newsletter_enabled', formData.newsletter_enabled.toString())
+      data.append('newsletter_send_day', formData.newsletter_send_day.toString())
+      data.append('newsletter_send_time', formData.newsletter_send_time)
+      data.append('newsletter_footer', formData.newsletter_footer)
 
       if (formData.favicon) {
         data.append('favicon', formData.favicon)
@@ -159,6 +182,7 @@ export function SettingsForm() {
       setSettings(result)
       setFormData({ ...formData, favicon: null })
       setSuccess(true)
+      newsletter.reload()
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
       setError('Failed to save settings. Please try again.')
@@ -277,6 +301,65 @@ export function SettingsForm() {
               />
               Require moderation for new events
             </label>
+          </div>
+        </section>
+
+        {/* Newsletter Section */}
+        <section class="settings-section">
+          <h2>Weekly picks newsletter</h2>
+
+          <NewsletterAdminPanel info={newsletter.info} />
+
+          <div class="form-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={formData.newsletter_enabled}
+                onChange={(e) => setFormData({ ...formData, newsletter_enabled: (e.target as HTMLInputElement).checked })}
+                disabled={saving}
+              />
+              Email the weekend picks to subscribers
+            </label>
+            <small class="field-hint">Only works while PocketBase mail (SMTP and sender address) is configured. If there is no picks post for the coming weekend, nothing is sent.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="newsletter_send_day">Send on</label>
+            <select
+              id="newsletter_send_day"
+              value={formData.newsletter_send_day}
+              onChange={(e) => setFormData({ ...formData, newsletter_send_day: Number((e.target as HTMLSelectElement).value) })}
+              disabled={saving}
+            >
+              {DAY_NAMES.map((name, i) => <option key={i} value={i}>{name}</option>)}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="newsletter_send_time">At</label>
+            <input
+              type="time"
+              id="newsletter_send_time"
+              value={formData.newsletter_send_time}
+              onInput={(e) => setFormData({ ...formData, newsletter_send_time: (e.target as HTMLInputElement).value })}
+              disabled={saving}
+            />
+            <small class="field-hint">
+              Server time zone{newsletter.info ? <>: <code>{newsletter.info.timezone}</code></> : ''}. It comes from the <code>TZ</code> environment variable. If a picks post goes up after this time, that week is skipped.
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="newsletter_footer">Email footer (optional)</label>
+            <textarea
+              id="newsletter_footer"
+              rows={3}
+              value={formData.newsletter_footer}
+              onInput={(e) => setFormData({ ...formData, newsletter_footer: (e.target as HTMLTextAreaElement).value })}
+              disabled={saving}
+              placeholder="Your organisation name and contact or postal address"
+            />
+            <small class="field-hint">Shown at the bottom of every email. Some regions expect a contact address in bulk mail. Publish a page with the slug <code>privacy</code> and a privacy policy link is added automatically.</small>
           </div>
         </section>
 
