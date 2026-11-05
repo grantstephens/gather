@@ -34,3 +34,20 @@ export function statusLine(i: NewsletterAdminInfo): string {
   if (!i.send_time) return 'No send time set, so nothing will be sent.'
   return `Sending every ${DAY_NAMES[i.send_day] ?? 'week'} at ${i.send_time} (${i.timezone}).`
 }
+
+/** How many events the mobile list shows before the signup card appears. */
+export const MOBILE_SIGNUP_AFTER = 10
+
+/**
+ * Index of the day (in a list of per-day event counts) after which the mobile
+ * signup card goes: the first day that takes the running total to `threshold`,
+ * or the last day when there are fewer events than that. -1 when there are no days.
+ */
+export function signupSlotIndex(dayCounts: number[], threshold: number): number {
+  let total = 0
+  for (let i = 0; i < dayCounts.length; i++) {
+    total += dayCounts[i]
+    if (total >= threshold) return i
+  }
+  return dayCounts.length - 1
+}

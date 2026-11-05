@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { pb } from '../lib/pocketbase'
 import type { NewsletterConfig } from '../lib/newsletter'
 import './NewsletterSignup.css'
+
+// Home mounts two copies (sidebar + mobile slot), so input ids must be unique.
+let instances = 0
 
 type Status = 'idle' | 'sending' | 'done' | 'error'
 
@@ -9,6 +12,7 @@ type Status = 'idle' | 'sending' | 'done' | 'error'
 // sidebar) or at the end of the page (mobile, where the sidebar is hidden).
 // Renders nothing unless the instance has the newsletter switched on.
 export function NewsletterSignup() {
+  const inputId = useRef(`newsletter-email-${++instances}`).current
   const [config, setConfig] = useState<NewsletterConfig | null>(null)
   const [email, setEmail] = useState('')
   const [website, setWebsite] = useState('') // honeypot: humans never see or fill this
@@ -54,9 +58,9 @@ export function NewsletterSignup() {
       ) : (
         <form onSubmit={onSubmit}>
           <div class="form-group">
-            <label class="newsletter-label" for="newsletter-email">Email address</label>
+            <label class="newsletter-label" for={inputId}>Email address</label>
             <input
-              id="newsletter-email"
+              id={inputId}
               type="email"
               required
               placeholder="you@example.com"

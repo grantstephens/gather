@@ -13,7 +13,9 @@
 /* Mobile-only copy of the newsletter signup (the sidebar one is hidden there). */
 .newsletter-mobile { display: none; }
 @media (max-width: 900px) {
-  .newsletter-mobile { display: block; margin-top: var(--space-6); }
+  .newsletter-mobile { display: block; margin: var(--space-6) 0; }
+  /* The sidebar's own rule is overridden further down, so it still renders on phones. */
+  .home-sidebar .newsletter-signup { display: none; }
 }
 
 /* ── Page header ──────────────────────────────── */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { tokenFromHash } from './newsletter'
+import { signupSlotIndex, tokenFromHash } from './newsletter'
 
 describe('tokenFromHash', () => {
   it('reads the token from the URL fragment', () => {
@@ -47,5 +47,18 @@ describe('statusLine', () => {
   })
   it('reports missing mail before the localhost warning', () => {
     expect(statusLine(info({ mail_configured: false, base_url_local: true, enabled: false }))).toMatch(/mail isn't configured/i)
+  })
+})
+
+describe('signupSlotIndex', () => {
+  it('goes after the day that takes the running total past the threshold', () => {
+    expect(signupSlotIndex([3, 4, 5, 2], 10)).toBe(2) // 3,7,12 -> after day index 2
+    expect(signupSlotIndex([10, 1], 10)).toBe(0)
+  })
+  it('goes at the end when there are fewer events than the threshold', () => {
+    expect(signupSlotIndex([2, 3], 10)).toBe(1)
+  })
+  it('is -1 with no days', () => {
+    expect(signupSlotIndex([], 10)).toBe(-1)
   })
 })

@@ -4,6 +4,7 @@ import { pb, Event, Tag, PicksRecord } from '../lib/pocketbase'
 import { usePageTitle } from '../lib/title'
 import { MiniCalendar } from '../components/MiniCalendar'
 import { NewsletterSignup } from '../components/NewsletterSignup'
+import { MOBILE_SIGNUP_AFTER } from '../lib/newsletter'
 import { tagStyle } from '../lib/color'
 import { EventTimeline } from '../components/EventTimeline'
 import { SkeletonTimeline } from '../components/Skeleton'
@@ -424,17 +425,17 @@ export function Home(_props: Props) {
             ))}
           </div>
         )}
-        {/* The sidebar is hidden below 900px, so phones get the signup here, above the
-            list: placed after the infinite-scroll sentinel it is never reached. */}
-        <div class="newsletter-mobile">
-          <NewsletterSignup />
-        </div>
         {events.length === 0 ? (
           <p class="no-events">
             {hasActiveFilters ? 'No events matching your filters' : 'No upcoming events'}
           </p>
         ) : (
-          <EventTimeline events={events} />
+          <EventTimeline
+            events={events}
+            // The sidebar is hidden below 900px, so phones get the signup inside the
+            // list, after the first few events (not above them: too eager).
+            inlineSlot={{ afterEvents: MOBILE_SIGNUP_AFTER, node: <div class="newsletter-mobile"><NewsletterSignup /></div> }}
+          />
         )}
         <div ref={sentinelRef} />
         {loadingMore && <p class="loading-more">Loading more events...</p>}
