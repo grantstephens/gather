@@ -12,7 +12,7 @@ import (
 )
 
 // NewTestApp creates a test PocketBase app instance with migrations
-func NewTestApp(t *testing.T) *tests.TestApp {
+func NewTestApp(t testing.TB) *tests.TestApp {
 	app, err := tests.NewTestApp()
 	if err != nil {
 		t.Fatalf("Failed to create test app: %v", err)
