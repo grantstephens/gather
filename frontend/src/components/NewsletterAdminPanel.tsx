@@ -29,8 +29,8 @@ export function NewsletterAdminPanel({ info }: { info: NewsletterAdminInfo | nul
     setTesting(true)
     setResult('')
     try {
-      await pb.send('/api/newsletter/test', { method: 'POST', requestKey: null })
-      setResult('Test email sent to your address.')
+      const res = await pb.send<{ post?: string }>('/api/newsletter/test', { method: 'POST', requestKey: null })
+      setResult(res.post ? `Test email sent to your address, previewing “${res.post}”.` : 'Test email sent to your address.')
     } catch (err: any) {
       setResult(err?.response?.message || 'Could not send the test email.')
     } finally {

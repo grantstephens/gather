@@ -194,7 +194,7 @@ func TestSendTestOnlyToRecipient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := SendTest(f.app, "admin@example.com", testBase); err != nil {
+	if _, err := SendTest(f.app, "admin@example.com", testBase, f.now); err != nil {
 		t.Fatal(err)
 	}
 	if f.app.TestMailer.TotalSend() != 1 {
@@ -219,7 +219,46 @@ func TestSendTestWithNoPicks(t *testing.T) {
 	app := api.NewTestApp(t)
 	defer app.Cleanup()
 	enable(t, app)
-	if err := SendTest(app, "admin@example.com", testBase); err == nil {
+	if _, err := SendTest(app, "admin@example.com", testBase, time.Now()); err == nil {
 		t.Error("expected an error when there are no picks posts")
+	}
+}
+
+func testSubject(t *testing.T, f *tickFixture) string {
+	t.Helper()
+	f.app.TestMailer.Reset()
+	if _, err := SendTest(f.app, "admin@example.com", testBase, f.now); err != nil {
+		t.Fatal(err)
+	}
+	return f.app.TestMailer.LastMessage().Subject
+}
+
+func TestSendTestPreviewsThePostTheRealSendWouldPick(t *testing.T) {
+	f := newTickFixture(t) // "weekend-picks" is this weekend's eligible post
+	defer f.app.Cleanup()
+	farEvent := mkEvent(t, f.app, f.now.AddDate(0, 0, 40), time.Time{}, "published", "")
+	mkPick(t, f.app, pickSpec{slug: "far-future-picks", start: "2026-12-15", events: []string{farEvent}})
+
+	if got := testSubject(t, f); got != "[Test] weekend-picks" {
+		t.Errorf("subject = %q, want the eligible weekend post, not the furthest-future one", got)
+	}
+}
+
+func TestSendTestFallsBackToNearestUpcomingPost(t *testing.T) {
+	f := newTickFixture(t)
+	defer f.app.Cleanup()
+	// Hide the weekend post so nothing is eligible this week.
+	wp := f.pick(t)
+	wp.Set("hidden", true)
+	if err := f.app.SaveNoValidate(wp); err != nil {
+		t.Fatal(err)
+	}
+	nearEv := mkEvent(t, f.app, f.now.AddDate(0, 0, 16), time.Time{}, "published", "")
+	farEv := mkEvent(t, f.app, f.now.AddDate(0, 0, 40), time.Time{}, "published", "")
+	mkPick(t, f.app, pickSpec{slug: "far-future-picks", start: "2026-12-15", events: []string{farEv}})
+	mkPick(t, f.app, pickSpec{slug: "near-picks", start: "2026-11-20", events: []string{nearEv}})
+
+	if got := testSubject(t, f); got != "[Test] near-picks" {
+		t.Errorf("subject = %q, want the nearest upcoming post", got)
 	}
 }

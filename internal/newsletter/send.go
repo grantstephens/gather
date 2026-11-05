@@ -139,25 +139,50 @@ func SendPick(app core.App, pick *core.Record, baseURL string, delay time.Durati
 	return sent, nil
 }
 
-// SendTest emails the latest non-hidden picks post, with all of its events, to
-// one address. Nothing is stamped.
-func SendTest(app core.App, to, baseURL string) error {
-	picks, err := app.FindRecordsByFilter("picks", "hidden = false", "-start_date", 1, 0)
+// testPick chooses which post a test email previews: the one the real send
+// would pick; failing that the nearest upcoming post; failing that the most
+// recent one. Never "the furthest-future post", which is what a plain
+// newest-first sort would give.
+func testPick(app core.App, now time.Time) (*core.Record, error) {
+	if p, err := EligiblePick(app, now); err != nil || p != nil {
+		return p, err
+	}
+	today := now.Format("2006-01-02") + " 00:00:00"
+	upcoming, err := app.FindRecordsByFilter("picks", "hidden = false && start_date >= {:today}", "start_date", 1, 0, dbx.Params{"today": today})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if len(picks) == 0 {
-		return errors.New("no picks posts to send")
+	if len(upcoming) > 0 {
+		return upcoming[0], nil
 	}
-	pick := picks[0]
+	latest, err := app.FindRecordsByFilter("picks", "hidden = false", "-start_date", 1, 0)
+	if err != nil {
+		return nil, err
+	}
+	if len(latest) == 0 {
+		return nil, errors.New("no picks posts to send")
+	}
+	return latest[0], nil
+}
+
+// SendTest emails a preview (see testPick), with all of the post's events, to
+// one address and returns the post it used. Nothing is stamped.
+func SendTest(app core.App, to, baseURL string, now time.Time) (*core.Record, error) {
+	pick, err := testPick(app, now)
+	if err != nil {
+		return nil, err
+	}
 	var events []*core.Record
 	if ids := pick.GetStringSlice("events"); len(ids) > 0 {
 		events, err = app.FindRecordsByIds("events", ids)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	msg := buildMessage(app, NewCampaign(app, pick, events, baseURL, time.Now(), "test"), to)
+	msg := buildMessage(app, NewCampaign(app, pick, events, baseURL, now, "test"), to)
 	msg.Subject = "[Test] " + msg.Subject
-	return app.NewMailClient().Send(msg)
+	if err := app.NewMailClient().Send(msg); err != nil {
+		return nil, err
+	}
+	return pick, nil
 }

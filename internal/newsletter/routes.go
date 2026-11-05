@@ -117,10 +117,11 @@ func Register(se *core.ServeEvent, baseURL string) {
 		if email == "" {
 			return re.BadRequestError("Your account has no email address.", nil)
 		}
-		if err := SendTest(app, email, baseURL); err != nil {
+		pick, err := SendTest(app, email, baseURL, time.Now())
+		if err != nil {
 			return re.BadRequestError("Couldn't send the test email: "+err.Error(), nil)
 		}
-		return re.JSON(http.StatusOK, map[string]string{"status": "sent"})
+		return re.JSON(http.StatusOK, map[string]string{"status": "sent", "post": pick.GetString("title")})
 	})
 }
 
