@@ -8,6 +8,15 @@ let instances = 0
 
 type Status = 'idle' | 'sending' | 'done' | 'error'
 
+// Standalone placement for the bottom of event and picks pages.
+export function NewsletterBand() {
+  return (
+    <div class="newsletter-band">
+      <NewsletterSignup />
+    </div>
+  )
+}
+
 // Renders its own sidebar-section so it can sit under the calendar (desktop
 // sidebar) or at the end of the page (mobile, where the sidebar is hidden).
 // Renders nothing unless the instance has the newsletter switched on.

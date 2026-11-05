@@ -38,3 +38,28 @@
   color: var(--color-text-muted);
 }
 .newsletter-note a { color: inherit; text-decoration: underline; }
+
+/* Bottom-of-page placement (event and picks pages). */
+.newsletter-band {
+  max-width: 460px;
+  margin: var(--space-8, 2rem) auto 0;
+}
+
+/* Self-contained card: the shared .sidebar-section styles live in Home.css,
+   which isn't loaded on event/picks pages (CSS is split per page). */
+.newsletter-signup {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.newsletter-signup .sidebar-section-title {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
