@@ -19,22 +19,35 @@ func TestUmamiTarget(t *testing.T) {
 	app := api.NewTestApp(t)
 	defer app.Cleanup()
 
-	if ep, id := umamiTarget(app); ep != "" || id != "" {
+	if ep, id := umamiTarget(app, testBase); ep != "" || id != "" {
 		t.Errorf("no settings: want empty, got %q %q", ep, id)
 	}
 	setNewsletterSettings(t, app, true, map[string]any{
 		"umami_src":        "https://stats.example.com/script.js",
 		"umami_website_id": "site-1",
 	})
-	if ep, id := umamiTarget(app); ep != "https://stats.example.com" || id != "site-1" {
+	if ep, id := umamiTarget(app, testBase); ep != "https://stats.example.com" || id != "site-1" {
 		t.Errorf("fallback to umami_src origin: got %q %q", ep, id)
 	}
 	setNewsletterSettings(t, app, true, map[string]any{"umami_host_url": "https://umami.internal/"})
-	if ep, _ := umamiTarget(app); ep != "https://umami.internal" {
+	if ep, _ := umamiTarget(app, testBase); ep != "https://umami.internal" {
 		t.Errorf("umami_host_url must win and lose its trailing slash: got %q", ep)
 	}
+	// Proxy setups use relative paths (the admin form says "/stats"): resolve them against this site.
+	setNewsletterSettings(t, app, true, map[string]any{"umami_host_url": "/stats"})
+	if ep, _ := umamiTarget(app, testBase); ep != testBase+"/stats" {
+		t.Errorf("relative umami_host_url: got %q, want %q", ep, testBase+"/stats")
+	}
+	setNewsletterSettings(t, app, true, map[string]any{"umami_host_url": "", "umami_src": "/stats/script.js"})
+	if ep, _ := umamiTarget(app, testBase); ep != testBase+"/stats" {
+		t.Errorf("relative umami_src: got %q, want %q", ep, testBase+"/stats")
+	}
+	setNewsletterSettings(t, app, true, map[string]any{"umami_src": "/script.js"})
+	if ep, _ := umamiTarget(app, testBase); ep != testBase {
+		t.Errorf("root-relative umami_src: got %q, want %q", ep, testBase)
+	}
 	setNewsletterSettings(t, app, true, map[string]any{"umami_website_id": ""})
-	if ep, id := umamiTarget(app); ep != "" || id != "" {
+	if ep, id := umamiTarget(app, testBase); ep != "" || id != "" {
 		t.Errorf("no website id: want empty, got %q %q", ep, id)
 	}
 }

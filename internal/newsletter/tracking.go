@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -31,16 +32,31 @@ var (
 
 // umamiTarget returns where to send server-side events and the website id, or
 // empty strings when Umami isn't configured. The host defaults to the origin of
-// the tracker script, exactly like the tracker itself does.
-func umamiTarget(app core.App) (endpoint, websiteID string) {
+// the tracker script, exactly like the tracker itself. Reverse-proxy setups use
+// relative paths (e.g. umami_host_url "/stats"); those are resolved against
+// this site's own base URL.
+func umamiTarget(app core.App, baseURL string) (endpoint, websiteID string) {
 	rec, err := app.FindFirstRecordByFilter("settings", "")
 	if err != nil {
 		return "", ""
 	}
 	websiteID = strings.TrimSpace(rec.GetString("umami_website_id"))
-	endpoint = strings.TrimRight(strings.TrimSpace(rec.GetString("umami_host_url")), "/")
-	if endpoint == "" {
-		endpoint = seo.OriginFromURL(rec.GetString("umami_src"))
+	hostURL := strings.TrimRight(strings.TrimSpace(rec.GetString("umami_host_url")), "/")
+	src := strings.TrimSpace(rec.GetString("umami_src"))
+	switch {
+	case strings.HasPrefix(hostURL, "/"):
+		endpoint = baseOf(baseURL) + hostURL
+	case hostURL != "":
+		endpoint = hostURL
+	case strings.HasPrefix(src, "/") && !strings.HasPrefix(src, "//"):
+		// "/stats/script.js" -> "/stats"; "/script.js" -> the site root
+		dir := path.Dir(src)
+		if dir == "/" || dir == "." {
+			dir = ""
+		}
+		endpoint = baseOf(baseURL) + dir
+	default:
+		endpoint = seo.OriginFromURL(src)
 	}
 	if endpoint == "" || websiteID == "" {
 		return "", ""
@@ -102,7 +118,7 @@ func PixelHandler(app core.App, baseURL string) func(*core.RequestEvent) error {
 			// The DB lookup happens here, before returning, so no goroutine ever
 			// touches the app afterwards.
 			if pick, err := app.FindRecordById("picks", id); err == nil && !pick.GetDateTime("newsletter_sent_at").IsZero() {
-				if endpoint, websiteID := umamiTarget(app); endpoint != "" {
+				if endpoint, websiteID := umamiTarget(app, baseURL); endpoint != "" {
 					slug := pick.GetString("slug")
 					select {
 					case openSem <- struct{}{}:
