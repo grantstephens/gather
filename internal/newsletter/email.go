@@ -139,7 +139,7 @@ func RenderCampaign(c Campaign) (subject, htmlBody, textBody string, headers map
 	}
 	base := baseOf(c.BaseURL)
 	rewrite := func(dest string) string { return addUTM(dest, c.BaseURL, slug) }
-	blurbHTML := seo.RenderMarkdownHTMLWith(c.Pick.GetString("blurb"), c.BaseURL, rewrite)
+	blurbHTML := styleBlurb(seo.RenderMarkdownHTMLWith(c.Pick.GetString("blurb"), c.BaseURL, rewrite))
 	webURL := addUTM(base+"/picks/"+slug, c.BaseURL, slug)
 	unsubPage := UnsubscribePageURL(c.BaseURL, c.UnsubscribeToken)
 
@@ -159,16 +159,17 @@ func RenderCampaign(c Campaign) (subject, htmlBody, textBody string, headers map
 		evTitle := oneLine(ev.GetString("title"))
 
 		var cards strings.Builder
-		cards.WriteString(`<tr><td style="padding:12px 0;border-top:1px solid #e2e8f0;"><table width="100%" cellpadding="0" cellspacing="0"><tr>`)
+		cards.WriteString(`<tr><td style="padding:8px 0 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:12px;border-collapse:separate;overflow:hidden;background:#ffffff;"><tr>`)
 		if thumb != "" {
-			fmt.Fprintf(&cards, `<td width="120" valign="top" style="padding-right:12px;"><a href="%s"><img src="%s" width="120" alt="" style="display:block;border-radius:6px;max-width:120px;height:auto;"></a></td>`, html.EscapeString(link), html.EscapeString(thumb))
+			fmt.Fprintf(&cards, `<td class="ec-img" width="170" valign="top" style="width:170px;background:#f1f5f9;"><a href="%s"><img src="%s" width="170" alt="" style="display:block;width:170px;max-width:100%%;height:auto;border:0;"></a></td>`, html.EscapeString(link), html.EscapeString(thumb))
 		}
-		fmt.Fprintf(&cards, `<td valign="top"><a href="%s" style="font-size:16px;font-weight:600;color:#0f766e;text-decoration:none;">%s</a>`, html.EscapeString(link), html.EscapeString(evTitle))
+		cards.WriteString(`<td class="ec-body" valign="middle" style="padding:16px 20px;">`)
 		if when != "" {
-			fmt.Fprintf(&cards, `<div style="font-size:14px;color:#334155;margin-top:2px;">%s</div>`, html.EscapeString(when))
+			fmt.Fprintf(&cards, `<div style="font-size:12px;font-weight:600;color:#0d9488;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">%s</div>`, html.EscapeString(when))
 		}
+		fmt.Fprintf(&cards, `<a href="%s" %s">%s</a>`, html.EscapeString(link), cardTitleStyle, html.EscapeString(evTitle))
 		if place != "" {
-			fmt.Fprintf(&cards, `<div style="font-size:14px;color:#64748b;">%s</div>`, html.EscapeString(place))
+			fmt.Fprintf(&cards, `<div style="font-size:12px;color:#5c6b7f;margin-top:4px;">%s</div>`, html.EscapeString(place))
 		}
 		cards.WriteString(`</td></tr></table></td></tr>`)
 		cardRows[ev.Id] = cards.String()
@@ -200,22 +201,23 @@ func RenderCampaign(c Campaign) (subject, htmlBody, textBody string, headers map
 	}
 
 	htmlBody = fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"></head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><style>@media only screen and (max-width:480px){.ec-img,.ec-body{display:block!important;width:100%%!important;box-sizing:border-box}.ec-img img{width:100%%!important}}</style></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,system-ui,-apple-system,sans-serif;color:#0f172a;">
 <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 12px;"><tr><td align="center">
 <table width="100%%" cellpadding="0" cellspacing="0" style="max-width:600px;">
-<tr><td style="background:#0d9488;border-radius:8px 8px 0 0;padding:20px 28px;"><span style="font-size:20px;font-weight:700;color:#ffffff;">%s</span></td></tr>
+<tr><td style="background:#ffffff;border:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;border-radius:12px 12px 0 0;padding:20px 28px;"><a href="%s" style="font-size:22px;font-weight:800;letter-spacing:-0.04em;line-height:1;color:#0f172a;text-decoration:none;">%s</a></td></tr>
 <tr><td style="background:#ffffff;padding:28px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;">
-<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;">%s</h1>
-<div style="font-size:15px;line-height:1.6;">%s</div>
-<table width="100%%" cellpadding="0" cellspacing="0" style="margin-top:20px;">%s</table>
-<p style="margin:24px 0 0;font-size:14px;"><a href="%s" style="color:#0f766e;">View on the web</a></p>
+<h1 style="margin:0 0 16px;font-size:28px;font-weight:700;letter-spacing:-0.025em;line-height:1.25;color:#0f172a;">%s</h1>
+<div style="font-size:16px;line-height:1.7;color:#475569;">%s</div>
+<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="margin-top:8px;">%s</table>
+<p style="margin:24px 0 0;font-size:14px;"><a href="%s" style="color:#0d9488;text-decoration:underline;">View on the web</a></p>
 </td></tr>
-<tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;padding:16px 28px;font-size:12px;line-height:1.6;color:#64748b;">%s</td></tr>
+<tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:16px 28px;font-size:12px;line-height:1.6;color:#64748b;">%s</td></tr>
 </table></td></tr></table>
 <img src="%s/newsletter/open/%s.gif" width="1" height="1" alt="" style="display:block;border:0;">
 </body></html>`,
-		html.EscapeString(site),
+		html.EscapeString(rewrite(base+"/")),
+		wordmarkHTML(site),
 		html.EscapeString(title),
 		blurbHTML,
 		cards.String(),
@@ -289,11 +291,61 @@ func weaveCards(blurbHTML string, c Campaign, cardRows map[string]string) (strin
 				continue
 			}
 			if row, ok := leftover[ev.Id]; ok {
-				fmt.Fprintf(&out, `<table width="100%%" cellpadding="0" cellspacing="0" style="margin:4px 0 16px;">%s</table>`, row)
+				fmt.Fprintf(&out, `<table width="100%%" cellpadding="0" cellspacing="0" style="margin:0;">%s</table>`, row)
 				delete(leftover, ev.Id)
 			}
 		}
 	}
 	out.WriteString(blurbHTML[prev:])
 	return out.String(), leftover
+}
+
+// cardTitleStyle is the inline style for an event card's title link.
+const cardTitleStyle = `style="font-size:20px;font-weight:700;letter-spacing:-0.02em;line-height:1.35;color:#0f172a;text-decoration:none;`
+
+var (
+	blurbTagRe = regexp.MustCompile(`(?i)<(p|h[1-6]|a|strong|ul|ol|li|blockquote)(\s[^>]*)?>`)
+)
+
+// styleBlurb inlines the site's typography into the blurb's HTML (email
+// clients ignore our stylesheet): larger lead paragraph, bold headings with
+// room above, accent-coloured underlined links.
+func styleBlurb(h string) string {
+	firstP := true
+	return blurbTagRe.ReplaceAllStringFunc(h, func(tag string) string {
+		m := blurbTagRe.FindStringSubmatch(tag)
+		name, attrs := strings.ToLower(m[1]), m[2]
+		var st string
+		switch name {
+		case "p":
+			st = "margin:0 0 16px;"
+			if firstP {
+				st += "font-size:18px;"
+				firstP = false
+			}
+		case "h1", "h2", "h3", "h4", "h5", "h6":
+			st = "margin:32px 0 8px;font-size:20px;font-weight:700;line-height:1.3;color:#0f172a;"
+		case "a":
+			st = "color:#0d9488;text-decoration:underline;"
+		case "strong":
+			st = "color:#0f172a;font-weight:600;"
+		case "ul", "ol":
+			st = "margin:0 0 16px;padding-left:24px;"
+		case "li":
+			st = "margin:0 0 4px;"
+		case "blockquote":
+			st = "margin:0 0 16px;padding-left:16px;border-left:3px solid #e2e8f0;"
+		}
+		return "<" + name + attrs + ` style="` + st + `">`
+	})
+}
+
+// wordmarkHTML renders the site name like the site header does: a teal dot
+// after the first word ("Perthshire.Events").
+func wordmarkHTML(name string) string {
+	dot := `<span style="color:#0d9488;">.</span>`
+	if i := strings.Index(name, " "); i > 0 {
+		return html.EscapeString(name[:i]) + dot + html.EscapeString(name[i:])
+	}
+	return html.EscapeString(name) + dot
 }

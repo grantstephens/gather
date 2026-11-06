@@ -220,7 +220,7 @@ func TestRenderCampaignSize(t *testing.T) {
 // cardTitleMarker matches an event card's title link (the blurb's own links
 // don't carry this style), so tests can find where each card landed.
 func cardTitleMarker(title string) string {
-	return `font-size:16px;font-weight:600;color:#0f766e;text-decoration:none;">` + title + `</a>`
+	return cardTitleStyle + `">` + title + `</a>`
 }
 
 // inlineFixture builds a campaign whose events are titled Alpha and Beta and
