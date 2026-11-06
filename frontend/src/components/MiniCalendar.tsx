@@ -5,9 +5,11 @@ interface Props {
   eventDates?: Map<string, string[]>  // date → unique tag colors ('' = default)
   selectedDate?: string               // Currently selected date in YYYY-MM-DD format
   onDateSelect?: (date: string) => void
+  weekStartsOn?: 'sunday' | 'monday'
 }
 
-const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const SUNDAY_FIRST = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const MONDAY_FIRST = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
@@ -20,7 +22,12 @@ function formatDate(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-export function MiniCalendar({ eventDates, selectedDate, onDateSelect }: Props) {
+export function MiniCalendar({
+  eventDates,
+  selectedDate,
+  onDateSelect,
+  weekStartsOn = 'sunday',
+}: Props) {
   const today = new Date()
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
 
@@ -31,8 +38,12 @@ export function MiniCalendar({ eventDates, selectedDate, onDateSelect }: Props) 
   const firstDayOfMonth = new Date(year, month, 1)
   const lastDayOfMonth = new Date(year, month + 1, 0)
   const daysInMonth = lastDayOfMonth.getDate()
-  const startingDayOfWeek = firstDayOfMonth.getDay()
-
+  const weekStartOffset = weekStartsOn === 'monday' ? 1 : 0
+  const startingDayOfWeek =
+    (firstDayOfMonth.getDay() - weekStartOffset + 7) % 7
+  const daysOfWeek =
+    weekStartsOn === 'monday' ? MONDAY_FIRST : SUNDAY_FIRST
+  
   // Generate calendar days
   const days: (number | null)[] = []
 
@@ -85,8 +96,10 @@ export function MiniCalendar({ eventDates, selectedDate, onDateSelect }: Props) 
       </div>
 
       <div class="calendar-grid">
-        {DAYS.map(day => (
-          <div key={day} class="calendar-day-name">{day}</div>
+        {daysOfWeek.map(day => (
+          <div key={day} class="calendar-day-name">
+            {day}
+          </div>
         ))}
 
         {days.map((day, index) => {
