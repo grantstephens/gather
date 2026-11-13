@@ -1,15 +1,14 @@
 import { useState } from 'preact/hooks'
 import './MiniCalendar.css'
+import { leadingBlanks, weekdayLabels, type WeekStart } from '../lib/week'
 
 interface Props {
   eventDates?: Map<string, string[]>  // date → unique tag colors ('' = default)
   selectedDate?: string               // Currently selected date in YYYY-MM-DD format
   onDateSelect?: (date: string) => void
-  weekStartsOn?: 'sunday' | 'monday'
+  weekStartsOn?: WeekStart
 }
 
-const SUNDAY_FIRST = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
-const MONDAY_FIRST = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
@@ -38,12 +37,9 @@ export function MiniCalendar({
   const firstDayOfMonth = new Date(year, month, 1)
   const lastDayOfMonth = new Date(year, month + 1, 0)
   const daysInMonth = lastDayOfMonth.getDate()
-  const weekStartOffset = weekStartsOn === 'monday' ? 1 : 0
-  const startingDayOfWeek =
-    (firstDayOfMonth.getDay() - weekStartOffset + 7) % 7
-  const daysOfWeek =
-    weekStartsOn === 'monday' ? MONDAY_FIRST : SUNDAY_FIRST
-  
+  const startingDayOfWeek = leadingBlanks(firstDayOfMonth.getDay(), weekStartsOn)
+  const daysOfWeek = weekdayLabels(weekStartsOn)
+
   // Generate calendar days
   const days: (number | null)[] = []
 

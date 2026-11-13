@@ -321,7 +321,7 @@ export function SettingsForm() {
                 onChange={(e) => setFormData({ ...formData, monday_as_start_of_week: (e.target as HTMLInputElement).checked })}
                 disabled={saving}
               />
-              Set monday as starting day of week
+              Week starts on Monday (calendar)
             </label>
           </div>
         </section>
