@@ -6,6 +6,13 @@ on:
       - main
   release:
     types: [published]
+  # Dependabot PRs are auto-merged with the workflow token, and GitHub does not
+  # start push workflows for pushes made with that token, so those merges never
+  # republish :latest. A weekly rebuild catches them (and picks up base-image
+  # security updates). Dependabot runs on Mondays.
+  schedule:
+    - cron: "0 6 * * 2"
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
