@@ -51,7 +51,7 @@ export function PlaceSearch({ value, onChange, onRawSelect }: Props) {
   const [manualAddress, setManualAddress] = useState('')
   const [manualLat, setManualLat] = useState('')
   const [manualLon, setManualLon] = useState('')
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const search = useCallback(async (q: string) => {

@@ -303,9 +303,7 @@ func weaveCards(blurbHTML string, c Campaign, cardRows map[string]string) (strin
 // cardTitleStyle is the inline style for an event card's title link.
 const cardTitleStyle = `style="font-size:20px;font-weight:700;letter-spacing:-0.02em;line-height:1.35;color:#0f172a;text-decoration:none;`
 
-var (
-	blurbTagRe = regexp.MustCompile(`(?i)<(p|h[1-6]|a|strong|ul|ol|li|blockquote)(\s[^>]*)?>`)
-)
+var blurbTagRe = regexp.MustCompile(`(?i)<(p|h[1-6]|a|strong|ul|ol|li|blockquote)(\s[^>]*)?>`)
 
 // styleBlurb inlines the site's typography into the blurb's HTML (email
 // clients ignore our stylesheet): larger lead paragraph, bold headings with

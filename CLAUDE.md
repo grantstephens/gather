@@ -44,6 +44,10 @@ make prod          # Build, setup admin, seed, and start server
 - Admin dashboard: http://127.0.0.1:8090/_/
 - Default credentials: admin@example.com / adminpassword123
 
+### Formatting and linting
+
+Go code must be [gofumpt](https://github.com/mvdan/gofumpt)-formatted (`make fmt`) and pass `make lint` (golangci-lint, config in `.golangci.yml`); the Lint workflow fails otherwise. Shipped migrations under `migrations/` are exempt from both (never edit them).
+
 ## Architecture
 
 ### Backend Structure

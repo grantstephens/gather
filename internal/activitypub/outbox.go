@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	dbx "github.com/pocketbase/dbx"
 	"gather/internal/recurrence"
+	dbx "github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
 

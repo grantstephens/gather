@@ -7,22 +7,20 @@ import (
 	"strings"
 	"testing"
 
+	"gather/internal/testutil"
+
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 )
 
-// NewTestApp creates a test PocketBase app instance with migrations
+// NewTestApp creates a test PocketBase app with every migration applied. It
+// clones a once-per-process migrated data dir (see testutil.NewApp); packages
+// using it should call testutil.Cleanup from TestMain.
 func NewTestApp(t testing.TB) *tests.TestApp {
-	app, err := tests.NewTestApp()
+	app, err := testutil.NewApp()
 	if err != nil {
 		t.Fatalf("Failed to create test app: %v", err)
 	}
-
-	// Run migrations to set up collections
-	if err := app.RunAllMigrations(); err != nil {
-		t.Fatalf("Failed to run migrations: %v", err)
-	}
-
 	return app
 }
 

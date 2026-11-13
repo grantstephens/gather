@@ -8,17 +8,14 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
-	_ "gather/migrations"
+	"gather/internal/testutil"
 )
 
 func newTestApp(t *testing.T) *tests.TestApp {
 	t.Helper()
-	app, err := tests.NewTestApp()
+	app, err := testutil.NewApp()
 	if err != nil {
 		t.Fatalf("create test app: %v", err)
-	}
-	if err := app.RunAllMigrations(); err != nil {
-		t.Fatalf("run migrations: %v", err)
 	}
 	return app
 }
