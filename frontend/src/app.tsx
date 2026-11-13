@@ -221,7 +221,7 @@ export function App() {
       <main>
         <Suspense fallback={<div class="page-loading" aria-label="Loading..." />}>
           <Router>
-            <Home path="/" />
+            <Home path="/" weekStartsOn={settings?.monday_as_start_of_week ? 'monday' : 'sunday'} />
             <Event path="/event/:id" />
             <Submit path="/submit" />
             <Tag path="/tag/:name" />

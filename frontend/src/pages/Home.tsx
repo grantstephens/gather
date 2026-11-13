@@ -3,6 +3,7 @@ import { marked } from 'marked'
 import { pb, Event, Tag, PicksRecord } from '../lib/pocketbase'
 import { usePageTitle } from '../lib/title'
 import { MiniCalendar } from '../components/MiniCalendar'
+import type { WeekStart } from '../lib/week'
 import { NewsletterSignup } from '../components/NewsletterSignup'
 import { MOBILE_SIGNUP_AFTER } from '../lib/newsletter'
 import { tagStyle } from '../lib/color'
@@ -14,9 +15,10 @@ const PAGE_SIZE = 20
 
 interface Props {
   path?: string
+  weekStartsOn?: WeekStart
 }
 
-export function Home(_props: Props) {
+export function Home({ weekStartsOn }: Props) {
   usePageTitle('')
   const [events, setEvents] = useState<Event[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -37,7 +39,6 @@ export function Home(_props: Props) {
   const today = new Date().toISOString().split('T')[0]
   const [currentPicks, setCurrentPicks] = useState<PicksRecord | null>(null)
   const [nextPicks, setNextPicks] = useState<PicksRecord | null>(null)
-
   // Reset all filters when the brand/logo link is clicked
   useEffect(() => {
     const reset = () => {
@@ -261,6 +262,7 @@ export function Home(_props: Props) {
       <div class="sidebar-section">
         <div class="sidebar-section-title">Browse by date</div>
         <MiniCalendar
+          weekStartsOn={weekStartsOn}
           eventDates={eventDates}
           selectedDate={selectedDate ?? undefined}
           onDateSelect={handleDateSelect}
