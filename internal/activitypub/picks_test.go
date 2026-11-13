@@ -22,8 +22,10 @@ func TestPicksIntro(t *testing.T) {
 		name, in, want string
 		check          func(t *testing.T, got string)
 	}{
-		{name: "first paragraph only", in: longBlurb,
-			want: "Birnam Book Festival turns five this weekend, with poetry and a pastry on Saturday and a Hogmanay ghost story on Sunday."},
+		{
+			name: "first paragraph only", in: longBlurb,
+			want: "Birnam Book Festival turns five this weekend, with poetry and a pastry on Saturday and a Hogmanay ghost story on Sunday.",
+		},
 		{name: "single sentence", in: "Just **one** line.", want: "Just one line."},
 		{name: "empty", in: " \n\n ", want: ""},
 		{name: "link text kept, url dropped", in: "Try [Swan Lake](/event/swan) now.", want: "Try Swan Lake now."},

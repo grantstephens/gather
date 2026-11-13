@@ -1,0 +1,33 @@
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  golangci-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install system dependencies
+        run: sudo apt-get install -y --no-install-recommends libwebp-dev
+
+      # main.go embeds frontend/dist; an empty placeholder is enough to type-check
+      - name: Stub embedded frontend
+        run: mkdir -p frontend/dist && touch frontend/dist/.keep
+
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15.0

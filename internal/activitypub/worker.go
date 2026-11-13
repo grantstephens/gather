@@ -38,7 +38,9 @@ func ProcessDeliveryQueue(app core.App) {
 			app.Logger().Error("ap-delivery: unmarshal error", "inbox", inboxURL, "error", err)
 			r.Set("attempts", maxAttempts)
 			r.Set("last_error", "unmarshal error: "+err.Error())
-			app.Save(r)
+			if err := app.Save(r); err != nil {
+				app.Logger().Error("ap-delivery: failed to save queue record", "id", r.Id, "error", err)
+			}
 			continue
 		}
 
