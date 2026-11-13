@@ -5,6 +5,7 @@ import { pb, User, Settings, PageRecord } from './lib/pocketbase'
 import { getTheme, toggleTheme } from './lib/theme'
 import { setInstanceName } from './lib/title'
 import { SearchBar } from './components/SearchBar'
+import { configureUmamiScript } from './lib/umami'
 import './style.css'
 import './components/Navigation.css'
 
@@ -29,6 +30,8 @@ const Page = lazy(() => import('./pages/Page').then(m => ({ default: m.Page })))
 const Picks = lazy(() => import('./pages/Picks').then(m => ({ default: m.Picks })))
 const PicksPost = lazy(() => import('./pages/PicksPost').then(m => ({ default: m.PicksPost })))
 const Submitted = lazy(() => import('./pages/Submitted').then(m => ({ default: m.Submitted })))
+const NewsletterConfirm = lazy(() => import('./pages/Newsletter').then(m => ({ default: m.NewsletterConfirm })))
+const NewsletterUnsubscribe = lazy(() => import('./pages/Newsletter').then(m => ({ default: m.NewsletterUnsubscribe })))
 const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
 
 export function App() {
@@ -99,12 +102,7 @@ export function App() {
 
           if (record.umami_src && record.umami_website_id) {
             const script = document.createElement('script')
-            script.defer = true
-            script.src = record.umami_src
-            script.setAttribute('data-website-id', record.umami_website_id)
-            if (record.umami_host_url) {
-              script.setAttribute('data-host-url', record.umami_host_url)
-            }
+            configureUmamiScript(script, record)
             document.head.appendChild(script)
           }
 
@@ -235,6 +233,8 @@ export function App() {
             <Picks path="/picks" />
             <PicksPost path="/picks/:slug" />
             <Submitted path="/submitted" />
+            <NewsletterConfirm path="/newsletter/confirm" />
+            <NewsletterUnsubscribe path="/newsletter/unsubscribe" />
             <NotFound default />
             <Page path="/:slug" />
           </Router>

@@ -1,6 +1,7 @@
 package seo
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -56,5 +57,37 @@ func TestPickIsRetired(t *testing.T) {
 		if got := PickIsRetired(app, slug, now); got != want {
 			t.Errorf("PickIsRetired(%q) = %v, want %v", slug, got, want)
 		}
+	}
+}
+
+func TestPicksIndexAdvertisesEmailOnlyWhenOffered(t *testing.T) {
+	items := []picksListItem{{Title: "x", URL: "https://s.test/picks/x"}}
+	on := buildPicksIndexHTML("T", "Perthshire Events", "d", "https://s.test/picks", "https://s.test", items, true)
+	for _, want := range []string{"What&#39;s on this weekend", `href="https://s.test/"`, "by email"} {
+		if !strings.Contains(on, want) {
+			t.Errorf("signup blurb missing %q in:\n%s", want, on)
+		}
+	}
+	off := buildPicksIndexHTML("T", "Perthshire Events", "d", "https://s.test/picks", "https://s.test", items, false)
+	if strings.Contains(off, "by email") {
+		t.Error("blurb must not appear when the newsletter is unavailable")
+	}
+}
+
+func TestGeneratePicksIndexUsesNewsletterHook(t *testing.T) {
+	app := api.NewTestApp(t)
+	defer app.Cleanup()
+	orig := NewsletterOffered
+	defer func() { NewsletterOffered = orig }()
+
+	NewsletterOffered = func(core.App, string) bool { return true }
+	html, _ := GeneratePicksIndexHTML(app, "https://s.test")
+	if !strings.Contains(string(html), "by email") {
+		t.Error("hook true: blurb expected")
+	}
+	NewsletterOffered = func(core.App, string) bool { return false }
+	html, _ = GeneratePicksIndexHTML(app, "https://s.test")
+	if strings.Contains(string(html), "by email") {
+		t.Error("hook false: no blurb")
 	}
 }

@@ -9,6 +9,17 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
+// NewsletterOffered reports whether the "What's on this weekend" email is
+// open for signups. main.go wires it to the newsletter package (which imports
+// seo, so seo can't import it back); the default is "not offered".
+var NewsletterOffered = func(core.App, string) bool { return false }
+
+// newsletterBlurbHTML is the crawlable description of the email. The signup
+// form itself is client-rendered, so this is what search engines see.
+func newsletterBlurbHTML(baseURL string) string {
+	return fmt.Sprintf("  <h2>What&#39;s on this weekend, by email</h2>\n  <p>Get What&#39;s on this weekend by email: one short roundup of the best events coming up, once a week. <a href=\"%s/\">Sign up on the home page</a>.</p>\n", htmlEscape(baseURL))
+}
+
 type picksListItem struct {
 	Title     string
 	URL       string
@@ -56,7 +67,7 @@ func GeneratePicksIndexHTML(app core.App, baseURL string) ([]byte, error) {
 		if slug == "" {
 			slug = p.Id
 		}
-		blurb := truncateText(stripMarkdown(p.GetString("blurb")), 160)
+		blurb := truncateText(StripMarkdownInline(p.GetString("blurb")), 160)
 		dateStr := ""
 		if sd := p.GetString("start_date"); sd != "" {
 			if t, err := time.Parse("2006-01-02", sd); err == nil {
@@ -71,10 +82,10 @@ func GeneratePicksIndexHTML(app core.App, baseURL string) ([]byte, error) {
 		})
 	}
 
-	return []byte(buildPicksIndexHTML(title, instanceName, description, picksURL, baseURL, items)), nil
+	return []byte(buildPicksIndexHTML(title, instanceName, description, picksURL, baseURL, items, NewsletterOffered(app, baseURL))), nil
 }
 
-func buildPicksIndexHTML(title, instanceName, description, picksURL, baseURL string, items []picksListItem) string {
+func buildPicksIndexHTML(title, instanceName, description, picksURL, baseURL string, items []picksListItem, newsletter bool) string {
 	var b strings.Builder
 
 	b.WriteString("<!DOCTYPE html>\n")
@@ -137,6 +148,10 @@ func buildPicksIndexHTML(title, instanceName, description, picksURL, baseURL str
 			b.WriteString("\n    </li>\n")
 		}
 		b.WriteString("  </ul>\n")
+	}
+
+	if newsletter {
+		b.WriteString(newsletterBlurbHTML(baseURL))
 	}
 
 	b.WriteString("</body>\n</html>\n")

@@ -7,22 +7,20 @@ import (
 	"strings"
 	"testing"
 
+	"gather/internal/testutil"
+
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 )
 
-// NewTestApp creates a test PocketBase app instance with migrations
-func NewTestApp(t *testing.T) *tests.TestApp {
-	app, err := tests.NewTestApp()
+// NewTestApp creates a test PocketBase app with every migration applied. It
+// clones a once-per-process migrated data dir (see testutil.NewApp); packages
+// using it should call testutil.Cleanup from TestMain.
+func NewTestApp(t testing.TB) *tests.TestApp {
+	app, err := testutil.NewApp()
 	if err != nil {
 		t.Fatalf("Failed to create test app: %v", err)
 	}
-
-	// Run migrations to set up collections
-	if err := app.RunAllMigrations(); err != nil {
-		t.Fatalf("Failed to run migrations: %v", err)
-	}
-
 	return app
 }
 
@@ -34,7 +32,7 @@ type AuthRecord struct {
 }
 
 // CreateTestUser creates a user and returns auth token
-func CreateTestUser(t *testing.T, app *tests.TestApp, email, password, role string) AuthRecord {
+func CreateTestUser(t testing.TB, app *tests.TestApp, email, password, role string) AuthRecord {
 	collection, err := app.FindCollectionByNameOrId("users")
 	if err != nil {
 		t.Fatalf("Failed to find users collection: %v", err)

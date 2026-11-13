@@ -24,6 +24,16 @@ func ParseBoilerplate(description string) (cost, sourceURL string) {
 	return cost, sourceURL
 }
 
+var trailingBreaks = regexp.MustCompile(`(?i)(?:<br\s*/?>|\s)+$`)
+
+// StripBoilerplate removes the "Cost:" and "Source:" lines ParseBoilerplate
+// recognises, for outputs (e.g. federated events) that carry them elsewhere.
+func StripBoilerplate(description string) string {
+	s := costLine.ReplaceAllString(description, "")
+	s = sourceLine.ReplaceAllString(s, "")
+	return trailingBreaks.ReplaceAllString(s, "")
+}
+
 // maxCostRunes matches the events.cost field's Max. A longer "Cost:" line must
 // be cut, not rejected: validation would otherwise refuse the whole event.
 const maxCostRunes = 200

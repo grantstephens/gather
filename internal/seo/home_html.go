@@ -20,6 +20,8 @@ type HomeEvent struct {
 // venue and category that has a live page, and the latest picks posts.
 type HomeBrowse struct {
 	Places, Tags, Picks []Link
+	// Newsletter is true when the weekend email is open for signups.
+	Newsletter bool
 }
 
 // homeHeading returns the page heading and <title>. For an instance named
@@ -74,7 +76,7 @@ func GenerateHomeHTML(app core.App, baseURL string) ([]byte, error) {
 	}
 
 	now := time.Now()
-	var browse HomeBrowse
+	browse := HomeBrowse{Newsletter: NewsletterOffered(app, baseURL)}
 	for _, p := range ActivePlaces(app, now) {
 		browse.Places = append(browse.Places, Link{Text: p.GetString("name"), URL: baseURL + "/place/" + PlaceRef(p)})
 	}
@@ -161,6 +163,9 @@ func buildHomeHTML(instanceName, description, ogImage, baseURL string, events []
 	writeBrowse("Browse by venue", browse.Places)
 	writeBrowse("Browse by category", browse.Tags)
 	writeBrowse("Weekend picks", browse.Picks)
+	if browse.Newsletter {
+		b.WriteString(fmt.Sprintf("  <p><a href=\"%s/picks\">What&#39;s on this weekend</a>: also by email, once a week.</p>\n", htmlEscape(baseURL)))
+	}
 
 	b.WriteString("</body>\n</html>\n")
 	return b.String()

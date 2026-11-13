@@ -26,6 +26,7 @@ import (
 	"gather/internal/hooks"
 	"gather/internal/ical"
 	"gather/internal/middleware"
+	"gather/internal/newsletter"
 	"gather/internal/recurrence"
 	"gather/internal/rss"
 	"gather/internal/seo"
@@ -65,12 +66,15 @@ func main() {
 			// trailing-slash prefix matches /feed/tag/<name> and /ics/tag/<name>
 			{Label: "/feed/tag/", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
 			{Label: "/ics/tag/", MaxRequests: 30, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
+			// newsletter signup: stops bots using us to mail confirmation emails to strangers
+			{Label: "/api/newsletter/subscribe", MaxRequests: 5, Duration: 60, Audience: core.RateLimitRuleAudienceGuest},
 			// Authenticated users: very high limits — effectively no restriction
 			{Label: "*:auth", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "*:create", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "/api/search", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "/feed/tag/", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 			{Label: "/ics/tag/", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
+			{Label: "/api/newsletter/subscribe", MaxRequests: 1000, Duration: 60, Audience: core.RateLimitRuleAudienceAuth},
 		}
 		// Note: these rules are written to the DB on every startup, so any changes
 		// made via the admin dashboard will be reverted on restart.
@@ -125,7 +129,13 @@ func main() {
 			h.Set("X-Frame-Options", "DENY")
 			h.Set("X-Permitted-Cross-Domain-Policies", "none")
 			h.Set("Cross-Origin-Opener-Policy", "same-origin")
-			h.Set("Cross-Origin-Resource-Policy", "same-origin")
+			// Event images and the newsletter open pixel are loaded straight from email
+			// clients (webmail that doesn't proxy images), so they must be cross-origin.
+			if strings.HasPrefix(path, "/api/files/") || strings.HasPrefix(path, "/newsletter/open/") {
+				h.Set("Cross-Origin-Resource-Policy", "cross-origin")
+			} else {
+				h.Set("Cross-Origin-Resource-Policy", "same-origin")
+			}
 			h.Set("Permissions-Policy", "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), usb=(), web-share=()")
 
 			// CSP only for frontend routes — skip admin UI and API
@@ -373,7 +383,7 @@ func main() {
 			if resource == "" {
 				return re.BadRequestError("Missing resource parameter", nil)
 			}
-			data, err := activitypub.HandleWebfinger(resource, baseURL)
+			data, err := activitypub.HandleWebfingerFor(se.App, resource, baseURL)
 			if err != nil {
 				return re.NotFoundError("Resource not found", err)
 			}
@@ -432,6 +442,70 @@ func main() {
 				return re.InternalServerError("Failed to process activity", err)
 			}
 			return re.NoContent(202)
+		})
+
+		// Relay actor: Mobilizon instances follow this to list our events
+		se.Router.GET("/ap/relay", func(re *core.RequestEvent) error {
+			b, err := activitypub.RelayActorJSON(se.App, baseURL)
+			if err != nil {
+				return re.InternalServerError("relay actor", err)
+			}
+			return re.Blob(200, "application/activity+json", b)
+		})
+		se.Router.POST("/ap/relay/inbox", func(re *core.RequestEvent) error {
+			if err := activitypub.HandleRelayInbox(se.App, baseURL, re.Request); err != nil {
+				if errors.Is(err, activitypub.ErrUnauthorized) {
+					return re.Error(http.StatusUnauthorized, "unauthorized", err)
+				}
+				return re.InternalServerError("relay inbox", err)
+			}
+			return re.NoContent(202)
+		})
+		// Place and town actors (Groups), created on first request
+		se.Router.GET("/ap/actor/{kind}/{ref}", func(re *core.RequestEvent) error {
+			data, err := activitypub.SubjectActorJSON(se.App, baseURL, re.Request.PathValue("kind"), re.Request.PathValue("ref"))
+			if err != nil {
+				if errors.Is(err, activitypub.ErrSubjectNotFound) {
+					return re.NotFoundError("Actor not found", nil)
+				}
+				return re.InternalServerError("Failed to get actor", err)
+			}
+			re.Response.Header().Set("Cache-Control", "public, max-age=3600, stale-if-error=86400")
+			return re.Blob(200, "application/activity+json", data)
+		})
+		for _, which := range []string{"followers", "outbox"} {
+			which := which
+			se.Router.GET("/ap/actor/{kind}/{ref}/"+which, func(re *core.RequestEvent) error {
+				data, err := activitypub.SubjectCollection(se.App, baseURL, re.Request.PathValue("kind"), re.Request.PathValue("ref"), which)
+				if err != nil {
+					if errors.Is(err, activitypub.ErrSubjectNotFound) {
+						return re.NotFoundError("Actor not found", nil)
+					}
+					return re.InternalServerError("Failed to get collection", err)
+				}
+				re.Response.Header().Set("Cache-Control", "public, max-age=60, stale-if-error=3600")
+				return re.Blob(200, "application/activity+json", data)
+			})
+		}
+		se.Router.GET("/ap/actor/{kind}/{ref}/events/{id}", func(re *core.RequestEvent) error {
+			body, status := activitypub.SubjectEventObject(se.App, baseURL, re.Request.PathValue("kind"), re.Request.PathValue("ref"), re.Request.PathValue("id"))
+			return re.Blob(status, "application/activity+json", body)
+		})
+		se.Router.POST("/ap/actor/{kind}/{ref}/inbox", func(re *core.RequestEvent) error {
+			err := activitypub.HandleSubjectInbox(se.App, baseURL, re.Request.PathValue("kind"), re.Request.PathValue("ref"), re.Request)
+			switch {
+			case errors.Is(err, activitypub.ErrSubjectNotFound):
+				return re.NotFoundError("Actor not found", nil)
+			case errors.Is(err, activitypub.ErrUnauthorized):
+				return re.Error(http.StatusUnauthorized, "unauthorized", err)
+			case err != nil:
+				return re.InternalServerError("Failed to process activity", err)
+			}
+			return re.NoContent(202)
+		})
+		se.Router.GET("/ap/events/{id}", func(re *core.RequestEvent) error {
+			body, status := activitypub.EventObject(se.App, baseURL, re.Request.PathValue("id"))
+			return re.Blob(status, "application/activity+json", body)
 		})
 
 		// Favicon route - serves favicon from settings, with default SVG fallback
@@ -802,10 +876,17 @@ func main() {
 		// Register cron jobs
 		cron.Register(se.App, baseURL)
 
+		// Weekly picks newsletter: signup/confirm/unsubscribe routes, open pixel, schedule tick
+		seo.NewsletterOffered = newsletter.Available
+		newsletter.Register(se, baseURL)
+		newsletter.RegisterCron(se.App, baseURL)
+
 		// ActivityPub delivery worker — every 5 minutes
-		se.App.Cron().Add("ap-delivery", "*/5 * * * *", func() {
+		if err := se.App.Cron().Add("ap-delivery", "*/5 * * * *", func() {
 			activitypub.ProcessDeliveryQueue(se.App)
-		})
+		}); err != nil {
+			se.App.Logger().Error("cron: failed to register ap-delivery", "error", err)
+		}
 
 		// POST /api/ap/test-delivery — send a test Note to a given inbox (superuser/admin only)
 		se.Router.POST("/api/ap/test-delivery", func(re *core.RequestEvent) error {

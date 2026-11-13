@@ -148,8 +148,8 @@ func convertAndReplaceImage(e *core.RecordEvent, fieldName string, allowSVG bool
 
 	_, err = e.App.DB().NewQuery(
 		"UPDATE " + e.Record.Collection().Name +
-		" SET " + fieldName + " = {:filename} " +
-		"WHERE id = {:id}",
+			" SET " + fieldName + " = {:filename} " +
+			"WHERE id = {:id}",
 	).Bind(map[string]any{
 		"filename": newFilename,
 		"id":       e.Record.Id,
@@ -160,7 +160,7 @@ func convertAndReplaceImage(e *core.RecordEvent, fieldName string, allowSVG bool
 	} else {
 		log.Printf("✓ Converted %s to %s for %s.%s (%.1f%% size reduction)",
 			filename, newFilename, e.Record.Collection().Name, fieldName,
-			(1.0 - float64(len(webpBytes))/float64(len(fileData)))*100)
+			(1.0-float64(len(webpBytes))/float64(len(fileData)))*100)
 	}
 
 	return e.Next()

@@ -828,23 +828,82 @@ echo "Created event: " . $event['id'];
 
 ## ActivityPub Federation
 
-Gather supports ActivityPub federation for publishing events to the Fediverse.
+Gather publishes events over ActivityPub to the Fediverse (Mastodon and similar) and to Mobilizon.
 
-### Endpoints
+### Actors and endpoints
 
-- **WebFinger:** `/.well-known/webfinger?resource=acct:gather@your-instance.com`
-- **Actor:** `/ap/actor`
-- **Outbox:** `/ap/outbox` (published events)
-- **Inbox:** `/ap/inbox` (receives activities)
+| Actor | Type | Handle (WebFinger) | URLs |
+|---|---|---|---|
+| Instance | `Service` | `events@host` | `GET /ap/actor`, `GET /ap/outbox`, `GET /ap/actor/followers`, `POST /ap/inbox` |
+| Relay | `Application` | `relay@host` | `GET /ap/relay`, `POST /ap/relay/inbox` |
+| Venue | `Group` | `{place-slug}@host` | `GET /ap/actor/place/{placeId}` and `/followers`, `/outbox`, `POST /inbox`, `GET /events/{eventId}` under it |
+| Town | `Group` | `town-{city-slug}@host` | `GET /ap/actor/town/{city-slug}` and the same sub-paths |
 
-### Behavior
+Other URLs: `GET /.well-known/webfinger?resource=acct:{handle}@host`, and `GET /ap/events/{eventId}`, the canonical object for an event.
 
-When an event's status changes to `published`, it automatically:
-1. Creates an ActivityPub `Create` activity
-2. Delivers to all followers in `ap_followers` collection
-3. Queues delivery in `ap_delivery_queue`
+Inbox requests must carry a valid HTTP Signature (draft-cavage, `rsa-sha256`); the signing key is fetched from the sender's actor, PKCS#1 and PKIX public keys are both accepted, and the `host` header is checked against the request's `Host`.
 
-**Note:** Federation must be enabled in instance settings.
+`ap_enabled` in settings currently controls only the weekly picks announcement. Routes and event delivery do not check it.
+
+### Who gets what
+
+Three follower lists, each with its own delivery shape:
+
+| Followers of | Stored in | Receive |
+|---|---|---|
+| Instance actor | `ap_followers` | A `Note` (`Create`, `Update`, `Delete`), as before |
+| Relay | `ap_relay_followers` | The `Event` shape: `Create` then `Announce` (10 s later), `Update`, `Delete` |
+| A venue or town | `ap_subject_followers` (`subject` is `place:{id}` or `town:{city-slug}`) | The `Event` shape, as that group's own copy: `Create`, `Update`, `Delete` |
+
+A remote inbox that follows both a venue and its town gets one copy, the venue's. Shared inboxes are used when the follower has one, so an inbox is never sent the same activity twice.
+
+**Why a relay.** Mobilizon lists a remote event in Explore only if a `Share` exists for it from an actor the Mobilizon instance follows. The relay's `Announce` creates that `Share`. A plain `Create` is stored but not listed.
+
+**Why group-owned copies.** Mobilizon attaches an event to a group only when the Event has an organizer `actor` that differs from `attributedTo`. A venue or town therefore serves its own copy of each event at `/ap/actor/{kind}/{ref}/events/{eventId}` with `attributedTo` = the group and `actor` = the instance actor; the instance actor sends the `Create`. These ids are separate from `/ap/events/{eventId}`.
+
+**Lazy actors.** Venue and town actors are created on first request. The first `GET` of the actor generates an RSA keypair (stored in `ap_actors`); names that do not resolve never create a key. A venue resolves only when it is `approved`; a town resolves when at least one approved venue has that city. Each actor signs its own deliveries (`keyId` is `{actor}#main-key`). The relay signs with the instance key.
+
+### Status changes
+
+The delivery hooks run on the `events` collection. Notes go to instance followers; Events go to relay, venue and town followers.
+
+| Change | Instance followers (Note) | Relay, venue, town followers (Event) |
+|---|---|---|
+| Created as `published`, or `draft/pending` → `published` | `Create` | `Create` (+ `Announce` for the relay) |
+| `published` → `published` (edit) | `Update` | `Update` |
+| `published` → `cancelled` | `Delete` | `Update` with `status: CANCELLED` |
+| `published` → `draft` / `pending` | `Delete` | `Delete` |
+| `cancelled` → `published` | `Create` | `Update` |
+| `cancelled` → `draft` / `pending`, or deleting a cancelled event | nothing | `Delete` |
+| Deleting a `published` event | `Delete` | `Delete` |
+
+A cancelled event is sent as an update, not a delete, because `/ap/events/{id}` still serves cancelled events and Mobilizon re-fetches the object on `Delete`. Nothing is sent when an event simply becomes past, and events published before a follow are not backfilled.
+
+### Event object
+
+`GET /ap/events/{eventId}` returns the Event for `published` and `cancelled` events. For anything else (draft, pending, missing) it returns `410 Gone` with a `Tombstone` that reveals nothing about the event. Group copies behave the same way, and also return `410` when the event is not at that venue or in that town.
+
+| Field | Source |
+|---|---|
+| `name` | Event title (plain text) |
+| `content` | Description with the scraper `Cost:` and `Source:` lines removed, the recurrence label, and a link to the Gather event page |
+| `startTime`, `endTime` | RFC 3339 in the `TZ` zone, with offset. `endTime` omitted when unset |
+| `timezone` | The `TZ` zone name (default `Europe/London` when unset or invalid) |
+| `status` | `CONFIRMED`, or `CANCELLED` for cancelled events |
+| `joinMode`, `externalParticipationUrl` | `external`, pointing at the Gather event page |
+| `location` | The event's place, only if `approved`: name, address, and latitude/longitude as JSON floats (Mobilizon ignores integers) |
+| `tag` | Approved tags only, as `#name` hashtags with spaces removed; tags over 40 characters are skipped |
+| `attachment` | The event image, always as `.webp`, with `name: "Banner"` (Mobilizon fails without a name) |
+
+The JSON-LD context uses Mobilizon's namespace `https://mobilizon.org/ns#`. A real Mobilizon-produced Event is kept in `internal/activitypub/testdata/mobilizon_event.json` and a test compares our output's keys and types against it.
+
+### Delivery
+
+Activities are queued in `ap_delivery_queue` and sent by a worker that runs every 5 minutes (`POST /api/ap/retry-queue` runs it immediately, for admins). Failures retry with exponential backoff, up to 5 attempts, then are dropped.
+
+### Collections
+
+`ap_followers`, `ap_relay_followers`, `ap_subject_followers`, `ap_actors` (keypairs for venue and town actors), `ap_delivery_queue`.
 
 ---
 
@@ -859,6 +918,10 @@ For issues, questions, or feature requests:
 ---
 
 ## Changelog
+
+### Unreleased
+- Mobilizon federation: `Event` objects at `/ap/events/{id}`, relay actor `relay@host`, lazily-created venue and town `Group` actors, `TZ` used for event times
+- Fix: inbox signature verification now accepts PKCS#1 public keys and checks the `host` header against the request `Host`
 
 ### Version 1.0 (2025-03-17)
 - Initial API specification

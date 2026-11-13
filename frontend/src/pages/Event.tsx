@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
+import { NewsletterBand } from '../components/NewsletterSignup'
 import { format } from 'date-fns'
 import { tagStyle } from '../lib/color'
 import { route } from 'preact-router'
@@ -348,6 +349,7 @@ export function Event({ id }: Props) {
           )}
         </footer>
       </div>
+      <NewsletterBand />
       {confirmDialog && (
         <ConfirmDialog
           message={confirmDialog.message}

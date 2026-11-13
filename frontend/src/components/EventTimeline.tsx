@@ -1,12 +1,16 @@
+import type { ComponentChildren } from 'preact'
 import { useMemo, useRef } from 'preact/hooks'
 import { format, parseISO } from 'date-fns'
 import { Event } from '../lib/pocketbase'
 import { groupEventsByDayShuffled } from '../lib/shuffleDayEvents'
 import { EventCard } from './EventCard'
+import { signupSlotIndex } from '../lib/newsletter'
 import './EventTimeline.css'
 
 interface Props {
   events: Event[]
+  /** Rendered between day sections once `afterEvents` events have been shown (or at the end if fewer). */
+  inlineSlot?: { afterEvents: number; node: ComponentChildren }
 }
 
 function formatDayHeading(dateKey: string): string {
@@ -17,7 +21,7 @@ function formatDayHeading(dateKey: string): string {
   }
 }
 
-export function EventTimeline({ events }: Props) {
+export function EventTimeline({ events, inlineSlot }: Props) {
   const dayOrderCache = useRef(new Map<string, string[]>())
   const grouped = useMemo(
     () => groupEventsByDayShuffled(events, dayOrderCache.current),
@@ -27,6 +31,9 @@ export function EventTimeline({ events }: Props) {
   if (events.length === 0) return null
 
   const entries = [...grouped.entries()]
+  const slotAfter = inlineSlot
+    ? signupSlotIndex(entries.map(([, d]) => d.length), inlineSlot.afterEvents)
+    : -1
 
   return (
     <div class="timeline">
@@ -59,6 +66,7 @@ export function EventTimeline({ events }: Props) {
                 )}
               </div>
             </section>
+            {inlineSlot && i === slotAfter && inlineSlot.node}
           </>
         )
       })}

@@ -3,14 +3,41 @@ package activitypub
 import (
 	"fmt"
 	"html"
+	"regexp"
+	"strings"
 	"time"
+
+	"gather/internal/seo"
 
 	"github.com/pocketbase/pocketbase/core"
 )
 
+const picksIntroMaxLen = 500
+
+var paragraphBreak = regexp.MustCompile(`\n\s*\n`)
+
+// picksIntro returns the first paragraph of a Markdown blurb as plain text, at
+// most maxLen runes, cut at a sentence end if one falls in the back two thirds,
+// otherwise at a word boundary with an ellipsis.
+func picksIntro(blurb string, maxLen int) string {
+	first := paragraphBreak.Split(strings.TrimSpace(blurb), 2)[0]
+	text := []rune(seo.StripMarkdownInline(first))
+	if len(text) <= maxLen {
+		return string(text)
+	}
+	cut := text[:maxLen]
+	if i := strings.LastIndexAny(string(cut), ".!?"); i > maxLen/3 {
+		return strings.TrimSpace(string(cut)[:i+1])
+	}
+	if i := strings.LastIndex(string(cut), " "); i > 0 {
+		return strings.TrimSpace(string(cut)[:i]) + "…"
+	}
+	return string(cut) + "…"
+}
+
 func picksToNote(picks *core.Record, baseURL string) Note {
 	title := html.EscapeString(picks.GetString("title"))
-	blurb := html.EscapeString(picks.GetString("blurb"))
+	blurb := html.EscapeString(picksIntro(picks.GetString("blurb"), picksIntroMaxLen))
 	picksURL := fmt.Sprintf("%s/picks/%s", baseURL, picks.GetString("slug"))
 
 	content := fmt.Sprintf(

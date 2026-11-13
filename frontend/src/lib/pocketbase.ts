@@ -76,12 +76,17 @@ export interface Settings extends BaseModel {
   custom_css: string
   custom_head: string
   ap_enabled: boolean
+  ap_event_lead_days?: number
   ap_private_key: string
   ap_public_key: string
   favicon?: string
   umami_src: string
   umami_website_id: string
   umami_host_url: string
+  newsletter_enabled: boolean
+  newsletter_send_day: number
+  newsletter_send_time: string
+  newsletter_footer: string
 }
 
 export interface PageRecord extends BaseModel {

@@ -15,19 +15,19 @@ import (
 
 // EventJSONLD represents a Schema.org Event in JSON-LD format
 type EventJSONLD struct {
-	Context             string                 `json:"@context"`
-	Type                string                 `json:"@type"`
-	Name                string                 `json:"name"`
-	Description         string                 `json:"description,omitempty"`
-	StartDate           string                 `json:"startDate"`
-	EndDate             string                 `json:"endDate,omitempty"`
-	EventStatus         string                 `json:"eventStatus"`
-	EventAttendanceMode string                 `json:"eventAttendanceMode"`
-	Location            *EventLocation         `json:"location,omitempty"`
-	Image               string                 `json:"image,omitempty"`
-	Organizer           *EventOrganizer        `json:"organizer,omitempty"`
-	Offers              any                    `json:"offers,omitempty"`
-	URL                 string                 `json:"url"`
+	Context             string          `json:"@context"`
+	Type                string          `json:"@type"`
+	Name                string          `json:"name"`
+	Description         string          `json:"description,omitempty"`
+	StartDate           string          `json:"startDate"`
+	EndDate             string          `json:"endDate,omitempty"`
+	EventStatus         string          `json:"eventStatus"`
+	EventAttendanceMode string          `json:"eventAttendanceMode"`
+	Location            *EventLocation  `json:"location,omitempty"`
+	Image               string          `json:"image,omitempty"`
+	Organizer           *EventOrganizer `json:"organizer,omitempty"`
+	Offers              any             `json:"offers,omitempty"`
+	URL                 string          `json:"url"`
 }
 
 // EventLocation represents a Schema.org Place for event location
@@ -40,10 +40,10 @@ type EventLocation struct {
 
 // EventAddress represents a Schema.org PostalAddress
 type EventAddress struct {
-	Type          string `json:"@type"`
-	StreetAddress string `json:"streetAddress,omitempty"`
+	Type            string `json:"@type"`
+	StreetAddress   string `json:"streetAddress,omitempty"`
 	AddressLocality string `json:"addressLocality,omitempty"`
-	AddressCountry string `json:"addressCountry,omitempty"`
+	AddressCountry  string `json:"addressCountry,omitempty"`
 }
 
 // EventGeo represents Schema.org GeoCoordinates
@@ -111,10 +111,10 @@ func GenerateEventJSONLD(app core.App, event *core.Record, baseURL string) ([]by
 			// Add address if available
 			if address := place.GetString("address"); address != "" {
 				jsonLD.Location.Address = &EventAddress{
-					Type:          "PostalAddress",
-					StreetAddress: address,
+					Type:            "PostalAddress",
+					StreetAddress:   address,
 					AddressLocality: place.GetString("city"),
-					AddressCountry: place.GetString("country_code"),
+					AddressCountry:  place.GetString("country_code"),
 				}
 			}
 		}
@@ -298,4 +298,11 @@ func metaDescription(desc string, start time.Time, place, city string) string {
 		return truncateText(suffix, 160)
 	}
 	return truncateText(base+" — "+suffix, 160)
+}
+
+// StripMarkdownInline is stripMarkdown with every run of whitespace, newlines
+// included, collapsed to one space so paragraph and heading boundaries read as
+// separate sentences in meta descriptions.
+func StripMarkdownInline(text string) string {
+	return strings.Join(strings.Fields(stripMarkdown(text)), " ")
 }

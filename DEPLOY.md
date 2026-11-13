@@ -41,7 +41,7 @@ Edit the environment variables before starting:
 | `PB_ADMIN_PASSWORD` | Yes | PocketBase superuser password — **change this!** |
 | `BASE_URL` | Yes | Your public URL — used for ActivityPub, feeds, and email links |
 | `PB_ENCRYPTION_KEY` | Recommended | Encryption key for sensitive fields. Generate: `openssl rand -hex 32` |
-| `TZ` | Recommended | IANA timezone name (e.g. `Europe/London`). Affects iCal feeds and JSON-LD event dates. |
+| `TZ` | Recommended | IANA timezone name (e.g. `Europe/London`). Affects iCal feeds and JSON-LD event dates, and the local times shown on Mobilizon (defaults to `Europe/London` for Mobilizon if unset). |
 
 ### 4. Start
 

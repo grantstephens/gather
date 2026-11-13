@@ -44,6 +44,10 @@ make prod          # Build, setup admin, seed, and start server
 - Admin dashboard: http://127.0.0.1:8090/_/
 - Default credentials: admin@example.com / adminpassword123
 
+### Formatting and linting
+
+Go code must be [gofumpt](https://github.com/mvdan/gofumpt)-formatted (`make fmt`) and pass `make lint` (golangci-lint, config in `.golangci.yml`); the Lint workflow fails otherwise. Shipped migrations under `migrations/` are exempt from both (never edit them).
+
 ## Architecture
 
 ### Backend Structure
@@ -60,6 +64,10 @@ make prod          # Build, setup admin, seed, and start server
   - `moderation.go`: Auto-set status, cascade blocking (events can't publish if place/tags pending)
   - Event hooks registered in main.go for AP publishing
 - `activitypub/`: Federation support (actor, inbox, outbox, delivery, keys, webfinger)
+  - `event.go`: Mobilizon-shaped `Event` serializer and `/ap/events/{id}` (golden-tested against `testdata/mobilizon_event.json`)
+  - `relay.go`: `relay@host` actor; Mobilizon follows it to list our events (needs an `Announce`)
+  - `subject*.go`: lazily-created `Group` actors per approved place and per town, each with its own keypair
+  - See API.md "ActivityPub Federation" for shapes, lifecycle rules and why each piece exists
 - `rss/`, `ical/`: Feed generation
 - `recurrence/`: Recurring event logic
 
@@ -67,6 +75,14 @@ make prod          # Build, setup admin, seed, and start server
 - `1709300000_collections.go`: Core collections (events, places, tags, settings, AP tables)
 - `1709300001_user_role.go`: User role field
 - `1709300002_places_tags_moderation.go`: Status fields for moderation
+
+**Migration numbering rules (MUST follow; this has gone wrong before):**
+- Migrations run in filename order, and production has already applied everything on `origin/main`. A new migration must therefore be numbered **higher than every migration on `origin/main`**, never just higher than the ones on your branch. A branch cut before another PR merged will otherwise sort *before* migrations production has already run (this shipped broken numbering in v1.3.0 and has happened before).
+- Pick the number only after `git fetch origin`, as one more than the highest on `origin/main`: `git ls-tree --name-only origin/main migrations/ | sort | tail -3`. Prefix is `17093000NN_`, contiguous, no gaps, no duplicates.
+- Re-check before merging and before cutting a release: `git fetch origin`, list `origin/main` migrations again, and if anyone else landed one, **rename yours to the next free number** (and any references to the filename in docs/plans). Do this on every merge of a long-lived branch, not just at creation.
+- Never renumber or edit a migration that has shipped in a release. Fix forward with a new, higher-numbered migration instead.
+- Migrations must be idempotent (check that a collection/field exists before adding it, and that it is gone before removing it), so a renumber or re-run is a no-op.
+- Quick duplicate check: `ls migrations | awk -F_ '{print $1}' | sort | uniq -d` must print nothing.
 
 ### Frontend Structure
 
@@ -91,6 +107,7 @@ make prod          # Build, setup admin, seed, and start server
 - `tags`: Has `status` (pending/approved)
 - `settings`: Singleton for instance config
 - `ap_followers`, `ap_delivery_queue`: ActivityPub infrastructure
+- `ap_relay_followers`, `ap_subject_followers`, `ap_actors`: Mobilizon relay followers, place/town actor followers, and those actors' keypairs
 
 **Access Control:**
 - Published events visible to all
@@ -109,6 +126,6 @@ make prod          # Build, setup admin, seed, and start server
 
 **Moderation Workflow**: Places and tags have approval status; events are blocked from publishing if dependencies aren't approved
 
-**ActivityPub Integration**: Events can federate via ActivityPub when published; hooks in main.go trigger AP delivery
+**ActivityPub Integration**: Events can federate via ActivityPub when published; event hooks (`internal/hooks/events.go`) queue Notes for Fediverse followers and the Mobilizon `Event` shape for relay and place/town followers. Inbox signature checks and the delivery worker are shared by all actors.
 
 **Authentication**: PocketBase handles auth; frontend checks user role for conditional UI/features

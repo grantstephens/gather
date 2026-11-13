@@ -19,3 +19,7 @@ func shortDate(t time.Time) string { return londonTime(t).Format("Mon 2 Jan") }
 
 // longDateTime renders "Saturday 10 October 2026, 7:30 PM".
 func longDateTime(t time.Time) string { return londonTime(t).Format("Monday 2 January 2006, 3:04 PM") }
+
+// LongDateTime is longDateTime for other packages, so emails format event times
+// exactly like the server-rendered site.
+func LongDateTime(t time.Time) string { return longDateTime(t) }

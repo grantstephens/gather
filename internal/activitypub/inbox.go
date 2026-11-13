@@ -114,8 +114,11 @@ func verifyHTTPSignature(app core.App, baseURL string, r *http.Request, body []b
 				}
 			}
 			parts = append(parts, fmt.Sprintf("digest: %s", digest))
+		case "host":
+			// net/http moves Host out of r.Header into r.Host
+			parts = append(parts, fmt.Sprintf("host: %s", r.Host))
 		default:
-			parts = append(parts, fmt.Sprintf("%s: %s", h, r.Header.Get(http.CanonicalHeaderKey(h))))
+			parts = append(parts, fmt.Sprintf("%s: %s", h, r.Header.Get(h)))
 		}
 	}
 	signedString := strings.Join(parts, "\n")
@@ -272,18 +275,29 @@ func fetchPublicKey(app core.App, baseURL, keyID string) (*rsa.PublicKey, error)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode PEM block from %s", keyID)
 	}
-	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("parse public key from %s: %w", keyID, err)
-	}
-	rsaKey, ok := pubKey.(*rsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("public key from %s is not RSA", keyID)
+	var rsaKey *rsa.PublicKey
+	if block.Type == "RSA PUBLIC KEY" { // PKCS#1, as published by Mobilizon
+		rsaKey, err = x509.ParsePKCS1PublicKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("parse public key from %s: %w", keyID, err)
+		}
+	} else {
+		pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("parse public key from %s: %w", keyID, err)
+		}
+		var ok bool
+		if rsaKey, ok = pubKey.(*rsa.PublicKey); !ok {
+			return nil, fmt.Errorf("public key from %s is not RSA", keyID)
+		}
 	}
 
 	keyCache.Store(keyID, &cachedKey{key: rsaKey, fetchedAt: time.Now()})
 	return rsaKey, nil
 }
+
+// followMu serialises the find-or-create of a follower row.
+var followMu sync.Mutex
 
 func handleFollow(app core.App, baseURL string, activity IncomingActivity) error {
 	actorInfo, err := fetchActor(app, baseURL, activity.Actor)
@@ -296,8 +310,14 @@ func handleFollow(app core.App, baseURL string, activity IncomingActivity) error
 		return err
 	}
 
+	// Follows are handled in goroutines and remote servers retry them, so the
+	// find-or-create must be atomic or the same actor gets two follower rows
+	// (and every post is then delivered twice). One process owns the database,
+	// so a mutex is enough; it is held only for the DB work, never the fetch.
+	followMu.Lock()
 	existing, _ := app.FindFirstRecordByFilter("ap_followers", "actor_url = {:url}", map[string]any{"url": activity.Actor})
 	if existing != nil {
+		followMu.Unlock()
 		app.Logger().Info("ap-inbox: already following, re-sending Accept", "actor", activity.Actor)
 	} else {
 		record := core.NewRecord(collection)
@@ -305,7 +325,9 @@ func handleFollow(app core.App, baseURL string, activity IncomingActivity) error
 		record.Set("inbox_url", actorInfo.Inbox)
 		record.Set("shared_inbox_url", actorInfo.SharedInbox)
 
-		if err := app.Save(record); err != nil {
+		err := app.Save(record)
+		followMu.Unlock()
+		if err != nil {
 			return fmt.Errorf("save follower: %w", err)
 		}
 		app.Logger().Info("ap-inbox: saved new follower", "actor", activity.Actor, "inbox", actorInfo.Inbox)

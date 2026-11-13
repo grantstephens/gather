@@ -1,5 +1,11 @@
 # Gather
 
+[![Build](https://github.com/grantstephens/gather/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/grantstephens/gather/actions/workflows/build.yml)
+[![Lint](https://github.com/grantstephens/gather/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/grantstephens/gather/actions/workflows/lint.yml)
+[![Docker image](https://github.com/grantstephens/gather/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/grantstephens/gather/actions/workflows/docker-publish.yml)
+[![Latest release](https://img.shields.io/github/v/release/grantstephens/gather)](https://github.com/grantstephens/gather/releases/latest)
+[![License: AGPL v3](https://img.shields.io/github/license/grantstephens/gather)](LICENSE)
+
 A self-hosted community calendar. Collect, moderate, and share local events with your community.
 
 Built with Go ([PocketBase](https://pocketbase.io)) and [Preact](https://preactjs.com). Single binary, no external dependencies.
@@ -14,11 +20,13 @@ Built with Go ([PocketBase](https://pocketbase.io)) and [Preact](https://preactj
 - Role-based access control (user / editor / admin)
 - Recurring events with per-occurrence cancellation (RRULE)
 - ActivityPub federation — follow your calendar from Mastodon and other Fediverse apps
+- Mobilizon federation — events appear on [Mobilizon](https://joinmobilizon.org) instances, and Mobilizon users can follow a single venue or town
 - RSS and iCal feeds (global, per-tag, per-venue, per-event)
 - Location-based events with OpenStreetMap — no Google Maps
 - Proximity search ("events near me")
 - Real-time updates via SSE subscriptions
 - Editorial Picks — curated weekly roundups with home page teaser
+- "What’s on this weekend" email — double opt-in email signup, sent only when there's a picks post for the coming weekend
 - Custom pages (About, FAQ, Code of Conduct) with Markdown support
 - OAuth2 social login (configurable via PocketBase)
 - API keys for external integrations
@@ -138,7 +146,50 @@ Your instance automatically provides:
 
 - **RSS** at `/feed.rss` (all events), `/feed/tag/{tagname}` (by tag)
 - **iCal** at `/feed.ics` (all events), `/ics/tag/{tagname}` (by tag), `/ics/event/{id}` (single event)
-- **ActivityPub** actor at `/ap/actor` (when federation is enabled)
+- **ActivityPub** actor at `/ap/actor`, plus a relay and per-venue / per-town actors (see below)
+
+### Fediverse and Mobilizon
+
+Gather publishes events as ActivityPub. Three kinds of actor exist, each for a different audience:
+
+| Actor | Handle | Who follows it | What they receive |
+|---|---|---|---|
+| Instance | `events@your-domain` | Mastodon and other Fediverse apps | Every event, as a post, a few days before it happens (see below) |
+| Relay | `relay@your-domain` | A Mobilizon instance (its admin) | Every event, as a Mobilizon event, listed in Explore |
+| Venue | `{venue-slug}@your-domain` | Mobilizon users | Events at that venue |
+| Town | `town-{town-slug}@your-domain` | Mobilizon users | Events at any approved venue in that town |
+
+**When events are posted to the Fediverse.** Not the moment they are published: each event is posted once, at 09:00 server time (`TZ`), a set number of days before it starts, so followers see it when it is useful. Set the number of days in **Admin > Settings > Advanced** (default 3; `0` posts as soon as an event is published). An event already inside that window posts straight away. Edits and cancellations go out immediately, but only for events followers have actually been sent; an event that was never posted and then cancelled sends nothing. Recurring events are timed from their next occurrence. Mobilizon (the relay, venue and town actors) still receives events as soon as they are published.
+
+Venue and town handles are the venue's slug (the last part of its `/place/...` URL) and `town-` plus the lower-cased, hyphenated town name (`town-pitlochry`). Only approved venues resolve, so the normal venue approval is what controls this. The actors are created the first time someone looks them up, so there is nothing to set up.
+
+**Getting your events onto a Mobilizon instance.** Mobilizon only lists remote events that were announced by an instance it follows. A Mobilizon admin follows your instance from the *Instances* page of the admin area, entering your domain (e.g. `gather.example.org`). Once the follow shows as approved, every event you publish afterwards is sent there, including edits, cancellations (shown as cancelled) and removals. Events published before the follow are not sent.
+
+**Following one venue or town.** On Mobilizon, search for `town-pitlochry@gather.example.org` (or a venue handle) and follow the group. Its events show on the group's page, owned by that group. Venue and town actors are built for Mobilizon; following them from Mastodon is untested and may not deliver anything, so Mastodon users should follow `events@your-domain`.
+
+**What Mobilizon shows.** Title, description, start and end time, venue with address and map, approved tags, and the event image. Registration is external: Mobilizon links back to the Gather event page. The `Cost:` and `Source:` lines Gather adds to descriptions are removed, and a link to the Gather page is added instead, so price is not shown on Mobilizon.
+
+**Timezone.** Set the `TZ` environment variable (e.g. `Europe/London`, the default) to the zone your events happen in, or Mobilizon will show the wrong local time.
+
+**Timing.** Activities go through the delivery queue, which runs every 5 minutes, so allow a few minutes for changes to appear.
+
+See [API.md](API.md#activitypub-federation) for the endpoints and the exact rules for each status change.
+
+### "What’s on this weekend" email
+
+Subscribers get the coming weekend's Editorial Picks post by email, once a week, and only if such a post exists.
+
+1. Configure outgoing mail in the PocketBase dashboard (**Settings > Mail settings**): enable SMTP and set a sender address. The newsletter reuses this config and is forced off without it.
+2. In **Admin > Settings > What’s on this weekend email**, switch it on and choose the day and time. The schedule uses the server's time zone, which comes from the `TZ` environment variable (Docker defaults to `UTC`, so set it to your own zone, e.g. `Europe/London`).
+3. A signup box appears under the calendar (and at the end of the page on phones). Sign-ups confirm by email (double opt-in) and every email has a one-click unsubscribe that deletes the address.
+
+Things worth knowing:
+
+- A picks post counts when it's visible, hasn't been sent, is dated Friday to Sunday of the coming weekend, and has at least one published event still to come. If the post goes up after the scheduled time, that week is skipped.
+- Tracking: links carry `utm_*` parameters, and a tiny image reports opens to Umami as a `newsletter-open` event (a rough indicator only: Apple Mail and Gmail pre-load images).
+- Publish a page with the slug `privacy` (**Admin > Pages**) and the signup box and emails link to it automatically. Start from [`docs/privacy-policy-template.md`](docs/privacy-policy-template.md). The **Email footer** setting is where a contact or postal address goes if your region expects one.
+- For providers to honour one-click unsubscribe, your sending domain's DKIM signature should cover the `List-Unsubscribe` and `List-Unsubscribe-Post` headers.
+- **Send test to me** (admin settings) emails the latest picks post to your own address.
 
 ### Custom Pages
 

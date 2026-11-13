@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend build build-frontend build-backend serve clean seed seed-test-users setup-admin help watch run reset stop test-unit test-frontend test-api test-e2e test-e2e-ui test-watch test-coverage test docker-build docker-run docker-stop docker-up docker-down docker-logs docker-restart
+.PHONY: dev dev-backend dev-frontend build build-frontend build-backend serve clean seed seed-test-users setup-admin help watch run reset stop test-unit test-frontend test-api test-e2e test-e2e-ui test-watch test-coverage test docker-build docker-run docker-stop docker-up docker-down docker-logs docker-restart fmt lint
 
 # Development: run Vite + backend with hot reload proxy
 dev: build-backend setup-admin
@@ -107,7 +107,7 @@ stop:
 # Testing
 test-unit:
 	@echo "Running Go unit tests..."
-	@go test ./internal/... -v 2>/dev/null || echo "No unit tests found or tests failed"
+	@go test ./internal/... -timeout 20m -v 2>/dev/null || echo "No unit tests found or tests failed"
 
 test-frontend:
 	@echo "Running frontend unit tests..."
@@ -135,7 +135,7 @@ test-watch:
 
 test-coverage:
 	@echo "Running tests with coverage..."
-	@go test -coverprofile=coverage.out ./...
+	@go test -timeout 20m -coverprofile=coverage.out ./...
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
 
@@ -237,3 +237,11 @@ help:
 	@echo "  admin@example.com  / adminpassword123  (admin)"
 	@echo "  editor@example.com / editorpassword123 (editor)"
 	@echo "  user@example.com   / userpassword123   (user)"
+
+# Format Go code with gofumpt (go install mvdan.cc/gofumpt@v0.9.2). Shipped migrations are exempt.
+fmt:
+	git ls-files '*.go' | grep -v '^migrations/' | xargs gofumpt -w
+
+# Lint + format check, same as CI (go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0)
+lint:
+	golangci-lint run ./...

@@ -163,8 +163,10 @@ func TestGenerateSitemapListsCustomPagesAndSkipsRetiredPicks(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := string(xml)
-	for _, want := range []string{"<loc>https://example.com/about</loc>", "<loc>https://example.com/contact</loc>",
-		"<loc>https://example.com/picks</loc>", "/picks/this-weekend<", "/picks/autumn-guide<"} {
+	for _, want := range []string{
+		"<loc>https://example.com/about</loc>", "<loc>https://example.com/contact</loc>",
+		"<loc>https://example.com/picks</loc>", "/picks/this-weekend<", "/picks/autumn-guide<",
+	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %s", want)
 		}

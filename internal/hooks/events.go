@@ -1,21 +1,79 @@
 package hooks
 
 import (
+	"time"
+
 	"gather/internal/activitypub"
 
 	"github.com/pocketbase/pocketbase/core"
 )
 
+// queueRelay sends the event in the Event shape to relay followers (Mobilizon) and to
+// followers of the event's place and town actors.
+func queueRelay(app core.App, baseURL string, event *core.Record, activityType string) {
+	go func() {
+		if err := activitypub.QueueRelayEvent(app, baseURL, event, activityType); err != nil {
+			app.Logger().Error("ap-relay: failed to queue "+activityType, "event_id", event.Id, "error", err)
+		}
+		if err := activitypub.QueueSubjectEvent(app, baseURL, event, activityType); err != nil {
+			app.Logger().Error("ap-subject: failed to queue "+activityType, "event_id", event.Id, "error", err)
+		}
+	}()
+}
+
+// The Fediverse post for an event goes out a few days before it (see
+// activitypub.PublishEvent), not when it is published, so these three helpers
+// only talk to followers when that is actually due or when followers already
+// have the post. The relay (Mobilizon) is separate and stays immediate.
+
+// publishToFollowers posts the event now if its post time has arrived.
+func publishToFollowers(app core.App, baseURL string, ev *core.Record) {
+	go func() {
+		if _, err := activitypub.PublishEvent(app, baseURL, ev, time.Now(), time.Local); err != nil {
+			app.Logger().Error("ap: failed to queue Create activity", "event_id", ev.Id, "error", err)
+		}
+	}()
+}
+
+// updateFollowers sends an Update when followers have the post, and otherwise
+// lets the edit ride along with the not-yet-sent Create.
+func updateFollowers(app core.App, baseURL string, ev *core.Record) {
+	go func() {
+		if !activitypub.IsPosted(app, ev.Id) {
+			if _, err := activitypub.PublishEvent(app, baseURL, ev, time.Now(), time.Local); err != nil {
+				app.Logger().Error("ap: failed to queue Create activity", "event_id", ev.Id, "error", err)
+			}
+			return
+		}
+		if err := activitypub.QueueDeliveryToFollowers(app, activitypub.CreateActivityForEvent(ev, baseURL, "Update")); err != nil {
+			app.Logger().Error("ap: failed to queue Update activity", "event_id", ev.Id, "error", err)
+		}
+	}()
+}
+
+// deleteFromFollowers sends a Delete only if followers have the post.
+func deleteFromFollowers(app core.App, baseURL string, ev *core.Record, clearMarker bool) {
+	go func() {
+		if !activitypub.IsPosted(app, ev.Id) && ev.GetDateTime("ap_posted_at").IsZero() {
+			return
+		}
+		if err := activitypub.QueueDeliveryToFollowers(app, activitypub.CreateActivityForEvent(ev, baseURL, "Delete")); err != nil {
+			app.Logger().Error("ap: failed to queue Delete activity", "event_id", ev.Id, "error", err)
+		}
+		if clearMarker {
+			if err := activitypub.ClearPosted(app, ev.Id); err != nil {
+				app.Logger().Error("ap: failed to clear posted marker", "event_id", ev.Id, "error", err)
+			}
+		}
+	}()
+}
+
 func RegisterEventHooks(app core.App, baseURL string) {
 	app.OnRecordAfterCreateSuccess("events").BindFunc(func(e *core.RecordEvent) error {
 		sendModeratorAlert(app, *e.Record, baseURL)
 		if e.Record.GetString("status") == "published" {
-			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Create")
-			go func() {
-				if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
-					app.Logger().Error("ap: failed to queue Create activity", "event_id", e.Record.Id, "error", err)
-				}
-			}()
+			publishToFollowers(app, baseURL, e.Record)
+			queueRelay(app, baseURL, e.Record, "Create")
 		}
 		return e.Next()
 	})
@@ -33,26 +91,26 @@ func RegisterEventHooks(app core.App, baseURL string) {
 		}
 
 		if oldStatus != "published" && newStatus == "published" {
-			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Create")
-			go func() {
-				if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
-					app.Logger().Error("ap: failed to queue Create activity", "event_id", e.Record.Id, "error", err)
-				}
-			}()
+			publishToFollowers(app, baseURL, e.Record)
+			// a cancelled event is already on Mobilizon, so republishing is an update
+			if oldStatus == "cancelled" {
+				queueRelay(app, baseURL, e.Record, "Update")
+			} else {
+				queueRelay(app, baseURL, e.Record, "Create")
+			}
 		} else if oldStatus == "published" && newStatus == "published" {
-			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Update")
-			go func() {
-				if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
-					app.Logger().Error("ap: failed to queue Update activity", "event_id", e.Record.Id, "error", err)
-				}
-			}()
+			updateFollowers(app, baseURL, e.Record)
+			queueRelay(app, baseURL, e.Record, "Update")
 		} else if oldStatus == "published" && newStatus != "published" {
-			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Delete")
-			go func() {
-				if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
-					app.Logger().Error("ap: failed to queue Delete activity", "event_id", e.Record.Id, "error", err)
-				}
-			}()
+			deleteFromFollowers(app, baseURL, e.Record, true)
+			if newStatus == "cancelled" {
+				queueRelay(app, baseURL, e.Record, "Update")
+			} else {
+				queueRelay(app, baseURL, e.Record, "Delete")
+			}
+		} else if oldStatus == "cancelled" && newStatus != "cancelled" {
+			// cancelled events stay visible on Mobilizon until deleted
+			queueRelay(app, baseURL, e.Record, "Delete")
 		}
 
 		return e.Next()
@@ -60,12 +118,10 @@ func RegisterEventHooks(app core.App, baseURL string) {
 
 	app.OnRecordAfterDeleteSuccess("events").BindFunc(func(e *core.RecordEvent) error {
 		if e.Record.GetString("status") == "published" {
-			activity := activitypub.CreateActivityForEvent(e.Record, baseURL, "Delete")
-			go func() {
-				if err := activitypub.QueueDeliveryToFollowers(app, activity); err != nil {
-					app.Logger().Error("ap: failed to queue Delete activity", "event_id", e.Record.Id, "error", err)
-				}
-			}()
+			deleteFromFollowers(app, baseURL, e.Record, false)
+			queueRelay(app, baseURL, e.Record, "Delete")
+		} else if e.Record.GetString("status") == "cancelled" {
+			queueRelay(app, baseURL, e.Record, "Delete")
 		}
 		return e.Next()
 	})
