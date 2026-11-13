@@ -1,5 +1,11 @@
 # Gather
 
+[![Build](https://github.com/grantstephens/gather/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/grantstephens/gather/actions/workflows/build.yml)
+[![Lint](https://github.com/grantstephens/gather/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/grantstephens/gather/actions/workflows/lint.yml)
+[![Docker image](https://github.com/grantstephens/gather/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/grantstephens/gather/actions/workflows/docker-publish.yml)
+[![Latest release](https://img.shields.io/github/v/release/grantstephens/gather)](https://github.com/grantstephens/gather/releases/latest)
+[![License: AGPL v3](https://img.shields.io/github/license/grantstephens/gather)](LICENSE)
+
 A self-hosted community calendar. Collect, moderate, and share local events with your community.
 
 Built with Go ([PocketBase](https://pocketbase.io)) and [Preact](https://preactjs.com). Single binary, no external dependencies.
