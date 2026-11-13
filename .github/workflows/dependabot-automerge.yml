@@ -1,0 +1,39 @@
+name: Dependabot auto-merge
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v3
+
+      # Grouped PRs bundle many updates: one major bump anywhere keeps the whole
+      # PR out of auto-merge so a human looks at it.
+      - name: Check for major updates
+        id: major
+        env:
+          UPDATES: ${{ steps.meta.outputs.updated-dependencies-json }}
+        run: |
+          if jq -e 'any(.[]; .updateType == "version-update:semver-major")' <<< "$UPDATES" > /dev/null; then
+            echo "major=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "major=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # --auto only merges once every *required* status check on main has passed
+      # (Build and Lint, set in branch protection), so a red PR never lands.
+      - name: Enable auto-merge (patch and minor only)
+        if: steps.major.outputs.major == 'false'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
