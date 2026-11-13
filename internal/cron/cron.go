@@ -3,15 +3,21 @@ package cron
 import (
 	"time"
 
-	dbx "github.com/pocketbase/dbx"
 	"gather/internal/activitypub"
+	dbx "github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
 
 // Register registers all housekeeping cron jobs on the app.
 func Register(app core.App, baseURL string) {
+	addJob := func(id, spec string, fn func()) {
+		if err := app.Cron().Add(id, spec, fn); err != nil {
+			app.Logger().Error("cron: failed to register job", "job", id, "error", err)
+		}
+	}
+
 	// Clean up exhausted AP delivery queue records older than 7 days
-	app.Cron().Add("ap-queue-cleanup", "0 3 * * *", func() {
+	addJob("ap-queue-cleanup", "0 3 * * *", func() {
 		cutoff := time.Now().AddDate(0, 0, -7)
 		records, err := app.FindRecordsByFilter(
 			"ap_delivery_queue",
@@ -33,7 +39,7 @@ func Register(app core.App, baseURL string) {
 
 	// Post events to Fediverse followers N days before they happen (settings.ap_event_lead_days).
 	// Posting is stamped on the event, so a tick can never post one twice.
-	app.Cron().Add("ap-event-schedule", "*/15 * * * *", func() {
+	addJob("ap-event-schedule", "*/15 * * * *", func() {
 		if baseURL == "" {
 			return
 		}
@@ -43,7 +49,7 @@ func Register(app core.App, baseURL string) {
 	})
 
 	// Announce this weekend's picks Mon-Wed; ap_announced flag prevents double-posting
-	app.Cron().Add("picks-ap-announcement", "0 9 * * 1-3", func() {
+	addJob("picks-ap-announcement", "0 9 * * 1-3", func() {
 		if baseURL == "" {
 			return
 		}
@@ -89,7 +95,7 @@ func Register(app core.App, baseURL string) {
 	})
 
 	// Cancel events stuck in pending for more than 90 days (if require_moderation is enabled)
-	app.Cron().Add("stale-pending-cleanup", "0 4 * * *", func() {
+	addJob("stale-pending-cleanup", "0 4 * * *", func() {
 		settings, err := app.FindFirstRecordByFilter("settings", "id != ''")
 		if err != nil || !settings.GetBool("require_moderation") {
 			return

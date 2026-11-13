@@ -45,7 +45,7 @@ func GeneratePageHTML(app core.App, slug, baseURL string) ([]byte, error) {
 	b.WriteString(fmt.Sprintf("  <title>%s - %s</title>\n", htmlEscape(title), htmlEscape(instanceName)))
 	b.WriteString(fmt.Sprintf("  <link rel=\"canonical\" href=\"%s\">\n", htmlEscape(pageURL)))
 	b.WriteString(fmt.Sprintf("  <meta name=\"description\" content=\"%s\">\n", htmlEscape(description)))
-	b.WriteString(fmt.Sprintf("  <meta property=\"og:type\" content=\"website\">\n"))
+	b.WriteString("  <meta property=\"og:type\" content=\"website\">\n")
 	b.WriteString(fmt.Sprintf("  <meta property=\"og:site_name\" content=\"%s\">\n", htmlEscape(instanceName)))
 	b.WriteString(fmt.Sprintf("  <meta property=\"og:title\" content=\"%s - %s\">\n", htmlEscape(title), htmlEscape(instanceName)))
 	b.WriteString(fmt.Sprintf("  <meta property=\"og:url\" content=\"%s\">\n", htmlEscape(pageURL)))

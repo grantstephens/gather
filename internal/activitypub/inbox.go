@@ -118,7 +118,7 @@ func verifyHTTPSignature(app core.App, baseURL string, r *http.Request, body []b
 			// net/http moves Host out of r.Header into r.Host
 			parts = append(parts, fmt.Sprintf("host: %s", r.Host))
 		default:
-			parts = append(parts, fmt.Sprintf("%s: %s", h, r.Header.Get(http.CanonicalHeaderKey(h))))
+			parts = append(parts, fmt.Sprintf("%s: %s", h, r.Header.Get(h)))
 		}
 	}
 	signedString := strings.Join(parts, "\n")

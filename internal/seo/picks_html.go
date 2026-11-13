@@ -164,15 +164,15 @@ func buildPicksHTML(
 		URL  string `json:"url"`
 	}
 	type articleLD struct {
-		Context      string    `json:"@context"`
-		Type         string    `json:"@type"`
-		Headline     string    `json:"headline"`
-		Description  string    `json:"description,omitempty"`
-		URL          string    `json:"url"`
-		DatePublished string   `json:"datePublished"`
-		DateModified  string   `json:"dateModified"`
-		Image        string    `json:"image,omitempty"`
-		Publisher    publisher `json:"publisher"`
+		Context       string    `json:"@context"`
+		Type          string    `json:"@type"`
+		Headline      string    `json:"headline"`
+		Description   string    `json:"description,omitempty"`
+		URL           string    `json:"url"`
+		DatePublished string    `json:"datePublished"`
+		DateModified  string    `json:"dateModified"`
+		Image         string    `json:"image,omitempty"`
+		Publisher     publisher `json:"publisher"`
 	}
 	ld := articleLD{
 		Context:       "https://schema.org",

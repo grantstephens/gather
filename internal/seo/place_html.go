@@ -128,12 +128,12 @@ func buildPlaceHTML(title, instanceName, description, placeURL, baseURL, placeNa
 		StreetAddress string `json:"streetAddress,omitempty"`
 	}
 	type placeLD struct {
-		Context     string     `json:"@context"`
-		Type        string     `json:"@type"`
-		Name        string     `json:"name"`
-		URL         string     `json:"url"`
-		Address     *addressLD `json:"address,omitempty"`
-		Geo         *geoLD     `json:"geo,omitempty"`
+		Context string     `json:"@context"`
+		Type    string     `json:"@type"`
+		Name    string     `json:"name"`
+		URL     string     `json:"url"`
+		Address *addressLD `json:"address,omitempty"`
+		Geo     *geoLD     `json:"geo,omitempty"`
 	}
 	ld := placeLD{
 		Context: "https://schema.org",

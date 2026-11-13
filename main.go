@@ -882,9 +882,11 @@ func main() {
 		newsletter.RegisterCron(se.App, baseURL)
 
 		// ActivityPub delivery worker — every 5 minutes
-		se.App.Cron().Add("ap-delivery", "*/5 * * * *", func() {
+		if err := se.App.Cron().Add("ap-delivery", "*/5 * * * *", func() {
 			activitypub.ProcessDeliveryQueue(se.App)
-		})
+		}); err != nil {
+			se.App.Logger().Error("cron: failed to register ap-delivery", "error", err)
+		}
 
 		// POST /api/ap/test-delivery — send a test Note to a given inbox (superuser/admin only)
 		se.Router.POST("/api/ap/test-delivery", func(re *core.RequestEvent) error {

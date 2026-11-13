@@ -10,10 +10,10 @@ import (
 )
 
 type RSS struct {
-	XMLName  xml.Name `xml:"rss"`
-	Version  string   `xml:"version,attr"`
-	AtomNS   string   `xml:"xmlns:atom,attr"`
-	Channel  Channel  `xml:"channel"`
+	XMLName xml.Name `xml:"rss"`
+	Version string   `xml:"version,attr"`
+	AtomNS  string   `xml:"xmlns:atom,attr"`
+	Channel Channel  `xml:"channel"`
 }
 
 type Channel struct {
