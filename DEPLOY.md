@@ -110,10 +110,10 @@ docker compose up -d
 To pin to a specific version instead of `latest`:
 
 ```yaml
-image: ghcr.io/grantstephens/gather:v1.0.0
+image: ghcr.io/grantstephens/gather:1.6.0
 ```
 
-Available tags: `latest` (main branch), `v1.0.0` (specific release), `0.1` (minor version).
+Available tags: `latest` (the main branch; rebuilt on every release and weekly), `1.6.0` (a specific release), `1.6` (the latest patch of a minor version) and `sha-<commit>`. Tags have no `v` prefix.
 
 ---
 

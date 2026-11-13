@@ -4,8 +4,8 @@
 
 ### Prerequisites
 
-- Go 1.25+
-- Node.js 18+
+- Go 1.27+
+- Node.js 22.12+
 - libwebp-dev (for image processing)
 - Python 3 (for seed scripts)
 
@@ -71,9 +71,21 @@ make test-api         # API integration tests
 make test-e2e         # Playwright E2E tests (headless)
 make test-e2e-ui      # Playwright interactive UI
 make test-coverage    # Coverage report
+make test-frontend    # Frontend unit tests (Vitest)
 ```
 
 See `tests/README.md` for more details.
+
+### Formatting and linting
+
+Go code must be [gofumpt](https://github.com/mvdan/gofumpt)-formatted and pass golangci-lint; CI fails otherwise.
+
+```bash
+make fmt              # gofumpt (go install mvdan.cc/gofumpt@v0.9.2)
+make lint             # golangci-lint, config in .golangci.yml (v2.15.0)
+```
+
+Shipped migrations under `migrations/` are exempt: never edit them.
 
 ### Docker
 
@@ -82,6 +94,12 @@ make docker-build     # Build image locally
 make docker-run       # Run container
 make docker-stop      # Stop container
 ```
+
+## Pull Requests and CI
+
+- `main` requires the **build** (`go test -race ./...`) and **golangci-lint** checks.
+- Dependabot patch/minor PRs auto-merge once those pass; major bumps wait for a manual check.
+- **Migrations:** number a new one higher than every migration on `origin/main` (`git fetch origin`, then `git ls-tree --name-only origin/main migrations/ | sort | tail -3`), keep it idempotent, and never edit one that has shipped.
 
 ## Architecture
 
@@ -92,6 +110,11 @@ make docker-stop      # Stop container
 - **internal/activitypub/** — federation (actor, inbox, outbox, delivery, keys)
 - **internal/rss/**, **internal/ical/** — feed generation
 - **internal/recurrence/** — recurring event expansion
+- **internal/newsletter/** — "What's on this weekend" email (signup, scheduling, rendering)
+- **internal/seo/** — server-rendered HTML for crawlers, JSON-LD, sitemap
+- **internal/cron/** — scheduled jobs
+- **internal/api/**, **internal/middleware/** — custom routes and rate limiting
+- **internal/testutil/** — migrated PocketBase template shared by the test suites
 - **migrations/** — database schema (PocketBase collections)
 
 ### Frontend (Preact + TypeScript + Vite)
@@ -112,8 +135,11 @@ make docker-stop      # Stop container
 | `places` | Locations with OSM data, moderation status |
 | `tags` | Categories with moderation status |
 | `pages` | Custom static pages (Markdown) |
+| `picks` | Editorial Picks posts |
 | `settings` | Singleton instance configuration |
+| `newsletter_subscribers` | Double opt-in email subscribers |
 | `ap_followers`, `ap_delivery_queue` | ActivityPub infrastructure |
+| `ap_relay_followers`, `ap_subject_followers`, `ap_actors` | Mobilizon relay, place/town actors and their keys |
 
 ### Key Patterns
 

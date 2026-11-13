@@ -84,7 +84,7 @@ docker run -d \
 
 ### Build from Source
 
-Requires Go 1.25+, Node.js 18+, and libwebp-dev.
+Requires Go 1.27+, Node.js 22.12+, and libwebp-dev.
 
 ```bash
 git clone https://github.com/grantstephens/gather.git
@@ -110,6 +110,7 @@ Once you have a frontend admin account:
    - **Favicon** (auto-converted to WebP)
    - **SEO description** for search engines and social previews
    - **Moderation** settings (anonymous submissions, require approval)
+   - **Week start** (Sunday or Monday) for the home page calendar
    - **ActivityPub** federation toggle
    - **OAuth2** social login providers
    - **Custom CSS** and **tracking/head code**

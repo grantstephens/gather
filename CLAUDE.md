@@ -70,6 +70,10 @@ Go code must be [gofumpt](https://github.com/mvdan/gofumpt)-formatted (`make fmt
   - See API.md "ActivityPub Federation" for shapes, lifecycle rules and why each piece exists
 - `rss/`, `ical/`: Feed generation
 - `recurrence/`: Recurring event logic
+- `newsletter/`: "What's on this weekend" email (signup, schedule, rendering)
+- `seo/`: Server-rendered HTML for crawlers, JSON-LD, sitemap
+- `cron/`: Scheduled jobs
+- `testutil/`: Migrated PocketBase template cloned per test package (use `testutil.NewApp()`, and call `testutil.Cleanup()` from `TestMain`)
 
 **migrations/**: Database schema definitions
 - `1709300000_collections.go`: Core collections (events, places, tags, settings, AP tables)
@@ -107,6 +111,7 @@ Go code must be [gofumpt](https://github.com/mvdan/gofumpt)-formatted (`make fmt
 - `tags`: Has `status` (pending/approved)
 - `settings`: Singleton for instance config
 - `ap_followers`, `ap_delivery_queue`: ActivityPub infrastructure
+- `picks`, `pages`, `newsletter_subscribers`: Editorial picks posts, custom pages, email subscribers
 - `ap_relay_followers`, `ap_subject_followers`, `ap_actors`: Mobilizon relay followers, place/town actor followers, and those actors' keypairs
 
 **Access Control:**
