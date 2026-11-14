@@ -87,7 +87,7 @@ Go code must be [gofumpt](https://github.com/mvdan/gofumpt)-formatted (`make fmt
 - `testutil/`: Migrated PocketBase template cloned per test package (use `testutil.NewApp()`, and call `testutil.Cleanup()` from `TestMain`)
 
 **migrations/**: Database schema definitions
-Files are `17093000NN_<name>.go` (currently up to `…033`; `…028` was never used, so don't backfill it). Key ones: `…000_collections.go` (core collections), `…001_user_role.go`, `…002_places_tags_moderation.go`, `…031_newsletter.go`, `…033_settings_week_start.go`. Never edit a shipped migration.
+Files are `17093000NN_<name>.go`. Don't guess the next number: derive it from `origin/main` as described in the numbering rules below. Never edit a shipped migration. `…000_collections.go` holds the core collections and later files add fields and collections.
 
 **Migration numbering rules (MUST follow; this has gone wrong before):**
 - Migrations run in filename order, and production has already applied everything on `origin/main`. A new migration must therefore be numbered **higher than every migration on `origin/main`**, never just higher than the ones on your branch. A branch cut before another PR merged will otherwise sort *before* migrations production has already run (this shipped broken numbering in v1.3.0 and has happened before).
