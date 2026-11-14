@@ -260,7 +260,7 @@ export function App() {
             </button>
           </div>
           <div class="footer-powered">
-            Powered by <a href="https://grantstephens.github.io/gather/" class="footer-link footer-powered-link" target="_blank" rel="noopener noreferrer" data-umami-event="powered-by-gather">gather<span class="brand-dot">.</span></a>
+            Powered by <a href="https://gather.hub13.xyz/" class="footer-link footer-powered-link" target="_blank" rel="noopener noreferrer" data-umami-event="powered-by-gather">gather<span class="brand-dot">.</span></a>
           </div>
         </div>
       </footer>
