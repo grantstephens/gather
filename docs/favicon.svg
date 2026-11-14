@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Gather">
+  <style>
+    .g { fill: none; stroke: #0f172a; stroke-width: 56; stroke-linecap: round; stroke-linejoin: round; }
+    @media (prefers-color-scheme: dark) { .g { stroke: #f8fafc; } }
+  </style>
+  <circle class="g" cx="204" cy="232" r="104"/>
+  <path class="g" d="M308 128V338C308 414 262 452 196 452C152 452 120 438 98 414"/>
+  <circle cx="404" cy="336" r="40" fill="#0d9488"/>
+</svg>
